@@ -54,6 +54,11 @@ export function EditorShell() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.key === "F11") {
+        event.preventDefault();
+        setIsFullscreen((f) => !f);
+        return;
+      }
       const meta = event.metaKey || event.ctrlKey;
       if (!meta) return;
       const key = event.key.toLowerCase();
@@ -69,18 +74,8 @@ export function EditorShell() {
         triggerFileOpen();
       }
     };
-    const onFullscreenKey = (event: KeyboardEvent) => {
-      if (event.key === "F11") {
-        event.preventDefault();
-        setIsFullscreen((f) => !f);
-      }
-    };
     window.addEventListener("keydown", onKey);
-    window.addEventListener("keydown", onFullscreenKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("keydown", onFullscreenKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [openExportDialog, saveSnapshot, hasDoc, triggerFileOpen]);
 
   const rightPane = sourceOpen ? (
