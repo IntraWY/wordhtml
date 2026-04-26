@@ -48,4 +48,12 @@ describe("applyCleaners", () => {
   it("ignores empty input", () => {
     expect(applyCleaners("", ["removeInlineStyles"])).toBe("");
   });
+
+  it("runs unwrapSpans BEFORE removeEmptyTags (order regression)", () => {
+    // <span> with no content should be unwrapped first, leaving an empty parent,
+    // which removeEmptyTags then cleans. Verifies order in pipeline.ts ORDER array.
+    const input = "<p><span></span></p>";
+    const result = applyCleaners(input, ["unwrapSpans", "removeEmptyTags"]);
+    expect(result).toBe(""); // both empty p and span removed
+  });
 });
