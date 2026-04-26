@@ -2,19 +2,27 @@
 
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+// NOTE: dynamic-import for Table extensions deferred — adds complexity
+// not justified by current bundle size. Revisit if Lighthouse flags it.
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import { SearchAndReplace } from "@sereneinserenade/tiptap-search-and-replace";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import FontFamily from "@tiptap/extension-font-family";
 
 import { useEditorStore } from "@/store/editorStore";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { IndentExtension } from "@/lib/tiptap/indentExtension";
+import { ImageWithAlign } from "@/lib/tiptap/imageWithAlign";
 import { FormattingToolbar } from "./FormattingToolbar";
 
 interface VisualEditorProps {
@@ -43,7 +51,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         openOnClick: false,
         HTMLAttributes: { rel: "noopener noreferrer" },
       }),
-      Image.configure({ inline: false }),
+      ImageWithAlign,
       Placeholder.configure({
         placeholder: "พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…",
       }),
@@ -57,6 +65,15 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TableRow,
       TableHeader,
       TableCell,
+      SearchAndReplace.configure({
+        searchResultClass: "search-result",
+        disableRegex: false,
+      }),
+      Subscript,
+      Superscript,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      FontFamily,
     ],
     content: documentHtml,
     editorProps: {
