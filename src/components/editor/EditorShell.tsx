@@ -10,6 +10,8 @@ import { CleaningToolbar } from "./CleaningToolbar";
 import { VisualEditor } from "./VisualEditor";
 import { A4Preview } from "./A4Preview";
 import { ExportDialog } from "./ExportDialog";
+import { SearchPanel } from "./SearchPanel";
+import { PageSetupDialog } from "./PageSetupDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { useEditorStore } from "@/store/editorStore";
 import { cn } from "@/lib/utils";
@@ -40,6 +42,9 @@ function SourcePane() {
 export function EditorShell() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [pageSetupOpen, setPageSetupOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const loadError = useEditorStore((s) => s.loadError);
   const clearError = useEditorStore((s) => s.clearError);
@@ -48,9 +53,23 @@ export function EditorShell() {
   const openExportDialog = useEditorStore((s) => s.openExportDialog);
   const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);
   const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
+  const reset = useEditorStore((s) => s.reset);
+  const loadFile = useEditorStore((s) => s.loadFile);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
   const previewOpen = useEditorStore((s) => s.previewOpen);
+
+  // Custom-event bridge between menu components and shell
+  useEffect(() => {
+    const onSearch = () => setSearchOpen(true);
+    const onPageSetup = () => setPageSetupOpen(true);
+    window.addEventListener("wordhtml:open-search", onSearch);
+    window.addEventListener("wordhtml:open-page-setup", onPageSetup);
+    return () => {
+      window.removeEventListener("wordhtml:open-search", onSearch);
+      window.removeEventListener("wordhtml:open-page-setup", onPageSetup);
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -62,21 +81,83 @@ export function EditorShell() {
       const meta = event.metaKey || event.ctrlKey;
       if (!meta) return;
       const key = event.key.toLowerCase();
-      if (key === "s") {
+
+      // Ctrl+Shift+S → Save snapshot (no dialog). Must be checked BEFORE
+      // the plain Ctrl+S branch so it doesn't double-trigger.
+      if (key === "s" && event.shiftKey) {
+        event.preventDefault();
+        saveSnapshot();
+        return;
+      }
+
+      // Ctrl+Shift+N → New document (reset)
+      if (key === "n" && event.shiftKey) {
+        event.preventDefault();
+        reset();
+        return;
+      }
+
+      // Ctrl+S → Save snapshot + open export dialog (existing behavior)
+      if (key === "s" && !event.shiftKey) {
         event.preventDefault();
         if (hasDoc) {
           saveSnapshot();
           openExportDialog();
         }
+        return;
       }
+
+      // Ctrl+O → Open file
       if (key === "o") {
         event.preventDefault();
         triggerFileOpen();
+        return;
+      }
+
+      // Ctrl+F → Toggle search panel
+      if (key === "f" && !event.shiftKey) {
+        event.preventDefault();
+        setSearchOpen((s) => !s);
+        return;
+      }
+
+      // Ctrl+K → Insert link
+      if (key === "k") {
+        event.preventDefault();
+        const url = window.prompt("ใส่ URL ของลิงก์:");
+        if (url && editor) {
+          editor.chain().focus().setLink({ href: url }).run();
+        }
+        return;
+      }
+
+      // Ctrl+P → Print
+      if (key === "p") {
+        event.preventDefault();
+        window.print();
+        return;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openExportDialog, saveSnapshot, hasDoc, triggerFileOpen]);
+  }, [openExportDialog, saveSnapshot, hasDoc, triggerFileOpen, reset, editor]);
+
+  // beforeunload warning when document has unsaved changes (current HTML
+  // differs from the most-recent snapshot in history).
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const state = useEditorStore.getState();
+      const html = state.documentHtml.trim();
+      if (!html) return;
+      const lastHistory = state.history[0];
+      if (lastHistory && lastHistory.html === state.documentHtml) return;
+      e.preventDefault();
+      // legacy browsers need a returnValue
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   const rightPane = sourceOpen ? (
     <SourcePane />
@@ -84,17 +165,32 @@ export function EditorShell() {
     <A4Preview />
   ) : null;
 
-  const gridCols = rightPane
-    ? "grid-cols-2"
-    : "grid-cols-1";
+  const gridCols = rightPane ? "grid-cols-2" : "grid-cols-1";
 
   return (
     <>
       <div
         className={cn(
-          "flex h-screen flex-col",
+          "relative flex h-screen flex-col",
           isFullscreen && "fixed inset-0 z-50 overflow-auto bg-[color:var(--color-background)]"
         )}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes("Files")) {
+            e.preventDefault();
+            setIsDragging(true);
+          }
+        }}
+        onDragLeave={(e) => {
+          // Only set false if we leave the actual element (not children)
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          setIsDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) loadFile(file);
+        }}
       >
         <TopBar />
         <MenuBar
@@ -154,7 +250,23 @@ export function EditorShell() {
           <VisualEditor onEditorReady={setEditor} />
           {rightPane}
         </div>
+
+        {isDragging && (
+          <div className="pointer-events-none absolute inset-4 z-40 flex items-center justify-center rounded-xl border-2 border-dashed border-[color:var(--color-accent)] bg-[color:var(--color-background)]/80 text-lg font-semibold text-[color:var(--color-accent)]">
+            วางไฟล์ที่นี่เพื่ออัปโหลด
+          </div>
+        )}
+
         <ExportDialog />
+        <SearchPanel
+          editor={editor}
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+        />
+        <PageSetupDialog
+          open={pageSetupOpen}
+          onClose={() => setPageSetupOpen(false)}
+        />
         <MobileBlock />
       </div>
     </>
