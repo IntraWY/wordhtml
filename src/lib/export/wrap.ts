@@ -1,8 +1,46 @@
 /**
+ * Page setup options for printable HTML exports.
+ */
+export interface PageSetup {
+  size: "A4" | "Letter";
+  orientation: "portrait" | "landscape";
+  marginMm: { top: number; right: number; bottom: number; left: number };
+}
+
+export interface WrapOptions {
+  title?: string;
+  pageSetup?: PageSetup;
+}
+
+const DEFAULT_PAGE_SETUP: PageSetup = {
+  size: "A4",
+  orientation: "portrait",
+  marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
+};
+
+/**
  * Wrap a body fragment into a complete HTML document for export.
  * Keeps the markup self-contained when downloaded or opened directly.
+ *
+ * Backward-compatible: the second argument can be a `title` string or a
+ * `WrapOptions` object that customizes title and page setup.
  */
-export function wrapAsDocument(body: string, title = "Document"): string {
+export function wrapAsDocument(
+  body: string,
+  titleOrOptions: string | WrapOptions = "Document"
+): string {
+  const opts: WrapOptions =
+    typeof titleOrOptions === "string"
+      ? { title: titleOrOptions }
+      : titleOrOptions;
+
+  const title = opts.title ?? "Document";
+  const ps = opts.pageSetup ?? DEFAULT_PAGE_SETUP;
+  const m = ps.marginMm;
+  const sizeDecl =
+    ps.orientation === "landscape" ? `${ps.size} landscape` : ps.size;
+  const pageRule = `@page { size: ${sizeDecl}; margin: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm; }`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -10,6 +48,10 @@ export function wrapAsDocument(body: string, title = "Document"): string {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)}</title>
   <style>
+    ${pageRule}
+    @media print {
+      body { margin: 0; padding: 0; }
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       max-width: 720px;
