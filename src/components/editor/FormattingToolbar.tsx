@@ -22,11 +22,15 @@ import {
   AlignJustify,
   Eraser,
   Minus,
+  Code,
   Code2,
   Indent,
   Outdent,
   Palette,
   Highlighter,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
+  RotateCcw,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -41,6 +45,28 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
 
   const currentTextColor = editor.getAttributes("textStyle").color as string | undefined;
   const currentHighlight = editor.getAttributes("highlight").color as string | undefined;
+
+  const isImage = editor.isActive("image");
+  const imageAttrs = editor.getAttributes("image") as {
+    align?: string;
+    width?: string | null;
+  };
+
+  const setImageAlign = (align: "left" | "center" | "right") => {
+    editor.chain().focus().updateAttributes("image", { align }).run();
+  };
+
+  const setImageWidth = (width: string | null) => {
+    editor.chain().focus().updateAttributes("image", { width }).run();
+  };
+
+  const isImageAlign = (align: "left" | "center" | "right"): boolean => {
+    return imageAttrs.align === align;
+  };
+
+  const isImageWidth = (width: string): boolean => {
+    return imageAttrs.width === width;
+  };
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5">
@@ -121,30 +147,74 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         >
           <Strikethrough />
         </ToolButton>
+        <ToolButton
+          label="ตัวห้อย"
+          onClick={() => editor.chain().focus().toggleSubscript().run()}
+          active={editor.isActive("subscript")}
+        >
+          <SubscriptIcon />
+        </ToolButton>
+        <ToolButton
+          label="ตัวยก"
+          onClick={() => editor.chain().focus().toggleSuperscript().run()}
+          active={editor.isActive("superscript")}
+        >
+          <SuperscriptIcon />
+        </ToolButton>
       </ToolGroup>
 
       <Divider />
 
-      {/* การจัดตำแหน่ง */}
+      {/* การจัดตำแหน่ง (รองรับรูปภาพ) */}
       <ToolGroup>
         <ToolButton
-          label="ชิดซ้าย"
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          active={editor.isActive({ textAlign: "left" })}
+          label={isImage ? "จัดรูปชิดซ้าย" : "ชิดซ้าย"}
+          onClick={() => {
+            if (isImage) {
+              setImageAlign("left");
+            } else {
+              editor.chain().focus().setTextAlign("left").run();
+            }
+          }}
+          active={
+            isImage
+              ? isImageAlign("left")
+              : editor.isActive({ textAlign: "left" })
+          }
         >
           <AlignLeft />
         </ToolButton>
         <ToolButton
-          label="กึ่งกลาง"
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          active={editor.isActive({ textAlign: "center" })}
+          label={isImage ? "จัดรูปกึ่งกลาง" : "กึ่งกลาง"}
+          onClick={() => {
+            if (isImage) {
+              setImageAlign("center");
+            } else {
+              editor.chain().focus().setTextAlign("center").run();
+            }
+          }}
+          active={
+            isImage
+              ? isImageAlign("center")
+              : editor.isActive({ textAlign: "center" })
+          }
         >
           <AlignCenter />
         </ToolButton>
         <ToolButton
-          label="ชิดขวา"
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          active={editor.isActive({ textAlign: "right" })}
+          label={isImage ? "จัดรูปชิดขวา" : "ชิดขวา"}
+          onClick={() => {
+            if (isImage) {
+              setImageAlign("right");
+            } else {
+              editor.chain().focus().setTextAlign("right").run();
+            }
+          }}
+          active={
+            isImage
+              ? isImageAlign("right")
+              : editor.isActive({ textAlign: "right" })
+          }
         >
           <AlignRight />
         </ToolButton>
@@ -152,10 +222,55 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
           label="เต็มบรรทัด"
           onClick={() => editor.chain().focus().setTextAlign("justify").run()}
           active={editor.isActive({ textAlign: "justify" })}
+          disabled={isImage}
         >
           <AlignJustify />
         </ToolButton>
       </ToolGroup>
+
+      {/* ขนาดรูปภาพ (แสดงเฉพาะตอนเลือกรูป) */}
+      {isImage && (
+        <>
+          <Divider />
+          <ToolGroup>
+            <ToolButton
+              label="ขนาดเล็ก (25%)"
+              onClick={() => setImageWidth("25%")}
+              active={isImageWidth("25%")}
+            >
+              <span className="text-[10px] font-bold leading-none">S</span>
+            </ToolButton>
+            <ToolButton
+              label="ขนาดกลาง (50%)"
+              onClick={() => setImageWidth("50%")}
+              active={isImageWidth("50%")}
+            >
+              <span className="text-[10px] font-bold leading-none">M</span>
+            </ToolButton>
+            <ToolButton
+              label="ขนาดใหญ่ (75%)"
+              onClick={() => setImageWidth("75%")}
+              active={isImageWidth("75%")}
+            >
+              <span className="text-[10px] font-bold leading-none">L</span>
+            </ToolButton>
+            <ToolButton
+              label="ขนาดเต็ม (100%)"
+              onClick={() => setImageWidth("100%")}
+              active={isImageWidth("100%")}
+            >
+              <span className="text-[10px] font-bold leading-none">XL</span>
+            </ToolButton>
+            <ToolButton
+              label="ขนาดต้นฉบับ"
+              onClick={() => setImageWidth(null)}
+              active={!imageAttrs.width}
+            >
+              <RotateCcw />
+            </ToolButton>
+          </ToolGroup>
+        </>
+      )}
 
       <Divider />
 
@@ -241,7 +356,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
 
       <Divider />
 
-      {/* เส้นคั่น / บล็อกโค้ด / ล้างรูปแบบ */}
+      {/* เส้นคั่น / บล็อกโค้ด / โค้ดบรรทัด / ล้างรูปแบบ */}
       <ToolGroup>
         <ToolButton
           label="เส้นคั่น"
@@ -255,6 +370,13 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
           active={editor.isActive("codeBlock")}
         >
           <Code2 />
+        </ToolButton>
+        <ToolButton
+          label="โค้ดบรรทัด (Ctrl+E)"
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          active={editor.isActive("code")}
+        >
+          <Code />
         </ToolButton>
         <ToolButton
           label="ล้างการจัดรูปแบบ"
