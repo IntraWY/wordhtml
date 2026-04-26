@@ -138,6 +138,7 @@ export const useEditorStore = create<EditorState>()(
           exportDialogOpen: false,
           loadError: null,
           lastLoadWarnings: [],
+          pendingExportFormat: null,
         }),
 
       saveSnapshot: () => {
