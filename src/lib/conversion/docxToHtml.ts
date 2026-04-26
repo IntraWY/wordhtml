@@ -1,10 +1,12 @@
 // mammoth ships a `browser` field in package.json that swaps Node-only modules
 // for browser-compatible builds, so the standard import works in webpack/turbopack.
-import mammoth from "mammoth";
+import mammoth, { type ConvertMessage } from "mammoth";
 
-interface ConvertResult {
+export type MammothMessage = ConvertMessage;
+
+export interface ConvertResult {
   html: string;
-  warnings: string[];
+  warnings: MammothMessage[];
 }
 
 /**
@@ -13,6 +15,9 @@ interface ConvertResult {
  * Images are inlined as base64 data URIs so the editor can display them
  * without any server-side asset handling. The export pipeline can later
  * extract them to separate files for ZIP downloads.
+ *
+ * Returns the full mammoth message objects (type + message) for warnings
+ * and errors so the UI can surface them with the correct severity.
  */
 export async function docxToHtml(file: File): Promise<ConvertResult> {
   const arrayBuffer = await file.arrayBuffer();
@@ -29,8 +34,8 @@ export async function docxToHtml(file: File): Promise<ConvertResult> {
 
   return {
     html: result.value,
-    warnings: result.messages
-      .filter((m) => m.type === "warning" || m.type === "error")
-      .map((m) => m.message),
+    warnings: result.messages.filter(
+      (m) => m.type === "warning" || m.type === "error"
+    ),
   };
 }

@@ -5,6 +5,7 @@ import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash } from "lucide-react
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
+import { cn } from "@/lib/utils";
 import type { DocumentSnapshot } from "@/types";
 
 function formatDate(iso: string): string {
@@ -161,8 +162,4 @@ function ActionBtn({ label, onClick, danger, children }: ActionBtnProps) {
       {children}
     </button>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

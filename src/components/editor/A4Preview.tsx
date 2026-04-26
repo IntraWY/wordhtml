@@ -1,9 +1,13 @@
 "use client";
 
+import { useDeferredValue } from "react";
+
 import { useEditorStore } from "@/store/editorStore";
 
 export function A4Preview() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
+  // Defer preview re-renders so typing in the editor stays responsive on long documents.
+  const deferredHtml = useDeferredValue(documentHtml);
 
   return (
     <div className="flex h-full flex-col bg-zinc-100">
@@ -18,7 +22,7 @@ export function A4Preview() {
             // The user-provided HTML is already from their own paste/edit flow.
             // It is sanitized at the conversion boundary (paste handler / mammoth output).
             dangerouslySetInnerHTML={{
-              __html: documentHtml || PLACEHOLDER_HTML,
+              __html: deferredHtml || PLACEHOLDER_HTML,
             }}
           />
         </div>

@@ -18,10 +18,10 @@ import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { downloadHtml } from "@/lib/export/exportHtml";
 import { downloadZip } from "@/lib/export/exportZip";
 import { downloadDocx } from "@/lib/export/exportDocx";
-import { CLEANERS, type ImageMode } from "@/types";
+import { CLEANERS, type ExportFormat, type ImageMode } from "@/types";
 import { cn } from "@/lib/utils";
 
-type ExportKind = "html" | "zip" | "docx";
+type ExportKind = ExportFormat;
 
 export function ExportDialog() {
   const open = useEditorStore((s) => s.exportDialogOpen);
@@ -31,9 +31,19 @@ export function ExportDialog() {
   const imageMode = useEditorStore((s) => s.imageMode);
   const setImageMode = useEditorStore((s) => s.setImageMode);
   const fileName = useEditorStore((s) => s.fileName);
+  const pendingFormat = useEditorStore((s) => s.pendingExportFormat);
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
+  // Track which format is highlighted as primary. When the dialog is opened
+  // with a pre-selected format (via openExportDialog(format)), default to it.
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>(
+    pendingFormat ?? "html"
+  );
+
+  useEffect(() => {
+    if (pendingFormat) setSelectedFormat(pendingFormat);
+  }, [pendingFormat]);
 
   const cleanedHtml = useMemo(
     () => applyCleaners(documentHtml, enabledCleaners),
@@ -134,23 +144,33 @@ export function ExportDialog() {
 
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
-                variant="secondary"
-                onClick={() => handleDownload("docx")}
+                variant={selectedFormat === "docx" ? "primary" : "secondary"}
+                onClick={() => {
+                  setSelectedFormat("docx");
+                  handleDownload("docx");
+                }}
                 disabled={busy !== null}
               >
                 {busy === "docx" ? <Loader2 className="animate-spin" /> : <FileText />}
                 ดาวน์โหลด .docx
               </Button>
               <Button
-                variant="secondary"
-                onClick={() => handleDownload("zip")}
+                variant={selectedFormat === "zip" ? "primary" : "secondary"}
+                onClick={() => {
+                  setSelectedFormat("zip");
+                  handleDownload("zip");
+                }}
                 disabled={busy !== null}
               >
                 {busy === "zip" ? <Loader2 className="animate-spin" /> : <FileArchive />}
                 ดาวน์โหลด .zip
               </Button>
               <Button
-                onClick={() => handleDownload("html")}
+                variant={selectedFormat === "html" ? "primary" : "secondary"}
+                onClick={() => {
+                  setSelectedFormat("html");
+                  handleDownload("html");
+                }}
                 disabled={busy !== null}
               >
                 {busy === "html" ? (
