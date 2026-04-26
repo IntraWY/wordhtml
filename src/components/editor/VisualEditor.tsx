@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -91,7 +92,11 @@ const IndentExtension = Extension.create({
   },
 });
 
-export function VisualEditor() {
+interface VisualEditorProps {
+  onEditorReady?: (editor: Editor | null) => void;
+}
+
+export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const setHtml = useEditorStore((s) => s.setHtml);
 
@@ -118,6 +123,10 @@ export function VisualEditor() {
       Color,
       Highlight.configure({ multicolor: true }),
       IndentExtension,
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: documentHtml,
     editorProps: {
@@ -139,6 +148,10 @@ export function VisualEditor() {
     if (documentHtml === editor.getHTML()) return;
     editor.commands.setContent(documentHtml || "", { emitUpdate: false });
   }, [documentHtml, editor]);
+
+  useEffect(() => {
+    onEditorReady?.(editor);
+  }, [editor, onEditorReady]);
 
   return (
     <div className="flex h-full flex-col">

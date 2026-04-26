@@ -27,6 +27,8 @@ interface EditorState {
   // ui
   isLoadingFile: boolean;
   loadError: string | null;
+  sourceOpen: boolean;
+  previewOpen: boolean;
   // actions
   setHtml: (html: string) => void;
   setFileName: (name: string | null) => void;
@@ -37,6 +39,8 @@ interface EditorState {
   loadFile: (file: File) => Promise<void>;
   clearError: () => void;
   reset: () => void;
+  toggleSource: () => void;
+  togglePreview: () => void;
   // history actions
   saveSnapshot: () => void;
   loadSnapshot: (id: string) => void;
@@ -61,6 +65,8 @@ export const useEditorStore = create<EditorState>()(
       historyPanelOpen: false,
       isLoadingFile: false,
       loadError: null,
+      sourceOpen: false,
+      previewOpen: true,
 
       setHtml: (html) => set({ documentHtml: html }),
       setFileName: (fileName) => set({ fileName }),
@@ -77,6 +83,8 @@ export const useEditorStore = create<EditorState>()(
       },
       closeExportDialog: () => set({ exportDialogOpen: false }),
       clearError: () => set({ loadError: null }),
+      toggleSource: () => set((s) => ({ sourceOpen: !s.sourceOpen })),
+      togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),
       loadFile: async (file) => {
         const name = file.name;
         const lower = name.toLowerCase();
