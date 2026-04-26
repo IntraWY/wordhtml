@@ -7,6 +7,7 @@ import {
   removeAttributes,
   removeClassesAndIds,
   removeComments,
+  unwrapDeprecatedTags,
   unwrapSpans,
   plainText,
 } from "./cleaners";
@@ -94,6 +95,37 @@ describe("removeComments", () => {
 
   it("removes nested comments", () => {
     expect(removeComments(`<p>x<!-- y -->z</p>`)).toBe(`<p>xz</p>`);
+  });
+});
+
+describe("unwrapDeprecatedTags", () => {
+  it("unwraps <font> but keeps text", () => {
+    expect(unwrapDeprecatedTags(`<font color="red">text</font>`)).toBe(`text`);
+  });
+
+  it("unwraps <center> while keeping inner blocks", () => {
+    expect(unwrapDeprecatedTags(`<center><p>x</p></center>`)).toBe(`<p>x</p>`);
+  });
+
+  it("unwraps nested deprecated tags", () => {
+    expect(unwrapDeprecatedTags(`<font><big>x</big></font>`)).toBe(`x`);
+  });
+
+  it("unwraps <strike>", () => {
+    expect(unwrapDeprecatedTags(`<strike>old</strike>`)).toBe(`old`);
+  });
+
+  it("unwraps <tt>", () => {
+    expect(unwrapDeprecatedTags(`<tt>code</tt>`)).toBe(`code`);
+  });
+
+  it("leaves plain HTML untouched", () => {
+    const html = `<p><strong>hi</strong></p>`;
+    expect(unwrapDeprecatedTags(html)).toBe(html);
+  });
+
+  it("returns empty input untouched", () => {
+    expect(unwrapDeprecatedTags("")).toBe("");
   });
 });
 

@@ -6,6 +6,7 @@ export type CleanerKey =
   | "removeClassesAndIds"
   | "removeComments"
   | "plainText"
+  | "unwrapDeprecatedTags"
   | "unwrapSpans";
 
 export interface CleanerInfo {
@@ -46,6 +47,11 @@ export const CLEANERS: readonly CleanerInfo[] = [
     description: "ลบ HTML comment (<!-- … -->)",
   },
   {
+    key: "unwrapDeprecatedTags",
+    label: "แท็กล้าสมัย",
+    description: "ลบแท็กเก่าเช่น <font>, <center>, <big>, <tt>, <strike>",
+  },
+  {
     key: "unwrapSpans",
     label: "แท็ก Span",
     description: "ลบแท็ก <span> แต่คงเนื้อหาข้างในไว้",
@@ -59,7 +65,7 @@ export const CLEANERS: readonly CleanerInfo[] = [
 
 export type ImageMode = "inline" | "separate";
 
-export type ExportFormat = "html" | "zip" | "docx";
+export type ExportFormat = "html" | "zip" | "docx" | "md";
 
 export interface DocumentSnapshot {
   id: string;

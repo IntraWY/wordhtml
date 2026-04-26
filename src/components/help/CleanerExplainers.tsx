@@ -30,6 +30,10 @@ const EXAMPLES: Record<CleanerKey, Example> = {
     before: `<p>Hi</p><!-- editor metadata -->`,
     after: `<p>Hi</p>`,
   },
+  unwrapDeprecatedTags: {
+    before: `<font color="red">Hello <big>world</big></font>`,
+    after: `Hello world`,
+  },
   unwrapSpans: {
     before: `<p><span style="color:red"><strong>bold</strong></span> text</p>`,
     after: `<p><strong>bold</strong> text</p>`,

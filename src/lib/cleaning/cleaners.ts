@@ -137,6 +137,28 @@ export function removeComments(html: string): string {
   return serialize(doc);
 }
 
+// ---------- 7a. Unwrap deprecated tags ----------
+/**
+ * Unwrap deprecated/presentational HTML tags (font, center, big, tt, strike).
+ * Removes the wrapper but keeps the children, so users can re-apply formatting
+ * via the editor's semantic tools.
+ */
+export function unwrapDeprecatedTags(html: string): string {
+  if (!html.trim()) return html;
+  const doc = parse(html);
+  const tags = ["font", "center", "big", "tt", "strike"];
+  for (const tag of tags) {
+    const els = Array.from(doc.body.getElementsByTagName(tag));
+    for (const el of els) {
+      const parent = el.parentNode;
+      if (!parent) continue;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    }
+  }
+  return serialize(doc);
+}
+
 // ---------- 7. Unwrap <span> tags ----------
 export function unwrapSpans(html: string): string {
   if (!html) return html;
