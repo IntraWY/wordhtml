@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# wordhtml
 
-## Getting Started
+Convert Word documents to clean, semantic HTML — and back. **Everything runs in your browser.** No uploads, no accounts, no tracking.
 
-First, run the development server:
+A redesigned clone of [wordhtml.com](https://wordhtml.com/) built with Next.js 16, Tiptap, and Tailwind v4.
+
+## Features
+
+- **Visual editor ↔ A4 Preview** — edit on the left, see the printed page on the right.
+- **Eight HTML cleaners** — strip inline styles, empty tags, attributes, classes, comments, span wrappers, repeated whitespace, or convert to plain text. Toggle just what you need.
+- **Three export formats** — clean `.html` (with images inlined or extracted), a `.zip` bundle, or a fresh `.docx`.
+- **Paste from Word** — Word/Google Docs paste artifacts (mso-* styles, MsoNormal classes, conditional comments) are stripped on the way in.
+- **100% client-side** — no document ever leaves your machine. Static-export ready.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other scripts:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build        # produces ./out — static export
+npm test             # vitest run (cleaners + pipeline)
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy
 
-## Learn More
+The build output is a plain static site:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+# Then upload ./out to:
+#   - Vercel (zero config)
+#   - Netlify
+#   - Cloudflare Pages
+#   - GitHub Pages
+#   - any S3 / nginx / static host
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+No environment variables. No runtime config. No backend.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech stack
 
-## Deploy on Vercel
+- **Next.js 16** (App Router, static export)
+- **TypeScript** (strict)
+- **Tailwind CSS v4** with `@theme inline` design tokens
+- **Tiptap v2** (ProseMirror-based rich editor)
+- **Zustand** for editor state
+- **mammoth.js** for `.docx` → HTML
+- **html-docx-js** for HTML → `.docx`
+- **JSZip** for ZIP exports with extracted images
+- **Vitest** + **jsdom** for tests
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See [`CLAUDE.md`](./CLAUDE.md) for architecture, conventions, and how to extend.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Privacy
+
+Everything happens in your browser. No telemetry. No third-party requests for document content. Your cleaner preferences (which toggles are on, which image mode you prefer) are saved in `localStorage`; the document itself is gone on reload.
+
+## License
+
+MIT
