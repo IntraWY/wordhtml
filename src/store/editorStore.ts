@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-import { docxToHtml } from "@/lib/conversion/docxToHtml";
+import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import type {
   CleanerKey,
@@ -33,6 +33,7 @@ interface EditorState {
   // ui
   isLoadingFile: boolean;
   loadError: string | null;
+  lastLoadWarnings: MammothMessage[];
   sourceOpen: boolean;
   previewOpen: boolean;
   // actions
@@ -45,6 +46,7 @@ interface EditorState {
   loadFile: (file: File) => Promise<void>;
   triggerFileOpen: () => void;
   clearError: () => void;
+  clearLoadWarnings: () => void;
   reset: () => void;
   toggleSource: () => void;
   togglePreview: () => void;
@@ -73,6 +75,7 @@ export const useEditorStore = create<EditorState>()(
       historyPanelOpen: false,
       isLoadingFile: false,
       loadError: null,
+      lastLoadWarnings: [],
       sourceOpen: false,
       previewOpen: true,
 
@@ -97,17 +100,20 @@ export const useEditorStore = create<EditorState>()(
         }
       },
       clearError: () => set({ loadError: null }),
+      clearLoadWarnings: () => set({ lastLoadWarnings: [] }),
       toggleSource: () => set((s) => ({ sourceOpen: !s.sourceOpen })),
       togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),
       loadFile: async (file) => {
         const name = file.name;
         const lower = name.toLowerCase();
-        set({ isLoadingFile: true, loadError: null });
+        set({ isLoadingFile: true, loadError: null, lastLoadWarnings: [] });
         try {
           let html: string;
+          let warnings: MammothMessage[] = [];
           if (lower.endsWith(".docx")) {
             const result = await docxToHtml(file);
             html = result.html;
+            warnings = result.warnings;
           } else if (lower.endsWith(".html") || lower.endsWith(".htm")) {
             html = await loadHtmlFile(file);
           } else {
@@ -117,6 +123,7 @@ export const useEditorStore = create<EditorState>()(
             documentHtml: html,
             fileName: name,
             isLoadingFile: false,
+            lastLoadWarnings: warnings,
           });
         } catch (error: unknown) {
           const message =
@@ -130,6 +137,7 @@ export const useEditorStore = create<EditorState>()(
           fileName: null,
           exportDialogOpen: false,
           loadError: null,
+          lastLoadWarnings: [],
         }),
 
       saveSnapshot: () => {

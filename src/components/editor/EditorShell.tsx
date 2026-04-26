@@ -19,10 +19,15 @@ function SourcePane() {
   const setHtml = useEditorStore((s) => s.setHtml);
   return (
     <div className="flex flex-col overflow-hidden bg-[color:var(--color-background)]">
-      <div className="shrink-0 border-b border-[color:var(--color-border)] px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
+      <div
+        id="source-pane-label"
+        className="shrink-0 border-b border-[color:var(--color-border)] px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]"
+      >
         ซอร์ส HTML
       </div>
       <textarea
+        aria-label="ซอร์ส HTML"
+        aria-labelledby="source-pane-label"
         className="flex-1 resize-none p-4 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)] outline-none"
         value={documentHtml}
         onChange={(e) => setHtml(e.target.value)}
@@ -38,7 +43,10 @@ export function EditorShell() {
 
   const loadError = useEditorStore((s) => s.loadError);
   const clearError = useEditorStore((s) => s.clearError);
+  const lastLoadWarnings = useEditorStore((s) => s.lastLoadWarnings);
+  const clearLoadWarnings = useEditorStore((s) => s.clearLoadWarnings);
   const openExportDialog = useEditorStore((s) => s.openExportDialog);
+  const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);
   const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
@@ -58,7 +66,7 @@ export function EditorShell() {
       }
       if (key === "o") {
         event.preventDefault();
-        document.querySelector<HTMLInputElement>("[data-file-input]")?.click();
+        triggerFileOpen();
       }
     };
     const onFullscreenKey = (event: KeyboardEvent) => {
@@ -73,7 +81,7 @@ export function EditorShell() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keydown", onFullscreenKey);
     };
-  }, [openExportDialog, saveSnapshot, hasDoc]);
+  }, [openExportDialog, saveSnapshot, hasDoc, triggerFileOpen]);
 
   const rightPane = sourceOpen ? (
     <SourcePane />
@@ -114,6 +122,29 @@ export function EditorShell() {
               onClick={clearError}
               aria-label="ปิดข้อความผิดพลาด"
               className="rounded-md p-1 text-red-700 transition-colors hover:bg-red-100"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
+        {lastLoadWarnings.length > 0 && (
+          <div
+            role="status"
+            className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--color-border)] bg-amber-50 px-5 py-2.5 text-sm text-amber-900"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="size-4 shrink-0" />
+              <span>
+                พบคำเตือน {lastLoadWarnings.length} รายการขณะโหลดไฟล์
+                {lastLoadWarnings[0]?.message && ` — ${lastLoadWarnings[0].message}`}
+                {lastLoadWarnings.length > 1 && ` (และอีก ${lastLoadWarnings.length - 1})`}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={clearLoadWarnings}
+              aria-label="ปิดคำเตือน"
+              className="rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
             >
               <X className="size-3.5" />
             </button>
