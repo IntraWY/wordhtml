@@ -7,6 +7,7 @@ import {
   FileCode2,
   FileArchive,
   FileText,
+  FileType2,
   Loader2,
   Copy,
   Check,
@@ -18,6 +19,7 @@ import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { downloadHtml } from "@/lib/export/exportHtml";
 import { downloadZip } from "@/lib/export/exportZip";
 import { downloadDocx } from "@/lib/export/exportDocx";
+import { exportMarkdown } from "@/lib/export/exportMarkdown";
 import { CLEANERS, type ExportFormat, type ImageMode } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +85,8 @@ export function ExportDialog() {
         }
       } else if (kind === "zip") {
         await downloadZip(cleanedHtml, opts);
+      } else if (kind === "md") {
+        await exportMarkdown(cleanedHtml, fileName);
       } else {
         await downloadDocx(cleanedHtml, opts);
       }
@@ -140,6 +144,11 @@ export function ExportDialog() {
           </div>
 
           <footer className="flex flex-col gap-4 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
+            {selectedFormat === "md" ? (
+              <p className="text-xs text-[color:var(--color-muted-foreground)]">
+                หมายเหตุ: Markdown จะฝังรูปภาพในรูปแบบ <code className="font-mono">![alt](src)</code> เสมอ ตัวเลือกรูปภาพด้านล่างใช้กับ HTML/ZIP เท่านั้น
+              </p>
+            ) : null}
             <ImageModeToggle imageMode={imageMode} onChange={setImageMode} />
 
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -179,6 +188,21 @@ export function ExportDialog() {
                   <FileCode2 />
                 )}
                 ดาวน์โหลด .html
+              </Button>
+              <Button
+                variant={selectedFormat === "md" ? "primary" : "secondary"}
+                onClick={() => {
+                  setSelectedFormat("md");
+                  handleDownload("md");
+                }}
+                disabled={busy !== null}
+              >
+                {busy === "md" ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <FileType2 />
+                )}
+                ดาวน์โหลด .md
               </Button>
             </div>
           </footer>
