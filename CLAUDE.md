@@ -25,7 +25,7 @@ npm run lint
 | Framework | **Next.js 16** (App Router) | `output: "export"` for static deploy |
 | Language | **TypeScript** | strict mode |
 | Styling | **Tailwind CSS v4** | tokens defined in `src/app/globals.css` via `@theme inline` |
-| Editor | **Tiptap v2** | StarterKit + Underline + Link + Image + Placeholder |
+| Editor | **Tiptap v3** | StarterKit + Underline + Link + Image + Placeholder + TextAlign + Color + Highlight + Table |
 | State | **Zustand** | `src/store/editorStore.ts`; cleaner prefs persisted to localStorage |
 | docx → HTML | **mammoth.js** | uses package `browser` field; ambient types in `src/types/mammoth.d.ts` |
 | HTML → docx | **html-docx-js** | UMD altchunks approach; dynamically imported |
@@ -46,9 +46,9 @@ src/
 │   ├── app/page.tsx           # /app editor
 │   └── help/page.tsx          # /help docs
 ├── components/
-│   ├── editor/                # EditorShell, TopBar, CleaningToolbar,
+│   ├── editor/                # EditorShell, TopBar, MenuBar, CleaningToolbar,
 │   │                          # VisualEditor (Tiptap), A4Preview,
-│   │                          # ExportDialog, UploadButton
+│   │                          # ExportDialog, UploadButton, HistoryPanel
 │   ├── landing/               # Hero, Features, HowItWorks, Footer, Header
 │   ├── help/                  # FAQ, CleanerExplainers, PasteTips
 │   ├── ui/Button.tsx          # primary button primitive (cva variants)
@@ -84,6 +84,8 @@ src/
 - **Cleaners are pure.** Each cleaner takes an HTML string and returns a new one. They use `DOMParser`, which is a browser API and also available under jsdom for tests.
 - **Cleaners apply only at export.** Editing should stay snappy; the A4 Preview reflects the *current* document, not the cleaned-for-export version.
 - **Document never persists.** localStorage holds only the user's cleaner preferences and image-mode choice (see `partialize` in `editorStore.ts`). The document itself is gone on reload — by design, for privacy.
+- **UI toggles are session-scoped.** `sourceOpen` (HTML source pane) and `previewOpen` (A4 preview) reset on reload — only cleaner prefs and history persist.
+- **History is local-only.** Up to 20 document snapshots are stored in localStorage as part of `wordhtml-editor`. See `HistoryPanel` and `saveSnapshot`/`loadSnapshot` actions.
 - **Cleaner order matters.** See `src/lib/cleaning/pipeline.ts` — comments → styles → classes → attributes → unwrap spans → empty tags → spaces → (terminal) plainText.
 
 ## Design system
@@ -115,7 +117,7 @@ Before writing new code:
 - Don't add user accounts, telemetry, or third-party trackers.
 - Don't use `next/image` for user-uploaded content (no loader configured for static export).
 - Don't move cleaning into the live editor render path — it'll feel laggy on long documents.
-- Don't import `html-to-docx` (the singular-`to` package) — it's Node-only. The browser path uses `html-docx-js`.
+- Don't add `html-to-docx` (the singular-`to` package) — it's Node-only. The browser path uses `html-docx-js`. The package was previously listed in deps but never imported; it has been removed.
 
 ## Deploy
 
