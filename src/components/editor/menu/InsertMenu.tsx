@@ -88,6 +88,12 @@ export function InsertMenu({ editor }: EditorMenuProps) {
           disabled={!hasEditor}
           onClick={() => editor?.chain().focus().setHorizontalRule().run()}
         />
+        <MenuItem
+          label="ขึ้นบรรทัดใหม่ (Soft Break)"
+          shortcut="Shift+Enter"
+          disabled={!hasEditor}
+          onClick={() => editor?.chain().focus().setHardBreak().run()}
+        />
         <Sep />
         <MenuItem
           label="บล็อกโค้ด (Code Block)"

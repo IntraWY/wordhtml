@@ -17,6 +17,9 @@ export function FormatMenu({ editor }: EditorMenuProps) {
       isItalic: e?.isActive("italic") ?? false,
       isUnderline: e?.isActive("underline") ?? false,
       isStrike: e?.isActive("strike") ?? false,
+      isSuperscript: e?.isActive("superscript") ?? false,
+      isSubscript: e?.isActive("subscript") ?? false,
+      isCode: e?.isActive("code") ?? false,
       alignLeft: e?.isActive({ textAlign: "left" }) ?? false,
       alignCenter: e?.isActive({ textAlign: "center" }) ?? false,
       alignRight: e?.isActive({ textAlign: "right" }) ?? false,
@@ -34,6 +37,9 @@ export function FormatMenu({ editor }: EditorMenuProps) {
     isItalic: false,
     isUnderline: false,
     isStrike: false,
+    isSuperscript: false,
+    isSubscript: false,
+    isCode: false,
     alignLeft: false,
     alignCenter: false,
     alignRight: false,
@@ -98,6 +104,25 @@ export function FormatMenu({ editor }: EditorMenuProps) {
         disabled={!hasEditor}
         onClick={() => editor?.chain().focus().toggleStrike().run()}
       />
+      <MenuItem
+        label="ตัวยก (Superscript)"
+        checked={s.isSuperscript}
+        disabled={!hasEditor}
+        onClick={() => editor?.chain().focus().toggleSuperscript().run()}
+      />
+      <MenuItem
+        label="ตัวห้อย (Subscript)"
+        checked={s.isSubscript}
+        disabled={!hasEditor}
+        onClick={() => editor?.chain().focus().toggleSubscript().run()}
+      />
+      <MenuItem
+        label="โค้ดบรรทัด (Inline Code)"
+        shortcut="Ctrl+E"
+        checked={s.isCode}
+        disabled={!hasEditor}
+        onClick={() => editor?.chain().focus().toggleCode().run()}
+      />
       <Sep />
       <MenuSub label="การจัดวาง (Align)">
         <MenuItem
@@ -120,6 +145,30 @@ export function FormatMenu({ editor }: EditorMenuProps) {
           checked={s.alignJustify}
           onClick={() => editor?.chain().focus().setTextAlign("justify").run()}
         />
+      </MenuSub>
+      <MenuSub label="ฟอนต์ (Font)">
+        {[
+          { label: "ค่าเริ่มต้น (Default)", value: null },
+          { label: "Sarabun", value: "Sarabun, sans-serif" },
+          { label: "Noto Sans Thai", value: "'Noto Sans Thai', sans-serif" },
+          { label: "Geist", value: "var(--font-geist-sans)" },
+          { label: "ระบบ Sans (System)", value: "system-ui, sans-serif" },
+          { label: "Serif", value: "Georgia, serif" },
+          { label: "Monospace", value: "var(--font-geist-mono)" },
+        ].map(({ label, value }) => (
+          <MenuItem
+            key={label}
+            label={label}
+            onClick={() => {
+              if (!editor) return;
+              if (value === null) {
+                editor.chain().focus().unsetFontFamily().run();
+              } else {
+                editor.chain().focus().setFontFamily(value).run();
+              }
+            }}
+          />
+        ))}
       </MenuSub>
       <Sep />
       <MenuItem

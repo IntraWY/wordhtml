@@ -20,7 +20,11 @@ export function FileMenu(_props: EditorMenuProps) {
 
   return (
     <MenuDropdown label="ไฟล์ (File)">
-      <MenuItem label="เอกสารใหม่ (New)" onClick={reset} />
+      <MenuItem
+        label="เอกสารใหม่ (New)"
+        shortcut="Ctrl+Shift+N"
+        onClick={reset}
+      />
       <MenuItem label="เปิดไฟล์… (Open)" onClick={triggerFileOpen} />
       <Sep />
       <MenuItem
@@ -39,9 +43,15 @@ export function FileMenu(_props: EditorMenuProps) {
         disabled={!hasDoc}
         onClick={() => openExportDialog("docx")}
       />
+      <MenuItem
+        label="ส่งออก Markdown"
+        disabled={!hasDoc}
+        onClick={() => openExportDialog("md")}
+      />
       <Sep />
       <MenuItem
         label="บันทึก Snapshot"
+        shortcut="Ctrl+Shift+S"
         disabled={!hasDoc}
         onClick={saveSnapshot}
       />
