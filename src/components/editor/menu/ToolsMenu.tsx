@@ -21,6 +21,24 @@ export function ToolsMenu(_props: EditorMenuProps) {
       />
       <Sep />
       <MenuItem
+        label="ค้นหา/แทนที่ (Find & Replace)"
+        shortcut="Ctrl+F"
+        onClick={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wordhtml:open-search"));
+          }
+        }}
+      />
+      <MenuItem
+        label="ตั้งค่าหน้ากระดาษ (Page Setup)…"
+        onClick={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wordhtml:open-page-setup"));
+          }
+        }}
+      />
+      <Sep />
+      <MenuItem
         label="ตัวเลือกการทำความสะอาด…"
         onClick={() => {
           document
