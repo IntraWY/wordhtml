@@ -11,11 +11,29 @@ import type {
 } from "@/types";
 
 const MAX_HISTORY = 20;
+const AUTO_SNAPSHOT_IDLE_MS = 120_000; // 2 minutes idle
+const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
 
 function countWords(html: string): number {
   const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   return text ? text.split(" ").length : 0;
 }
+
+export interface PageSetup {
+  size: "A4" | "Letter";
+  orientation: "portrait" | "landscape";
+  marginMm: { top: number; right: number; bottom: number; left: number };
+}
+
+const DEFAULT_PAGE_SETUP: PageSetup = {
+  size: "A4",
+  orientation: "portrait",
+  marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
+};
+
+// Module-scoped debounce timer for auto-snapshot. Lives outside the store
+// factory so it isn't recreated on each set() and persists across calls.
+let autoSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface EditorState {
   // document
@@ -30,6 +48,10 @@ interface EditorState {
   // history
   history: DocumentSnapshot[];
   historyPanelOpen: boolean;
+  // page setup
+  pageSetup: PageSetup;
+  // editing telemetry
+  lastEditAt: number;
   // ui
   isLoadingFile: boolean;
   loadError: string | null;
@@ -41,6 +63,7 @@ interface EditorState {
   setFileName: (name: string | null) => void;
   toggleCleaner: (key: CleanerKey) => void;
   setImageMode: (mode: ImageMode) => void;
+  setPageSetup: (partial: Partial<PageSetup>) => void;
   openExportDialog: (format?: ExportFormat) => void;
   closeExportDialog: () => void;
   loadFile: (file: File) => Promise<void>;
@@ -73,13 +96,25 @@ export const useEditorStore = create<EditorState>()(
       pendingExportFormat: null,
       history: [],
       historyPanelOpen: false,
+      pageSetup: DEFAULT_PAGE_SETUP,
+      lastEditAt: 0,
       isLoadingFile: false,
       loadError: null,
       lastLoadWarnings: [],
       sourceOpen: false,
       previewOpen: true,
 
-      setHtml: (html) => set({ documentHtml: html }),
+      setHtml: (html) => {
+        set({ documentHtml: html, lastEditAt: Date.now() });
+        if (autoSnapshotTimer) clearTimeout(autoSnapshotTimer);
+        autoSnapshotTimer = setTimeout(() => {
+          const state = get();
+          if (!state.documentHtml.trim()) return;
+          const last = state.history[0];
+          if (last && last.html === state.documentHtml) return; // no change
+          state.saveSnapshot();
+        }, AUTO_SNAPSHOT_IDLE_MS);
+      },
       setFileName: (fileName) => set({ fileName }),
       toggleCleaner: (key) =>
         set((state) => ({
@@ -88,6 +123,17 @@ export const useEditorStore = create<EditorState>()(
             : [...state.enabledCleaners, key],
         })),
       setImageMode: (imageMode) => set({ imageMode }),
+      setPageSetup: (partial) =>
+        set((s) => ({
+          pageSetup: {
+            ...s.pageSetup,
+            ...partial,
+            marginMm: {
+              ...s.pageSetup.marginMm,
+              ...(partial.marginMm ?? {}),
+            },
+          },
+        })),
       openExportDialog: (format) => {
         get().saveSnapshot();
         set({ exportDialogOpen: true, pendingExportFormat: format ?? null });
@@ -139,6 +185,7 @@ export const useEditorStore = create<EditorState>()(
           loadError: null,
           lastLoadWarnings: [],
           pendingExportFormat: null,
+          lastEditAt: 0,
         }),
 
       saveSnapshot: () => {
@@ -151,7 +198,17 @@ export const useEditorStore = create<EditorState>()(
           html: documentHtml,
           wordCount: countWords(documentHtml),
         };
-        const updated = [snapshot, ...history].slice(0, MAX_HISTORY);
+        let updated = [snapshot, ...history].slice(0, MAX_HISTORY);
+
+        // Size guard: drop oldest snapshots until serialized list fits within
+        // the size budget. Always keep at least the newest snapshot.
+        while (
+          updated.length > 1 &&
+          JSON.stringify(updated).length > SNAPSHOT_SIZE_LIMIT
+        ) {
+          updated = updated.slice(0, -1); // drop oldest
+        }
+
         set({ history: updated });
       },
 
@@ -197,6 +254,7 @@ export const useEditorStore = create<EditorState>()(
         enabledCleaners: state.enabledCleaners,
         imageMode: state.imageMode,
         history: state.history,
+        pageSetup: state.pageSetup,
       }),
     }
   )
