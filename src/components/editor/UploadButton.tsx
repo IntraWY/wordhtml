@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Upload, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,18 @@ export function UploadButton() {
     await loadFile(file);
     event.target.value = "";
   };
+
+  // Allow other components (e.g. the File menu) to trigger the file picker
+  // via a custom DOM event so we keep a single hidden file input.
+  useEffect(() => {
+    const handler = () => {
+      inputRef.current?.click();
+    };
+    window.addEventListener("wordhtml:open-file", handler);
+    return () => {
+      window.removeEventListener("wordhtml:open-file", handler);
+    };
+  }, []);
 
   return (
     <>

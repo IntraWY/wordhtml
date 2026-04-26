@@ -3,7 +3,12 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 import { docxToHtml } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
-import type { CleanerKey, ImageMode, DocumentSnapshot } from "@/types";
+import type {
+  CleanerKey,
+  ImageMode,
+  DocumentSnapshot,
+  ExportFormat,
+} from "@/types";
 
 const MAX_HISTORY = 20;
 
@@ -21,6 +26,7 @@ interface EditorState {
   // export
   imageMode: ImageMode;
   exportDialogOpen: boolean;
+  pendingExportFormat: ExportFormat | null;
   // history
   history: DocumentSnapshot[];
   historyPanelOpen: boolean;
@@ -34,9 +40,10 @@ interface EditorState {
   setFileName: (name: string | null) => void;
   toggleCleaner: (key: CleanerKey) => void;
   setImageMode: (mode: ImageMode) => void;
-  openExportDialog: () => void;
+  openExportDialog: (format?: ExportFormat) => void;
   closeExportDialog: () => void;
   loadFile: (file: File) => Promise<void>;
+  triggerFileOpen: () => void;
   clearError: () => void;
   reset: () => void;
   toggleSource: () => void;
@@ -61,6 +68,7 @@ export const useEditorStore = create<EditorState>()(
       enabledCleaners: DEFAULT_CLEANERS,
       imageMode: "inline",
       exportDialogOpen: false,
+      pendingExportFormat: null,
       history: [],
       historyPanelOpen: false,
       isLoadingFile: false,
@@ -77,11 +85,17 @@ export const useEditorStore = create<EditorState>()(
             : [...state.enabledCleaners, key],
         })),
       setImageMode: (imageMode) => set({ imageMode }),
-      openExportDialog: () => {
+      openExportDialog: (format) => {
         get().saveSnapshot();
-        set({ exportDialogOpen: true });
+        set({ exportDialogOpen: true, pendingExportFormat: format ?? null });
       },
-      closeExportDialog: () => set({ exportDialogOpen: false }),
+      closeExportDialog: () =>
+        set({ exportDialogOpen: false, pendingExportFormat: null }),
+      triggerFileOpen: () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("wordhtml:open-file"));
+        }
+      },
       clearError: () => set({ loadError: null }),
       toggleSource: () => set((s) => ({ sourceOpen: !s.sourceOpen })),
       togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),

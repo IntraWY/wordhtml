@@ -54,7 +54,7 @@ export function TopBar() {
           <UploadButton />
           <Button
             size="sm"
-            onClick={openExportDialog}
+            onClick={() => openExportDialog()}
             disabled={!hasDoc}
             aria-label={`ส่งออก HTML พร้อมตัวทำความสะอาด ${enabledCleaners.length} รายการ`}
           >
