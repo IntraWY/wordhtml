@@ -80,24 +80,6 @@ body {
   pointer-events: none;
 }
 
-/* Paragraph / heading indent levels — driven by IndentExtension via data-indent attr.
-   Each level = 2em (~32px at 16px base), matching Word's 0.5-inch tab stop. */
-.prose-editor :is(p, h1, h2, h3)[data-indent="1"],
-.paper :is(p, h1, h2, h3)[data-indent="1"] { padding-left: 2em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="2"],
-.paper :is(p, h1, h2, h3)[data-indent="2"] { padding-left: 4em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="3"],
-.paper :is(p, h1, h2, h3)[data-indent="3"] { padding-left: 6em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="4"],
-.paper :is(p, h1, h2, h3)[data-indent="4"] { padding-left: 8em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="5"],
-.paper :is(p, h1, h2, h3)[data-indent="5"] { padding-left: 10em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="6"],
-.paper :is(p, h1, h2, h3)[data-indent="6"] { padding-left: 12em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="7"],
-.paper :is(p, h1, h2, h3)[data-indent="7"] { padding-left: 14em; }
-.prose-editor :is(p, h1, h2, h3)[data-indent="8"],
-.paper :is(p, h1, h2, h3)[data-indent="8"] { padding-left: 16em; }
 
 /* Dot grid "desk" canvas behind the editor content card */
 .editor-canvas {
@@ -215,44 +197,25 @@ body {
   background: transparent;
   padding: 0;
 }
+/* Base image styles */
 .prose-editor img,
 .paper img {
   max-width: 100%;
   height: auto;
 }
 
-/* Default block image (no alignment): center-ish stack */
-.prose-editor img:not([data-align]),
-.paper img:not([data-align]) {
-  display: block;
-  margin: 1em 0;
-}
+/* A4Preview / export: alignment via data-align on <img> */
+.paper img:not([data-align]) { display: block; margin: 1em 0; }
+.paper img[data-align="left"]   { float: left;  margin: 0.5em 1em 0.5em 0; clear: left; }
+.paper img[data-align="center"] { display: block; margin: 1em auto; clear: both; float: none; }
+.paper img[data-align="right"]  { float: right; margin: 0.5em 0 0.5em 1em; clear: right; }
 
-.prose-editor img[data-align="left"],
-.paper img[data-align="left"] {
-  float: left;
-  margin: 0.5em 1em 0.5em 0;
-  clear: left;
-}
-.prose-editor img[data-align="center"],
-.paper img[data-align="center"] {
-  display: block;
-  margin: 1em auto;
-  clear: both;
-  float: none;
-}
-.prose-editor img[data-align="right"],
-.paper img[data-align="right"] {
-  float: right;
-  margin: 0.5em 0 0.5em 1em;
-  clear: right;
-}
-
-/* Selected image (Tiptap adds .ProseMirror-selectednode to selected node) */
-.prose-editor img.ProseMirror-selectednode {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
+/* Editor: alignment handled by ImageResizeView inline styles (NodeView wrapper div).
+   Keep fallback selectors for any non-NodeView img (paste before extension loads). */
+.prose-editor img:not([data-align]) { display: block; margin: 1em 0; }
+.prose-editor img[data-align="left"]   { float: left;  margin: 0.5em 1em 0.5em 0; clear: left; }
+.prose-editor img[data-align="center"] { display: block; margin: 1em auto; clear: both; float: none; }
+.prose-editor img[data-align="right"]  { float: right; margin: 0.5em 0 0.5em 1em; clear: right; }
 .prose-editor hr,
 .paper hr {
   border: none;
