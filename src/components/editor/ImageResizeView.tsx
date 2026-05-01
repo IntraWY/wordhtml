@@ -111,7 +111,7 @@ export function ImageResizeView({
 
   // --- Handle appearance ---
   const isDragging = !!drag;
-  const handleColor = isDragging && liveShift ? "#f59e0b" : "#2563eb";
+  const handleColor = liveShift ? "#f59e0b" : "#2563eb";
 
   const handleStyle = (which: "bl" | "br"): React.CSSProperties => ({
     position: "absolute",
