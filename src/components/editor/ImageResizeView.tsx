@@ -34,22 +34,27 @@ export function ImageResizeView({
   useEffect(() => {
     if (!drag) return;
 
+    let rafId: number | null = null;
     const onMove = (e: MouseEvent) => {
       setLiveShift(e.shiftKey);
-      // BL handle: dragging LEFT = increasing width (invert dx)
-      const dx =
-        drag.handle === "br"
-          ? e.clientX - drag.startX
-          : drag.startX - e.clientX;
-      const dy = e.clientY - drag.startY;
-      const locked = !e.shiftKey;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        // BL handle: dragging LEFT = increasing width (invert dx)
+        const dx =
+          drag.handle === "br"
+            ? e.clientX - drag.startX
+            : drag.startX - e.clientX;
+        const dy = e.clientY - drag.startY;
+        const locked = !e.shiftKey;
 
-      const newW = Math.max(50, Math.round(drag.startW + dx));
-      const newH = locked
-        ? Math.max(50, Math.round(newW / drag.ratio))
-        : Math.max(50, Math.round(drag.startH + dy));
+        const newW = Math.max(50, Math.round(drag.startW + dx));
+        const newH = locked
+          ? Math.max(50, Math.round(newW / drag.ratio))
+          : Math.max(50, Math.round(drag.startH + dy));
 
-      updateAttributes({ width: String(newW), height: String(newH) });
+        updateAttributes({ width: String(newW), height: String(newH) });
+      });
     };
 
     const onUp = () => {
@@ -60,6 +65,7 @@ export function ImageResizeView({
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     };

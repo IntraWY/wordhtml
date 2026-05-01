@@ -15,7 +15,13 @@ export const ImageWithAlign = Image.extend({
       },
       width: {
         default: null,
-        parseHTML: (el) => el.getAttribute("width") ?? el.style.width ?? null,
+        parseHTML: (el) => {
+          const attr = el.getAttribute("width");
+          if (attr) return attr;
+          const styleW = el.style.width;
+          // normalize "320px" → "320", pass "50%" through unchanged
+          return styleW ? styleW.replace(/px$/, "") : null;
+        },
         renderHTML: (attrs) => {
           if (!attrs.width) return {};
           const w = attrs.width as string;
