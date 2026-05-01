@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { BookmarkPlus, FileText, Pencil, Trash2, X } from "lucide-react";
 
-import { useEditorStore } from "@/store/editorStore";
+import { useEditorStore, type PageSetup } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,8 @@ export function TemplatePanel() {
   const setHtml = useEditorStore((s) => s.setHtml);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const setFileName = useEditorStore((s) => s.setFileName);
+  const clearError = useEditorStore((s) => s.clearError);
+  const clearLoadWarnings = useEditorStore((s) => s.clearLoadWarnings);
 
   const [saveName, setSaveName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -51,6 +53,8 @@ export function TemplatePanel() {
     setHtml(template.html);
     setPageSetup(template.pageSetup);
     setFileName(template.name);
+    clearError();
+    clearLoadWarnings();
     closePanel();
   }
 
@@ -82,6 +86,7 @@ export function TemplatePanel() {
       onOpenChange={(o) => {
         if (!o) {
           setRenamingId(null);
+          setSaveName("");
           closePanel();
         }
       }}
@@ -181,7 +186,7 @@ export function TemplatePanel() {
 interface TemplateRowProps {
   name: string;
   createdAt: string;
-  pageSize: "A4" | "Letter";
+  pageSize: PageSetup["size"];
   isRenaming: boolean;
   renameValue: string;
   onRenameValueChange: (v: string) => void;
@@ -206,7 +211,7 @@ function TemplateRow({
   onDelete,
 }: TemplateRowProps) {
   // Tracks whether Escape was pressed so onBlur doesn't commit after abort.
-  const escapedRef = useRef(false);
+  const keyHandledRef = useRef(false);
 
   return (
     <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)]">
@@ -223,17 +228,17 @@ function TemplateRow({
             onChange={(e) => onRenameValueChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                escapedRef.current = true;
+                keyHandledRef.current = true;
                 onRenameCommit();
               }
               if (e.key === "Escape") {
-                escapedRef.current = true;
+                keyHandledRef.current = true;
                 onRenameAbort();
               }
             }}
             onBlur={() => {
-              if (!escapedRef.current) onRenameCommit();
-              escapedRef.current = false;
+              if (!keyHandledRef.current) onRenameCommit();
+              keyHandledRef.current = false;
             }}
             className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-0.5 text-sm font-medium outline-none focus:ring-2 focus:ring-[color:var(--color-foreground)]"
           />

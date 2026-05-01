@@ -2,6 +2,9 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { PageSetup } from "./editorStore";
 
+const MAX_TEMPLATES = 50;
+const TEMPLATE_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB
+
 export interface DocumentTemplate {
   id: string;
   name: string;
@@ -30,18 +33,27 @@ export const useTemplateStore = create<TemplateState>()(
       closePanel: () => set({ panelOpen: false }),
 
       saveTemplate: (name, html, pageSetup) =>
-        set((state) => ({
-          templates: [
+        set((state) => {
+          let updated = [
             {
-              id: crypto.randomUUID(),
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
               name,
               createdAt: new Date().toISOString(),
               html,
               pageSetup,
             },
             ...state.templates,
-          ],
-        })),
+          ].slice(0, MAX_TEMPLATES);
+
+          while (
+            updated.length > 1 &&
+            JSON.stringify(updated).length > TEMPLATE_SIZE_LIMIT
+          ) {
+            updated = updated.slice(0, -1);
+          }
+
+          return { templates: updated };
+        }),
 
       renameTemplate: (id, name) =>
         set((state) => ({
