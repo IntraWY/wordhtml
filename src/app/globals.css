@@ -72,6 +72,13 @@ body {
   pointer-events: none;
 }
 
+/* Dot grid "desk" canvas behind the editor content card */
+.editor-canvas {
+  background-color: var(--color-muted);
+  background-image: radial-gradient(circle, var(--color-border-strong) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 /* Shared document typography — used in both .prose-editor (Tiptap)
    and .paper (A4 Preview).  Keep both visually identical so users see
    what they'll get. */

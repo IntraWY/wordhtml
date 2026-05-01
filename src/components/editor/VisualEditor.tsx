@@ -116,9 +116,12 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         โปรแกรมแก้ไข
       </div>
       {editor && <FormattingToolbar editor={editor} />}
-      <div className="flex-1 min-h-0 overflow-auto px-8 py-6">
+      <div className="editor-canvas flex-1 min-h-0 overflow-auto p-6">
         {!editor ? (
-          <div className="space-y-3 animate-pulse" aria-hidden="true">
+          <div
+            className="bg-white shadow space-y-3 animate-pulse px-10 py-8"
+            aria-hidden="true"
+          >
             <div className="h-4 rounded bg-[color:var(--color-border)] w-3/4" />
             <div className="h-4 rounded bg-[color:var(--color-border)] w-full" />
             <div className="h-4 rounded bg-[color:var(--color-border)] w-5/6" />
@@ -127,10 +130,10 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
             <div className="h-4 rounded bg-[color:var(--color-border)] w-4/5" />
           </div>
         ) : (
-          <>
+          <div className="bg-white shadow min-h-full px-10 py-8">
             <EditorContent editor={editor} className="h-full" />
             {isEmpty && <EmptyHint />}
-          </>
+          </div>
         )}
       </div>
     </div>
