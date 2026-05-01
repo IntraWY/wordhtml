@@ -32,6 +32,7 @@ export function TemplatePanel() {
 
   const [saveName, setSaveName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  // Single renameValue shared across rows — only one row renames at a time via renamingId.
   const [renameValue, setRenameValue] = useState("");
 
   const hasDoc = documentHtml.trim().length > 0;
@@ -76,7 +77,15 @@ export function TemplatePanel() {
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => !o && closePanel()}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          setRenamingId(null);
+          closePanel();
+        }
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content
@@ -124,7 +133,10 @@ export function TemplatePanel() {
                     onRenameStart={() => handleRenameStart(t.id, t.name)}
                     onRenameCommit={() => handleRenameCommit(t.id)}
                     onRenameAbort={handleRenameAbort}
-                    onDelete={() => deleteTemplate(t.id)}
+                    onDelete={() => {
+                      if (window.confirm(`ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`))
+                        deleteTemplate(t.id);
+                    }}
                   />
                 ))}
               </ul>
@@ -211,7 +223,7 @@ function TemplateRow({
             onChange={(e) => onRenameValueChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                escapedRef.current = false;
+                escapedRef.current = true;
                 onRenameCommit();
               }
               if (e.key === "Escape") {
