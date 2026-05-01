@@ -67,14 +67,14 @@ export function removeEmptyTags(html: string): string {
 
   const isMeaningfulVoid = (el: Element): boolean => {
     const tag = el.tagName.toLowerCase();
-    return VOID_ELEMENTS.has(tag) && tag !== "br"; // <br> alone counts as empty
+    return VOID_ELEMENTS.has(tag);
   };
 
   const isEmpty = (el: Element): boolean => {
     if (isMeaningfulVoid(el)) return false;
     if (el.textContent && el.textContent.trim().length > 0) return false;
-    // Has any meaningful descendant (image, hr, etc.)?
-    const meaningful = el.querySelector("img, hr, iframe, video, audio, source");
+    // Has any meaningful descendant (image, hr, br for blank lines, etc.)?
+    const meaningful = el.querySelector("img, hr, iframe, video, audio, source, br");
     return meaningful === null;
   };
 
@@ -116,7 +116,8 @@ export function removeAttributes(html: string): string {
     // Iterate over a snapshot — removing attrs mutates the live NamedNodeMap
     const names = Array.from(el.attributes).map((a) => a.name);
     for (const name of names) {
-      if (!preserve.includes(name)) {
+      // "style" is managed exclusively by removeInlineStyles — never strip it here
+      if (name !== "style" && !preserve.includes(name)) {
         el.removeAttribute(name);
       }
     }
