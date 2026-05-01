@@ -30,7 +30,6 @@ import {
   Highlighter,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
-  RotateCcw,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -49,23 +48,14 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
   const isImage = editor.isActive("image");
   const imageAttrs = editor.getAttributes("image") as {
     align?: string;
-    width?: string | null;
   };
 
   const setImageAlign = (align: "left" | "center" | "right") => {
     editor.chain().focus().updateAttributes("image", { align }).run();
   };
 
-  const setImageWidth = (width: string | null) => {
-    editor.chain().focus().updateAttributes("image", { width }).run();
-  };
-
   const isImageAlign = (align: "left" | "center" | "right"): boolean => {
     return imageAttrs.align === align;
-  };
-
-  const isImageWidth = (width: string): boolean => {
-    return imageAttrs.width === width;
   };
 
   return (
@@ -227,50 +217,6 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
           <AlignJustify />
         </ToolButton>
       </ToolGroup>
-
-      {/* ขนาดรูปภาพ (แสดงเฉพาะตอนเลือกรูป) */}
-      {isImage && (
-        <>
-          <Divider />
-          <ToolGroup>
-            <ToolButton
-              label="ขนาดเล็ก (25%)"
-              onClick={() => setImageWidth("25%")}
-              active={isImageWidth("25%")}
-            >
-              <span className="text-[10px] font-bold leading-none">S</span>
-            </ToolButton>
-            <ToolButton
-              label="ขนาดกลาง (50%)"
-              onClick={() => setImageWidth("50%")}
-              active={isImageWidth("50%")}
-            >
-              <span className="text-[10px] font-bold leading-none">M</span>
-            </ToolButton>
-            <ToolButton
-              label="ขนาดใหญ่ (75%)"
-              onClick={() => setImageWidth("75%")}
-              active={isImageWidth("75%")}
-            >
-              <span className="text-[10px] font-bold leading-none">L</span>
-            </ToolButton>
-            <ToolButton
-              label="ขนาดเต็ม (100%)"
-              onClick={() => setImageWidth("100%")}
-              active={isImageWidth("100%")}
-            >
-              <span className="text-[10px] font-bold leading-none">XL</span>
-            </ToolButton>
-            <ToolButton
-              label="ขนาดต้นฉบับ"
-              onClick={() => setImageWidth(null)}
-              active={!imageAttrs.width}
-            >
-              <RotateCcw />
-            </ToolButton>
-          </ToolGroup>
-        </>
-      )}
 
       <Divider />
 
