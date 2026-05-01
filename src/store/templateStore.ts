@@ -58,6 +58,7 @@ export const useTemplateStore = create<TemplateState>()(
     {
       name: "wordhtml-templates",
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ templates: state.templates }),
     }
   )
 );
