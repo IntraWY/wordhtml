@@ -1,0 +1,114 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "wh wordhtml" [ref=e212] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: wh
+        - generic [ref=e7]: wordhtml
+      - generic [ref=e8]:
+        - button "ประวัติเอกสาร" [ref=e213]:
+          - img [ref=e10]
+          - generic [ref=e326]: "2"
+        - button "อัปโหลดไฟล์ .docx หรือ .html" [ref=e214]:
+          - img [ref=e14]
+          - text: อัปโหลด
+        - button "ส่งออก HTML พร้อมตัวทำความสะอาด 2 รายการ" [ref=e251]:
+          - img [ref=e252]
+          - text: ส่งออก HTML
+          - generic [ref=e255]: "2"
+    - navigation [ref=e17]:
+      - button "ไฟล์ (File)" [ref=e215]
+      - button "แก้ไข (Edit)" [ref=e216]
+      - button "แทรก (Insert)" [ref=e217]
+      - button "มุมมอง (View)" [ref=e218]
+      - button "จัดรูปแบบ (Format)" [ref=e219]
+      - button "ตาราง (Table)" [ref=e220]
+      - button "เครื่องมือ (Tools)" [ref=e221]
+    - generic [ref=e25]:
+      - generic [ref=e26]: ทำความสะอาดตอนส่งออก
+      - generic [ref=e27]: ·
+      - button "สไตล์ inline" [pressed] [ref=e222]:
+        - img [ref=e29]
+        - text: สไตล์ inline
+      - button "แท็กว่าง" [pressed] [ref=e223]:
+        - img [ref=e32]
+        - text: แท็กว่าง
+      - button "ช่องว่าง" [ref=e224]
+      - button "Attributes" [ref=e225]
+      - button "Class & ID" [ref=e226]
+      - button "คอมเมนต์" [ref=e227]
+      - button "แท็ก Span" [ref=e228]
+      - button "ข้อความล้วน" [ref=e229]
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: โปรแกรมแก้ไข
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - button "เลิกทำ" [ref=e256]:
+              - img [ref=e257]
+            - button "ทำซ้ำ" [disabled]:
+              - img
+          - generic [ref=e63]:
+            - button "หัวเรื่อง 1" [ref=e230]:
+              - img [ref=e65]
+            - button "หัวเรื่อง 2" [ref=e231]:
+              - img [ref=e68]
+            - button "หัวเรื่อง 3" [ref=e232]:
+              - img [ref=e71]
+          - generic [ref=e75]:
+            - button "ตัวหนา" [ref=e233]:
+              - img [ref=e77]
+            - button "ตัวเอียง" [ref=e234]:
+              - img [ref=e80]
+            - button "ขีดเส้นใต้" [ref=e235]:
+              - img [ref=e83]
+            - button "ขีดทับ" [ref=e236]:
+              - img [ref=e86]
+          - generic [ref=e90]:
+            - button "ชิดซ้าย" [ref=e237]:
+              - img [ref=e92]
+            - button "กึ่งกลาง" [ref=e238]:
+              - img [ref=e94]
+            - button "ชิดขวา" [ref=e239]:
+              - img [ref=e96]
+            - button "เต็มบรรทัด" [ref=e240]:
+              - img [ref=e98]
+          - generic [ref=e100]:
+            - button "รายการจุด" [ref=e241]:
+              - img [ref=e102]
+            - button "รายการตัวเลข" [ref=e242]:
+              - img [ref=e104]
+            - button "อ้างอิง" [ref=e243]:
+              - img [ref=e108]
+          - generic [ref=e112]:
+            - button "ลดเยื้อง" [disabled]:
+              - img
+            - button "เพิ่มเยื้อง" [disabled]:
+              - img
+          - button "แทรกลิงก์" [ref=e244]:
+            - img [ref=e116]
+          - generic [ref=e120]:
+            - button "เส้นคั่น" [ref=e245]:
+              - img [ref=e122]
+            - button "บล็อกโค้ด" [ref=e246]:
+              - img [ref=e124]
+            - button "ล้างการจัดรูปแบบ" [ref=e247]:
+              - img [ref=e129]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - button "สีตัวอักษร" [ref=e248]:
+                - img [ref=e137]
+              - textbox: "#000000"
+            - generic [ref=e144]:
+              - button "สีพื้นหลัง" [ref=e249]:
+                - img [ref=e147]
+              - textbox: "#ffff00"
+        - textbox "โปรแกรมแก้ไขเอกสาร" [ref=e250]:
+          - paragraph [ref=e153]: Hello world for testing
+      - generic [ref=e45]:
+        - generic [ref=e46]: A4 preview
+        - article [ref=e49]:
+          - paragraph [ref=e260]: Hello world for testing
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert [ref=e155]

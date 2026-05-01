@@ -1,0 +1,198 @@
+- generic:
+  - generic:
+    - banner:
+      - generic:
+        - link:
+          - /url: /
+          - generic: wh
+          - generic: wordhtml
+      - generic:
+        - button:
+          - img
+          - generic: "2"
+        - button:
+          - img
+          - text: อัปโหลด
+        - button [disabled]:
+          - img
+          - text: ส่งออก HTML
+          - generic: "2"
+    - navigation:
+      - button: ไฟล์ (File)
+      - button: แก้ไข (Edit)
+      - button [expanded]: แทรก (Insert)
+      - button: มุมมอง (View)
+      - button: จัดรูปแบบ (Format)
+      - button: ตาราง (Table)
+      - button: เครื่องมือ (Tools)
+    - generic:
+      - generic: ทำความสะอาดตอนส่งออก
+      - generic: ·
+      - button [pressed]:
+        - img
+        - text: สไตล์ inline
+      - button [pressed]:
+        - img
+        - text: แท็กว่าง
+      - button: ช่องว่าง
+      - button: Attributes
+      - button: Class & ID
+      - button: คอมเมนต์
+      - button: แท็กล้าสมัย
+      - button: แท็ก Span
+      - button: ข้อความล้วน
+    - generic:
+      - generic:
+        - generic: โปรแกรมแก้ไข
+        - generic:
+          - generic:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - img
+            - generic:
+              - button:
+                - generic:
+                  - img
+        - generic:
+          - generic:
+            - textbox:
+              - paragraph: พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…
+      - generic:
+        - generic: A4 preview
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: "1"
+                - generic: "2"
+                - generic: "3"
+                - generic: "4"
+                - generic: "5"
+                - generic: "6"
+                - generic: "7"
+                - generic: "8"
+                - generic: "9"
+                - generic: "10"
+                - generic: "11"
+                - generic: "12"
+                - generic: "13"
+                - generic: "14"
+                - generic: "15"
+                - generic: "16"
+                - generic: "17"
+                - generic: "18"
+                - generic: "19"
+                - generic: "20"
+                - generic: "21"
+              - generic:
+                - generic: "1"
+                - generic: "2"
+                - generic: "3"
+                - generic: "4"
+                - generic: "5"
+                - generic: "6"
+                - generic: "7"
+                - generic: "8"
+                - generic: "9"
+                - generic: "10"
+                - generic: "11"
+                - generic: "12"
+                - generic: "13"
+                - generic: "14"
+                - generic: "15"
+                - generic: "16"
+                - generic: "17"
+                - generic: "18"
+                - generic: "19"
+                - generic: "20"
+                - generic: "21"
+                - generic: "22"
+                - generic: "23"
+                - generic: "24"
+                - generic: "25"
+                - generic: "26"
+                - generic: "27"
+                - generic: "28"
+                - generic: "29"
+              - article
+  - button "Open Next.js Dev Tools" [ref=e216] [cursor=pointer]:
+    - img [ref=e217]
+  - alert
+  - menu "แทรก (Insert)" [active] [ref=e330]:
+    - menuitem "ลิงก์… (Link)" [ref=e331] [cursor=pointer]:
+      - generic [ref=e332]: ลิงก์… (Link)
+    - separator [ref=e333]
+    - menuitem "อัปโหลดรูปภาพ… (Upload Image)" [ref=e334] [cursor=pointer]:
+      - generic [ref=e335]: อัปโหลดรูปภาพ… (Upload Image)
+    - menuitem "รูปภาพจาก URL… (Image URL)" [ref=e336] [cursor=pointer]:
+      - generic [ref=e337]: รูปภาพจาก URL… (Image URL)
+    - separator [ref=e338]
+    - menuitem "ตาราง (Table)" [ref=e339] [cursor=pointer]:
+      - generic [ref=e340]: ตาราง (Table)
+    - menuitem "เส้นแบ่ง (Horizontal Rule)" [ref=e341] [cursor=pointer]:
+      - generic [ref=e342]: เส้นแบ่ง (Horizontal Rule)
+    - menuitem "ขึ้นบรรทัดใหม่ (Soft Break) Shift+Enter" [ref=e343] [cursor=pointer]:
+      - generic [ref=e344]: ขึ้นบรรทัดใหม่ (Soft Break)
+      - generic [ref=e345]: Shift+Enter
+    - separator [ref=e346]
+    - menuitem "บล็อกโค้ด (Code Block)" [ref=e347] [cursor=pointer]:
+      - generic [ref=e348]: บล็อกโค้ด (Code Block)

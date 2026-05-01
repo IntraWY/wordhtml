@@ -1,0 +1,136 @@
+- generic:
+  - generic:
+    - banner:
+      - generic:
+        - link:
+          - /url: /
+          - generic: wh
+          - generic: wordhtml
+      - generic:
+        - button:
+          - img
+          - generic: "2"
+        - button:
+          - img
+          - text: อัปโหลด
+        - button:
+          - img
+          - text: ส่งออก HTML
+          - generic: "2"
+    - navigation:
+      - button: ไฟล์ (File)
+      - button [expanded]: แก้ไข (Edit)
+      - button: แทรก (Insert)
+      - button: มุมมอง (View)
+      - button: จัดรูปแบบ (Format)
+      - button: ตาราง (Table)
+      - button: เครื่องมือ (Tools)
+    - generic:
+      - generic: ทำความสะอาดตอนส่งออก
+      - generic: ·
+      - button [pressed]:
+        - img
+        - text: สไตล์ inline
+      - button [pressed]:
+        - img
+        - text: แท็กว่าง
+      - button: ช่องว่าง
+      - button: Attributes
+      - button: Class & ID
+      - button: คอมเมนต์
+      - button: แท็ก Span
+      - button: ข้อความล้วน
+    - generic:
+      - generic:
+        - generic: โปรแกรมแก้ไข
+        - generic:
+          - generic:
+            - button:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [pressed]:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - img
+            - generic:
+              - button:
+                - generic:
+                  - img
+        - generic:
+          - generic:
+            - textbox:
+              - paragraph:
+                - strong: Hello world for testing
+      - generic:
+        - generic: A4 preview
+        - generic:
+          - generic:
+            - article:
+              - paragraph:
+                - strong: Hello world for testing
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert
+  - menu "แก้ไข (Edit)" [active] [ref=e623]:
+    - menuitem "เลิกทำ (Undo) Ctrl+Z" [ref=e624] [cursor=pointer]:
+      - generic [ref=e625]: เลิกทำ (Undo)
+      - generic [ref=e626]: Ctrl+Z
+    - menuitem "ทำซ้ำ (Redo) Ctrl+Y" [disabled] [ref=e627]:
+      - generic [ref=e628]: ทำซ้ำ (Redo)
+      - generic [ref=e629]: Ctrl+Y
+    - separator [ref=e630]
+    - menuitem "คัดลอกเป็น HTML (Copy as HTML)" [ref=e631] [cursor=pointer]:
+      - generic [ref=e632]: คัดลอกเป็น HTML (Copy as HTML)
+    - separator [ref=e633]
+    - menuitem "เลือกทั้งหมด (Select All) Ctrl+A" [ref=e634] [cursor=pointer]:
+      - generic [ref=e635]: เลือกทั้งหมด (Select All)
+      - generic [ref=e636]: Ctrl+A

@@ -1,0 +1,48 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "wh wordhtml" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: wh
+        - generic [ref=e7]: wordhtml
+      - generic [ref=e8]:
+        - button "ประวัติเอกสาร" [ref=e9]:
+          - img [ref=e10]
+        - button "อัปโหลดไฟล์ .docx หรือ .html" [ref=e13]:
+          - img [ref=e14]
+          - text: อัปโหลด
+        - button "ส่งออก HTML พร้อมตัวทำความสะอาด 2 รายการ" [disabled]:
+          - img
+          - text: ส่งออก HTML
+          - generic: "2"
+    - navigation [ref=e17]:
+      - button "ไฟล์ (File)" [ref=e18]
+      - button "แก้ไข (Edit)" [ref=e19]
+      - button "แทรก (Insert)" [ref=e20]
+      - button "มุมมอง (View)" [ref=e21]
+      - button "จัดรูปแบบ (Format)" [ref=e22]
+      - button "ตาราง (Table)" [ref=e23]
+      - button "เครื่องมือ (Tools)" [ref=e24]
+    - generic [ref=e25]:
+      - generic [ref=e26]: ทำความสะอาดตอนส่งออก
+      - generic [ref=e27]: ·
+      - button "สไตล์ inline" [pressed] [ref=e28]:
+        - img [ref=e29]
+        - text: สไตล์ inline
+      - button "แท็กว่าง" [pressed] [ref=e31]:
+        - img [ref=e32]
+        - text: แท็กว่าง
+      - button "ช่องว่าง" [ref=e34]
+      - button "Attributes" [ref=e35]
+      - button "Class & ID" [ref=e36]
+      - button "คอมเมนต์" [ref=e37]
+      - button "แท็ก Span" [ref=e38]
+      - button "ข้อความล้วน" [ref=e39]
+    - generic [ref=e40]:
+      - generic [ref=e42]: โปรแกรมแก้ไข
+      - generic [ref=e45]:
+        - generic [ref=e46]: A4 preview
+        - article [ref=e49]:
+          - paragraph [ref=e50]: The A4 preview renders your edited document at print scale. Start typing, paste from Word, or upload a .docx to fill this page.
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]

@@ -1,0 +1,114 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "wh wordhtml" [ref=e780] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: wh
+        - generic [ref=e7]: wordhtml
+      - generic [ref=e8]:
+        - button "ประวัติเอกสาร" [ref=e781]:
+          - img [ref=e10]
+          - generic [ref=e326]: "2"
+        - button "อัปโหลดไฟล์ .docx หรือ .html" [ref=e782]:
+          - img [ref=e14]
+          - text: อัปโหลด
+        - button "ส่งออก HTML พร้อมตัวทำความสะอาด 2 รายการ" [ref=e783]:
+          - img [ref=e252]
+          - text: ส่งออก HTML
+          - generic [ref=e255]: "2"
+    - navigation [ref=e17]:
+      - button "ไฟล์ (File)" [ref=e784]
+      - button "แก้ไข (Edit)" [ref=e785]
+      - button "แทรก (Insert)" [ref=e786]
+      - button "มุมมอง (View)" [ref=e787]
+      - button "จัดรูปแบบ (Format)" [ref=e788]
+      - button "ตาราง (Table)" [ref=e789]
+      - button "เครื่องมือ (Tools)" [ref=e790]
+    - generic [ref=e25]:
+      - generic [ref=e26]: ทำความสะอาดตอนส่งออก
+      - generic [ref=e27]: ·
+      - button "สไตล์ inline" [pressed] [ref=e791]:
+        - img [ref=e29]
+        - text: สไตล์ inline
+      - button "แท็กว่าง" [pressed] [ref=e792]:
+        - img [ref=e32]
+        - text: แท็กว่าง
+      - button "ช่องว่าง" [ref=e793]
+      - button "Attributes" [ref=e794]
+      - button "Class & ID" [ref=e795]
+      - button "คอมเมนต์" [ref=e796]
+      - button "แท็ก Span" [ref=e797]
+      - button "ข้อความล้วน" [ref=e798]
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: โปรแกรมแก้ไข
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - button "เลิกทำ" [ref=e799]:
+              - img [ref=e257]
+            - button "ทำซ้ำ" [disabled]:
+              - img
+          - generic [ref=e63]:
+            - button "หัวเรื่อง 1" [ref=e800]:
+              - img [ref=e65]
+            - button "หัวเรื่อง 2" [ref=e801]:
+              - img [ref=e68]
+            - button "หัวเรื่อง 3" [ref=e802]:
+              - img [ref=e71]
+          - generic [ref=e75]:
+            - button "ตัวหนา" [pressed] [ref=e803]:
+              - img [ref=e77]
+            - button "ตัวเอียง" [ref=e804]:
+              - img [ref=e80]
+            - button "ขีดเส้นใต้" [ref=e805]:
+              - img [ref=e83]
+            - button "ขีดทับ" [ref=e806]:
+              - img [ref=e86]
+          - generic [ref=e90]:
+            - button "ชิดซ้าย" [ref=e807]:
+              - img [ref=e92]
+            - button "กึ่งกลาง" [ref=e808]:
+              - img [ref=e94]
+            - button "ชิดขวา" [ref=e809]:
+              - img [ref=e96]
+            - button "เต็มบรรทัด" [ref=e810]:
+              - img [ref=e98]
+          - generic [ref=e100]:
+            - button "รายการจุด" [ref=e811]:
+              - img [ref=e102]
+            - button "รายการตัวเลข" [ref=e812]:
+              - img [ref=e104]
+            - button "อ้างอิง" [ref=e813]:
+              - img [ref=e108]
+          - generic [ref=e112]:
+            - button "ลดเยื้อง" [disabled]:
+              - img
+            - button "เพิ่มเยื้อง" [disabled]:
+              - img
+          - button "แทรกลิงก์" [ref=e814]:
+            - img [ref=e116]
+          - generic [ref=e120]:
+            - button "เส้นคั่น" [ref=e815]:
+              - img [ref=e122]
+            - button "บล็อกโค้ด" [ref=e816]:
+              - img [ref=e124]
+            - button "ล้างการจัดรูปแบบ" [ref=e817]:
+              - img [ref=e129]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - button "สีตัวอักษร" [ref=e818]:
+                - img [ref=e137]
+              - textbox: "#000000"
+            - generic [ref=e144]:
+              - button "สีพื้นหลัง" [ref=e819]:
+                - img [ref=e147]
+              - textbox: "#ffff00"
+        - textbox "โปรแกรมแก้ไขเอกสาร" [ref=e820]:
+          - paragraph [ref=e153]:
+            - strong [ref=e464]: Hello world for testing
+      - generic [ref=e776]:
+        - generic [ref=e777]: ซอร์ส HTML
+        - textbox "ซอร์ส HTML" [active] [ref=e821]: <p><strong>Hello world for testing</strong></p>
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert [ref=e155]

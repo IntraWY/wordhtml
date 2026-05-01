@@ -4,6 +4,7 @@ import { useEditorState } from "@tiptap/react";
 
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
+import { useToastStore } from "@/store/toastStore";
 
 export function EditMenu({ editor }: EditorMenuProps) {
   const state = useEditorState({
@@ -24,6 +25,7 @@ export function EditMenu({ editor }: EditorMenuProps) {
     editor.chain().focus().run();
     try {
       await navigator.clipboard.writeText(editor.getHTML());
+      useToastStore.getState().show("คัดลอก HTML แล้ว");
     } catch {
       window.alert("ไม่สามารถคัดลอกได้ — เบราว์เซอร์ไม่อนุญาต");
     }

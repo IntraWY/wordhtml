@@ -52,7 +52,7 @@ export function HistoryPanel() {
                       clearHistory();
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[color:var(--color-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                 >
                   <Trash className="size-3" />
                   ล้างทั้งหมด
@@ -113,7 +113,7 @@ interface SnapshotRowProps {
 
 function SnapshotRow({ snap, onLoad, onDuplicate, onDelete }: SnapshotRowProps) {
   return (
-    <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)]">
+    <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]">
       <FileText className="size-8 shrink-0 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-1.5 text-[color:var(--color-muted-foreground)]" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">
@@ -123,7 +123,7 @@ function SnapshotRow({ snap, onLoad, onDuplicate, onDelete }: SnapshotRowProps) 
           {formatDate(snap.savedAt)} · {snap.wordCount.toLocaleString()} คำ
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <ActionBtn label="โหลดเอกสาร" onClick={onLoad}>
           <RotateCcw className="size-3.5" />
         </ActionBtn>
@@ -149,11 +149,10 @@ function ActionBtn({ label, onClick, danger, children }: ActionBtnProps) {
   return (
     <button
       type="button"
-      title={label}
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "grid h-7 w-7 place-items-center rounded-md transition-colors",
+        "grid h-8 w-8 place-items-center rounded-md transition-colors",
         danger
           ? "text-[color:var(--color-muted-foreground)] hover:bg-red-100 hover:text-red-600"
           : "text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-border)] hover:text-[color:var(--color-foreground)]"

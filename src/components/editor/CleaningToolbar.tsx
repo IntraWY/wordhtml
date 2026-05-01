@@ -24,9 +24,10 @@ export function CleaningToolbar() {
             type="button"
             onClick={() => toggleCleaner(key)}
             title={description}
+            aria-label={`${label}: ${description}`}
             aria-pressed={enabled}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              "inline-flex cursor-pointer shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--color-muted)]",
               enabled
                 ? "border-transparent bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"

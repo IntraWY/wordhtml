@@ -1,0 +1,155 @@
+- generic:
+  - generic:
+    - banner:
+      - generic:
+        - link:
+          - /url: /
+          - generic: wh
+          - generic: wordhtml
+      - generic:
+        - button:
+          - img
+          - generic: "1"
+        - button:
+          - img
+          - text: อัปโหลด
+        - button:
+          - img
+          - text: ส่งออก HTML
+          - generic: "2"
+    - navigation:
+      - button: ไฟล์ (File)
+      - button: แก้ไข (Edit)
+      - button: แทรก (Insert)
+      - button: มุมมอง (View)
+      - button: จัดรูปแบบ (Format)
+      - button: ตาราง (Table)
+      - button: เครื่องมือ (Tools)
+    - generic:
+      - generic: ทำความสะอาดตอนส่งออก
+      - generic: ·
+      - button [pressed]:
+        - img
+        - text: สไตล์ inline
+      - button [pressed]:
+        - img
+        - text: แท็กว่าง
+      - button: ช่องว่าง
+      - button: Attributes
+      - button: Class & ID
+      - button: คอมเมนต์
+      - button: แท็ก Span
+      - button: ข้อความล้วน
+    - generic:
+      - generic:
+        - generic: โปรแกรมแก้ไข
+        - generic:
+          - generic:
+            - button:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - img
+            - generic:
+              - button:
+                - generic:
+                  - img
+        - generic:
+          - generic:
+            - textbox:
+              - paragraph: Hello world for testing
+      - generic:
+        - generic: A4 preview
+        - generic:
+          - generic:
+            - article:
+              - paragraph: Hello world for testing
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert
+  - dialog "ส่งออก HTML" [ref=e278]:
+    - banner [ref=e279]:
+      - generic [ref=e280]:
+        - heading "ส่งออก HTML" [level=2] [ref=e281]
+        - paragraph [ref=e282]: "เปิดใช้ตัวทำความสะอาด 2 รายการ: สไตล์ inline, แท็กว่าง"
+      - button "ปิด" [active] [ref=e283]:
+        - img [ref=e284]
+    - generic [ref=e287]:
+      - generic [ref=e288]:
+        - generic [ref=e289]: ตัวอย่าง
+        - button "คัดลอก" [ref=e290]:
+          - img [ref=e291]
+          - text: คัดลอก
+      - code [ref=e295]: <p>Hello world for testing</p>
+    - contentinfo [ref=e296]:
+      - group "รูปภาพ:" [ref=e297]:
+        - generic [ref=e298]: "รูปภาพ:"
+        - generic [ref=e299] [cursor=pointer]:
+          - radio "Inline (base64) · ไฟล์เดียวครบในตัว" [checked] [ref=e300]
+          - generic [ref=e303]: Inline (base64)
+          - generic [ref=e304]: · ไฟล์เดียวครบในตัว
+        - generic [ref=e305] [cursor=pointer]:
+          - radio "แยกไฟล์ (ZIP) · HTML เล็กลง รูปภาพแยกต่างหาก" [ref=e306]
+          - generic [ref=e308]: แยกไฟล์ (ZIP)
+          - generic [ref=e309]: · HTML เล็กลง รูปภาพแยกต่างหาก
+      - generic [ref=e310]:
+        - button "ดาวน์โหลด .docx" [ref=e311]:
+          - img [ref=e312]
+          - text: ดาวน์โหลด .docx
+        - button "ดาวน์โหลด .zip" [ref=e315]:
+          - img [ref=e316]
+          - text: ดาวน์โหลด .zip
+        - button "ดาวน์โหลด .html" [ref=e320]:
+          - img [ref=e321]
+          - text: ดาวน์โหลด .html

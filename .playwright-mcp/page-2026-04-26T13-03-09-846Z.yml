@@ -1,0 +1,126 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link [ref=e637] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: wh
+        - generic [ref=e7]: wordhtml
+      - generic [ref=e8]:
+        - button [ref=e638]:
+          - img [ref=e10]
+          - generic [ref=e326]: "2"
+        - button [ref=e639]:
+          - img [ref=e14]
+          - text: อัปโหลด
+        - button [ref=e640]:
+          - img [ref=e252]
+          - text: ส่งออก HTML
+          - generic [ref=e255]: "2"
+    - navigation [ref=e17]:
+      - button [ref=e641]: ไฟล์ (File)
+      - button [ref=e642]: แก้ไข (Edit)
+      - button [ref=e643]: แทรก (Insert)
+      - button [ref=e644]: มุมมอง (View)
+      - button [ref=e645]: จัดรูปแบบ (Format)
+      - button [ref=e646]: ตาราง (Table)
+      - button [ref=e647]: เครื่องมือ (Tools)
+    - generic [ref=e25]:
+      - generic [ref=e26]: ทำความสะอาดตอนส่งออก
+      - generic [ref=e27]: ·
+      - button [pressed] [ref=e648]:
+        - img [ref=e29]
+        - text: สไตล์ inline
+      - button [pressed] [ref=e649]:
+        - img [ref=e32]
+        - text: แท็กว่าง
+      - button [ref=e650]: ช่องว่าง
+      - button [ref=e651]: Attributes
+      - button [ref=e652]: Class & ID
+      - button [ref=e653]: คอมเมนต์
+      - button [ref=e654]: แท็ก Span
+      - button [ref=e655]: ข้อความล้วน
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: โปรแกรมแก้ไข
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - button [ref=e656]:
+              - img [ref=e257]
+            - button [disabled]:
+              - img
+          - generic [ref=e63]:
+            - button [ref=e657]:
+              - img [ref=e65]
+            - button [ref=e658]:
+              - img [ref=e68]
+            - button [ref=e659]:
+              - img [ref=e71]
+          - generic [ref=e75]:
+            - button [pressed] [ref=e660]:
+              - img [ref=e77]
+            - button [ref=e661]:
+              - img [ref=e80]
+            - button [ref=e662]:
+              - img [ref=e83]
+            - button [ref=e663]:
+              - img [ref=e86]
+          - generic [ref=e90]:
+            - button [ref=e664]:
+              - img [ref=e92]
+            - button [ref=e665]:
+              - img [ref=e94]
+            - button [ref=e666]:
+              - img [ref=e96]
+            - button [ref=e667]:
+              - img [ref=e98]
+          - generic [ref=e100]:
+            - button [ref=e668]:
+              - img [ref=e102]
+            - button [ref=e669]:
+              - img [ref=e104]
+            - button [ref=e670]:
+              - img [ref=e108]
+          - generic [ref=e112]:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - button [ref=e671]:
+            - img [ref=e116]
+          - generic [ref=e120]:
+            - button [ref=e672]:
+              - img [ref=e122]
+            - button [ref=e673]:
+              - img [ref=e124]
+            - button [ref=e674]:
+              - img [ref=e129]
+          - generic [ref=e133]:
+            - button [ref=e675]:
+              - img [ref=e137]
+            - button [ref=e676]:
+              - img [ref=e147]
+        - textbox [active] [ref=e677]:
+          - paragraph [ref=e153]:
+            - strong [ref=e464]: Hello world for testing
+      - generic [ref=e45]:
+        - generic [ref=e46]: A4 preview
+        - article [ref=e49]:
+          - paragraph [ref=e465]:
+            - strong [ref=e466]: Hello world for testing
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert [ref=e155]
+  - menu "แก้ไข (Edit)" [ref=e623]:
+    - menuitem "เลิกทำ (Undo) Ctrl+Z" [ref=e624] [cursor=pointer]:
+      - generic [ref=e625]: เลิกทำ (Undo)
+      - generic [ref=e626]: Ctrl+Z
+    - menuitem "ทำซ้ำ (Redo) Ctrl+Y" [disabled] [ref=e627]:
+      - generic [ref=e628]: ทำซ้ำ (Redo)
+      - generic [ref=e629]: Ctrl+Y
+    - separator [ref=e630]
+    - menuitem "คัดลอกเป็น HTML (Copy as HTML)" [ref=e631] [cursor=pointer]:
+      - generic [ref=e632]: คัดลอกเป็น HTML (Copy as HTML)
+    - separator [ref=e633]
+    - menuitem "เลือกทั้งหมด (Select All) Ctrl+A" [ref=e634] [cursor=pointer]:
+      - generic [ref=e635]: เลือกทั้งหมด (Select All)
+      - generic [ref=e636]: Ctrl+A

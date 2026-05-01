@@ -100,15 +100,15 @@ function HeroMockup() {
               <div className="h-1.5 w-5/6 rounded-sm bg-[color:var(--color-border-strong)]" />
             </div>
           </div>
-          <div className="flex justify-center bg-zinc-100 p-4">
+          <div className="flex justify-center bg-[color:var(--color-muted)] p-4">
             <div className="aspect-[0.707] w-full max-w-[140px] rounded-sm bg-white p-3 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.18)]">
               <div className="mb-1.5 h-2 w-4/5 rounded-sm bg-[color:var(--color-foreground)]" />
-              <div className="h-1 w-full rounded-sm bg-zinc-200" />
-              <div className="mt-1 h-1 w-11/12 rounded-sm bg-zinc-200" />
-              <div className="mt-1 h-1 w-2/3 rounded-sm bg-zinc-200" />
+              <div className="h-1 w-full rounded-sm bg-[color:var(--color-border)]" />
+              <div className="mt-1 h-1 w-11/12 rounded-sm bg-[color:var(--color-border)]" />
+              <div className="mt-1 h-1 w-2/3 rounded-sm bg-[color:var(--color-border)]" />
               <div className="mt-3 h-1.5 w-1/3 rounded-sm bg-[color:var(--color-foreground)]" />
-              <div className="mt-1 h-1 rounded-sm bg-zinc-200" />
-              <div className="mt-1 h-1 w-3/4 rounded-sm bg-zinc-200" />
+              <div className="mt-1 h-1 rounded-sm bg-[color:var(--color-border)]" />
+              <div className="mt-1 h-1 w-3/4 rounded-sm bg-[color:var(--color-border)]" />
             </div>
           </div>
         </div>

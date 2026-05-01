@@ -33,7 +33,7 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(o) => (o ? null : onClose())}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[480px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-lg">
           <header className="flex items-center justify-between border-b border-[color:var(--color-border)] px-5 py-3">
             <Dialog.Title className="text-base font-semibold tracking-tight">

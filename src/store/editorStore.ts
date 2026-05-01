@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
+import { useToastStore } from "./toastStore";
 import type {
   CleanerKey,
   ImageMode,
@@ -210,6 +211,7 @@ export const useEditorStore = create<EditorState>()(
         }
 
         set({ history: updated });
+        useToastStore.getState().show("บันทึก Snapshot แล้ว");
       },
 
       loadSnapshot: (id) => {

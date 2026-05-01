@@ -16,9 +16,10 @@ export function MenuDropdown({ label, children }: MenuDropdownProps) {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         className={cn(
-          "rounded px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)]",
+          "cursor-pointer rounded px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)]",
           "hover:bg-[color:var(--color-border)] data-[state=open]:bg-[color:var(--color-border)]",
-          "outline-none select-none"
+          "transition-colors duration-150 outline-none select-none",
+          "focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-1"
         )}
       >
         {label}
@@ -28,7 +29,7 @@ export function MenuDropdown({ label, children }: MenuDropdownProps) {
           sideOffset={2}
           className={cn(
             "z-50 min-w-52 rounded-lg border border-[color:var(--color-border)]",
-            "bg-white py-1 shadow-lg",
+            "bg-[color:var(--color-background)] py-1 shadow-lg",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
           )}
@@ -63,7 +64,7 @@ export function MenuItem({
       onSelect={onClick}
       className={cn(
         "flex cursor-pointer items-center justify-between px-3 py-1.5 text-xs outline-none select-none",
-        "text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]",
+        "transition-colors duration-150 text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]",
         danger && "text-[color:var(--color-danger)] hover:bg-red-50",
         disabled && "cursor-default opacity-40"
       )}
@@ -96,7 +97,7 @@ export function MenuSub({ label, children }: MenuSubProps) {
       <DropdownMenu.SubTrigger
         className={cn(
           "flex cursor-pointer items-center justify-between px-3 py-1.5 text-xs outline-none select-none",
-          "text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]",
+          "transition-colors duration-150 text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]",
           "data-[state=open]:bg-[color:var(--color-muted)]"
         )}
       >
@@ -108,7 +109,7 @@ export function MenuSub({ label, children }: MenuSubProps) {
           sideOffset={2}
           className={cn(
             "z-50 min-w-40 rounded-lg border border-[color:var(--color-border)]",
-            "bg-white py-1 shadow-lg",
+            "bg-[color:var(--color-background)] py-1 shadow-lg",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
           )}
         >

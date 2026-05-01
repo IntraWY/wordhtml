@@ -1,0 +1,192 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "wh wordhtml" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: wh
+        - generic [ref=e6]: wordhtml
+      - navigation [ref=e7]:
+        - link "Help" [ref=e8] [cursor=pointer]:
+          - /url: /help/
+        - link "GitHub" [ref=e9] [cursor=pointer]:
+          - /url: https://github.com
+      - link "Open editor" [ref=e10] [cursor=pointer]:
+        - /url: /app/
+  - main [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - img [ref=e15]
+        - text: Everything runs in your browser
+      - heading "How wordhtml works" [level=1] [ref=e18]
+      - paragraph [ref=e19]: A reference for the eight cleaning options, paste behavior, and the most common questions. If you don't find your answer here, your document probably reveals a new edge case — get in touch on GitHub.
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - heading "The eight cleaners" [level=2] [ref=e22]
+        - paragraph [ref=e23]: Each is a single, predictable transformation applied at export.
+        - generic [ref=e24]:
+          - article [ref=e25]:
+            - generic [ref=e26]:
+              - heading "Inline styles" [level=3] [ref=e27]
+              - paragraph [ref=e28]: Remove style="…" attributes from every element.
+            - generic [ref=e29]:
+              - generic [ref=e30]:
+                - generic [ref=e31]: Before
+                - code [ref=e32]: <p style="color:#ff0000;font-weight:bold">Hello</p>
+              - generic [ref=e33]:
+                - generic [ref=e34]: After
+                - code [ref=e35]: <p>Hello</p>
+          - article [ref=e36]:
+            - generic [ref=e37]:
+              - heading "Empty tags" [level=3] [ref=e38]
+              - paragraph [ref=e39]: Remove tags that contain no text or meaningful children.
+            - generic [ref=e40]:
+              - generic [ref=e41]:
+                - generic [ref=e42]: Before
+                - code [ref=e43]: <div><p></p><p>Hi</p><span></span></div>
+              - generic [ref=e44]:
+                - generic [ref=e45]: After
+                - code [ref=e46]: <div><p>Hi</p></div>
+          - article [ref=e47]:
+            - generic [ref=e48]:
+              - heading "Spaces" [level=3] [ref=e49]
+              - paragraph [ref=e50]: Collapse runs of whitespace and trim line ends.
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - generic [ref=e53]: Before
+                - code [ref=e54]: <p>hello world !</p>
+              - generic [ref=e55]:
+                - generic [ref=e56]: After
+                - code [ref=e57]: <p>hello world !</p>
+          - article [ref=e58]:
+            - generic [ref=e59]:
+              - heading "Attributes" [level=3] [ref=e60]
+              - paragraph [ref=e61]: Drop tag attributes (preserve href, src, alt).
+            - generic [ref=e62]:
+              - generic [ref=e63]:
+                - generic [ref=e64]: Before
+                - code [ref=e65]: <a href="https://x.com" class="cta" data-track="link">click</a>
+              - generic [ref=e66]:
+                - generic [ref=e67]: After
+                - code [ref=e68]: <a href="https://x.com">click</a>
+          - article [ref=e69]:
+            - generic [ref=e70]:
+              - heading "Classes & IDs" [level=3] [ref=e71]
+              - paragraph [ref=e72]: Strip class and id attributes.
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - generic [ref=e75]: Before
+                - code [ref=e76]: <p class="lead" id="intro">Hi</p>
+              - generic [ref=e77]:
+                - generic [ref=e78]: After
+                - code [ref=e79]: <p>Hi</p>
+          - article [ref=e80]:
+            - generic [ref=e81]:
+              - heading "Comments" [level=3] [ref=e82]
+              - paragraph [ref=e83]: Remove HTML comments (<!-- … -->).
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e86]: Before
+                - code [ref=e87]: <p>Hi</p><!-- editor metadata -->
+              - generic [ref=e88]:
+                - generic [ref=e89]: After
+                - code [ref=e90]: <p>Hi</p>
+          - article [ref=e91]:
+            - generic [ref=e92]:
+              - heading "Span tags" [level=3] [ref=e93]
+              - paragraph [ref=e94]: Unwrap <span> while keeping inner content.
+            - generic [ref=e95]:
+              - generic [ref=e96]:
+                - generic [ref=e97]: Before
+                - code [ref=e98]: <p><span style="color:red"><strong>bold</strong></span> text</p>
+              - generic [ref=e99]:
+                - generic [ref=e100]: After
+                - code [ref=e101]: <p><strong>bold</strong> text</p>
+          - article [ref=e102]:
+            - generic [ref=e103]:
+              - heading "Plain text" [level=3] [ref=e104]
+              - paragraph [ref=e105]: Strip all tags and return plain text only.
+            - generic [ref=e106]:
+              - generic [ref=e107]:
+                - generic [ref=e108]: Before
+                - code [ref=e109]: <h1>Title</h1><p><strong>Body</strong> here.</p>
+              - generic [ref=e110]:
+                - generic [ref=e111]: After
+                - code [ref=e112]: Title Body here.
+      - generic [ref=e113]:
+        - heading "Paste & format tips" [level=2] [ref=e114]
+        - list [ref=e115]:
+          - listitem [ref=e116]:
+            - img [ref=e117]
+            - generic [ref=e119]:
+              - heading "Paste from Word for free" [level=3] [ref=e120]
+              - paragraph [ref=e121]: Word's clipboard payload is the messiest input we handle — wordhtml strips mso-* styles, MsoNormal classes, conditional comments, and Word's XML namespaces automatically.
+          - listitem [ref=e122]:
+            - img [ref=e123]
+            - generic [ref=e125]:
+              - heading "Paste from Google Docs preserves headings" [level=3] [ref=e126]
+              - paragraph [ref=e127]: Google Docs gives much cleaner HTML than Word, so the result usually needs only one or two cleaners (typically empty tags + classes) before export.
+          - listitem [ref=e128]:
+            - img [ref=e129]
+            - generic [ref=e131]:
+              - heading "Images come along when you paste" [level=3] [ref=e132]
+              - paragraph [ref=e133]: Inline images are kept as base64 data URIs in the editor. Choose Inline at export to keep them embedded, or Separate to extract them into a ZIP folder.
+          - listitem [ref=e134]:
+            - img [ref=e135]
+            - generic [ref=e137]:
+              - heading "Tables paste, complex formatting may not" [level=3] [ref=e138]
+              - paragraph [ref=e139]: Simple tables convert well. Highly customized table styling, columns, or text boxes may not survive — for those, finish styling after export in your target environment.
+          - listitem [ref=e140]:
+            - img [ref=e141]
+            - generic [ref=e143]:
+              - heading "Round-tripping HTML → DOCX → HTML" [level=3] [ref=e144]
+              - paragraph [ref=e145]: Going through Word strips most CSS. If you plan to round-trip, keep markup semantic (h1, p, ul) and let the destination apply its own styles.
+      - generic [ref=e146]:
+        - heading "Frequently asked" [level=2] [ref=e147]
+        - generic [ref=e148]:
+          - group [ref=e149]:
+            - generic "Is anything uploaded to a server?" [ref=e150] [cursor=pointer]:
+              - text: Is anything uploaded to a server?
+              - generic [ref=e151]: +
+          - group [ref=e152]:
+            - generic "What file formats are supported?" [ref=e153] [cursor=pointer]:
+              - text: What file formats are supported?
+              - generic [ref=e154]: +
+          - group [ref=e155]:
+            - generic "Why does my pasted Word content look slightly different?" [ref=e156] [cursor=pointer]:
+              - text: Why does my pasted Word content look slightly different?
+              - generic [ref=e157]: +
+          - group [ref=e158]:
+            - generic "Are the cleaning options applied while I edit?" [ref=e159] [cursor=pointer]:
+              - text: Are the cleaning options applied while I edit?
+              - generic [ref=e160]: +
+          - group [ref=e161]:
+            - generic "Where do my cleaner preferences go?" [ref=e162] [cursor=pointer]:
+              - text: Where do my cleaner preferences go?
+              - generic [ref=e163]: +
+          - group [ref=e164]:
+            - generic "Why does the .docx export sometimes look basic in Google Docs?" [ref=e165] [cursor=pointer]:
+              - text: Why does the .docx export sometimes look basic in Google Docs?
+              - generic [ref=e166]: +
+      - generic [ref=e167]:
+        - heading "Ready to try it?" [level=2] [ref=e168]
+        - paragraph [ref=e169]: Open the editor and paste a document. Cleaners apply only at export, so it's safe to experiment.
+        - link "Open the editor" [ref=e171] [cursor=pointer]:
+          - /url: /app/
+          - text: Open the editor
+          - img [ref=e172]
+  - contentinfo [ref=e174]:
+    - generic [ref=e175]:
+      - generic [ref=e176]:
+        - generic [ref=e177]: wh
+        - paragraph [ref=e178]: wordhtml· client-side Word ↔ HTML
+      - navigation [ref=e179]:
+        - link "Help" [ref=e180] [cursor=pointer]:
+          - /url: /help/
+        - link "Editor" [ref=e181] [cursor=pointer]:
+          - /url: /app/
+        - link "GitHub" [ref=e182] [cursor=pointer]:
+          - /url: https://github.com
+      - paragraph [ref=e183]: No tracking · No cookies · No uploads
+  - button "Open Next.js Dev Tools" [ref=e189] [cursor=pointer]:
+    - img [ref=e190]
+  - alert [ref=e193]

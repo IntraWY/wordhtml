@@ -13,6 +13,7 @@ import { ExportDialog } from "./ExportDialog";
 import { SearchPanel } from "./SearchPanel";
 import { PageSetupDialog } from "./PageSetupDialog";
 import { TemplatePanel } from "./TemplatePanel";
+import { Toast } from "./Toast";
 import { MobileBlock } from "@/components/MobileBlock";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
@@ -264,6 +265,7 @@ export function EditorShell() {
 
         <ExportDialog />
         <TemplatePanel />
+        <Toast />
         <SearchPanel
           editor={editor}
           open={searchOpen}

@@ -6,6 +6,7 @@ import { BookmarkPlus, FileText, Pencil, Trash2, X } from "lucide-react";
 
 import { useEditorStore, type PageSetup } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
+import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/lib/utils";
 
 function formatDate(iso: string): string {
@@ -56,6 +57,7 @@ export function TemplatePanel() {
     clearError();
     clearLoadWarnings();
     closePanel();
+    useToastStore.getState().show(`โหลด Template: ${template.name} แล้ว`);
   }
 
   function handleSave() {
@@ -63,6 +65,7 @@ export function TemplatePanel() {
     if (!name || !hasDoc) return;
     saveTemplate(name, documentHtml, pageSetup);
     setSaveName("");
+    useToastStore.getState().show(`บันทึก Template "${name}" แล้ว`);
   }
 
   function handleRenameStart(id: string, currentName: string) {
@@ -139,8 +142,10 @@ export function TemplatePanel() {
                     onRenameCommit={() => handleRenameCommit(t.id)}
                     onRenameAbort={handleRenameAbort}
                     onDelete={() => {
-                      if (window.confirm(`ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`))
+                      if (window.confirm(`ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`)) {
                         deleteTemplate(t.id);
+                        useToastStore.getState().show(`ลบ Template "${t.name}" แล้ว`);
+                      }
                     }}
                   />
                 ))}
@@ -214,7 +219,7 @@ function TemplateRow({
   const keyHandledRef = useRef(false);
 
   return (
-    <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)]">
+    <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[color:var(--color-foreground)] text-[10px] font-bold text-[color:var(--color-background)]">
         {pageSize === "A4" ? "A4" : "Ltr"}
       </div>
@@ -257,7 +262,7 @@ function TemplateRow({
       </div>
 
       {!isRenaming && (
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <RowBtn label="เปลี่ยนชื่อ" onClick={onRenameStart}>
             <Pencil className="size-3.5" />
           </RowBtn>
@@ -281,11 +286,10 @@ function RowBtn({ label, onClick, danger, children }: RowBtnProps) {
   return (
     <button
       type="button"
-      title={label}
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "grid h-7 w-7 place-items-center rounded-md transition-colors",
+        "grid h-8 w-8 place-items-center rounded-md transition-colors",
         danger
           ? "text-[color:var(--color-muted-foreground)] hover:bg-red-100 hover:text-red-600"
           : "text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-border)] hover:text-[color:var(--color-foreground)]"

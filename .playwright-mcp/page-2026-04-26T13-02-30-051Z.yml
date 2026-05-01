@@ -1,0 +1,153 @@
+- generic:
+  - generic:
+    - banner:
+      - generic:
+        - link:
+          - /url: /
+          - generic: wh
+          - generic: wordhtml
+      - generic:
+        - button:
+          - img
+          - generic: "2"
+        - button:
+          - img
+          - text: อัปโหลด
+        - button:
+          - img
+          - text: ส่งออก HTML
+          - generic: "2"
+    - navigation:
+      - button: ไฟล์ (File)
+      - button: แก้ไข (Edit)
+      - button: แทรก (Insert)
+      - button: มุมมอง (View)
+      - button [expanded]: จัดรูปแบบ (Format)
+      - button: ตาราง (Table)
+      - button: เครื่องมือ (Tools)
+    - generic:
+      - generic: ทำความสะอาดตอนส่งออก
+      - generic: ·
+      - button [pressed]:
+        - img
+        - text: สไตล์ inline
+      - button [pressed]:
+        - img
+        - text: แท็กว่าง
+      - button: ช่องว่าง
+      - button: Attributes
+      - button: Class & ID
+      - button: คอมเมนต์
+      - button: แท็ก Span
+      - button: ข้อความล้วน
+    - generic:
+      - generic:
+        - generic: โปรแกรมแก้ไข
+        - generic:
+          - generic:
+            - button:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [pressed]:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - img
+            - generic:
+              - button:
+                - generic:
+                  - img
+        - generic:
+          - generic:
+            - textbox:
+              - paragraph:
+                - strong: Hello world for testing
+      - generic:
+        - generic: A4 preview
+        - generic:
+          - generic:
+            - article:
+              - paragraph:
+                - strong: Hello world for testing
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert
+  - menu "จัดรูปแบบ (Format)" [active] [ref=e509]:
+    - menuitem "รูปแบบย่อหน้า" [ref=e510] [cursor=pointer]:
+      - text: รูปแบบย่อหน้า
+      - img [ref=e511]
+    - separator [ref=e513]
+    - menuitem "ตัวหนา (Bold) Ctrl+B" [ref=e514] [cursor=pointer]:
+      - generic [ref=e515]:
+        - img [ref=e516]
+        - text: ตัวหนา (Bold)
+      - generic [ref=e518]: Ctrl+B
+    - menuitem "ตัวเอียง (Italic) Ctrl+I" [ref=e519] [cursor=pointer]:
+      - generic [ref=e520]:
+        - img [ref=e521]
+        - text: ตัวเอียง (Italic)
+      - generic [ref=e523]: Ctrl+I
+    - menuitem "ขีดเส้นใต้ (Underline) Ctrl+U" [ref=e524] [cursor=pointer]:
+      - generic [ref=e525]:
+        - img [ref=e526]
+        - text: ขีดเส้นใต้ (Underline)
+      - generic [ref=e528]: Ctrl+U
+    - menuitem "ขีดทับ (Strikethrough)" [ref=e529] [cursor=pointer]:
+      - generic [ref=e530]:
+        - img [ref=e531]
+        - text: ขีดทับ (Strikethrough)
+    - separator [ref=e533]
+    - menuitem "การจัดวาง (Align)" [ref=e534] [cursor=pointer]:
+      - text: การจัดวาง (Align)
+      - img [ref=e535]
+    - separator [ref=e537]
+    - menuitem "ล้างรูปแบบ (Clear Formatting)" [ref=e538] [cursor=pointer]:
+      - generic [ref=e539]: ล้างรูปแบบ (Clear Formatting)

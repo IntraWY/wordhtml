@@ -1,0 +1,136 @@
+- generic:
+  - generic:
+    - banner:
+      - generic:
+        - link:
+          - /url: /
+          - generic: wh
+          - generic: wordhtml
+      - generic:
+        - button:
+          - img
+          - generic: "1"
+        - button:
+          - img
+          - text: อัปโหลด
+        - button:
+          - img
+          - text: ส่งออก HTML
+          - generic: "2"
+    - navigation:
+      - button [expanded]: ไฟล์ (File)
+      - button: แก้ไข (Edit)
+      - button: แทรก (Insert)
+      - button: มุมมอง (View)
+      - button: จัดรูปแบบ (Format)
+      - button: ตาราง (Table)
+      - button: เครื่องมือ (Tools)
+    - generic:
+      - generic: ทำความสะอาดตอนส่งออก
+      - generic: ·
+      - button [pressed]:
+        - img
+        - text: สไตล์ inline
+      - button [pressed]:
+        - img
+        - text: แท็กว่าง
+      - button: ช่องว่าง
+      - button: Attributes
+      - button: Class & ID
+      - button: คอมเมนต์
+      - button: แท็ก Span
+      - button: ข้อความล้วน
+    - generic:
+      - generic:
+        - generic: โปรแกรมแก้ไข
+        - generic:
+          - generic:
+            - button:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - button [disabled]:
+              - img
+            - button [disabled]:
+              - img
+          - generic:
+            - button:
+              - img
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - img
+            - generic:
+              - button:
+                - generic:
+                  - img
+        - generic:
+          - generic:
+            - textbox:
+              - paragraph: Hello world for testing
+      - generic:
+        - generic: A4 preview
+        - generic:
+          - generic:
+            - article:
+              - paragraph: Hello world for testing
+  - button "Open Next.js Dev Tools" [ref=e56] [cursor=pointer]:
+    - img [ref=e57]
+  - alert
+  - menu "ไฟล์ (File)" [active] [ref=e327]:
+    - menuitem "เอกสารใหม่ (New)" [ref=e328] [cursor=pointer]:
+      - generic [ref=e329]: เอกสารใหม่ (New)
+    - menuitem "เปิดไฟล์… (Open)" [ref=e330] [cursor=pointer]:
+      - generic [ref=e331]: เปิดไฟล์… (Open)
+    - separator [ref=e332]
+    - menuitem "ส่งออก HTML Ctrl+S" [ref=e333] [cursor=pointer]:
+      - generic [ref=e334]: ส่งออก HTML
+      - generic [ref=e335]: Ctrl+S
+    - menuitem "ส่งออก ZIP" [ref=e336] [cursor=pointer]:
+      - generic [ref=e337]: ส่งออก ZIP
+    - menuitem "ส่งออก DOCX" [ref=e338] [cursor=pointer]:
+      - generic [ref=e339]: ส่งออก DOCX
+    - separator [ref=e340]
+    - menuitem "บันทึก Snapshot" [ref=e341] [cursor=pointer]:
+      - generic [ref=e342]: บันทึก Snapshot

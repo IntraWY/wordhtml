@@ -1,0 +1,72 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "wh wordhtml" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: wh
+        - generic [ref=e7]: wordhtml
+      - generic [ref=e8]:
+        - button "Upload .docx or .html file" [ref=e9]:
+          - img [ref=e10]
+          - text: Upload
+        - button "Export HTML with 2 cleaners" [disabled]:
+          - img
+          - text: Export HTML
+          - generic: "2"
+    - generic [ref=e13]:
+      - generic [ref=e14]: Clean on export
+      - generic [ref=e15]: ·
+      - button "Inline styles" [pressed] [ref=e16]:
+        - img [ref=e17]
+        - text: Inline styles
+      - button "Empty tags" [pressed] [ref=e19]:
+        - img [ref=e20]
+        - text: Empty tags
+      - button "Spaces" [ref=e22]
+      - button "Attributes" [ref=e23]
+      - button "Classes & IDs" [ref=e24]
+      - button "Comments" [ref=e25]
+      - button "Span tags" [ref=e26]
+      - button "Plain text" [ref=e27]
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: Visual editor
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - button "Undo" [disabled]:
+              - img
+            - button "Redo" [disabled]:
+              - img
+          - generic [ref=e34]:
+            - button "Heading 1" [ref=e35]:
+              - img [ref=e36]
+            - button "Heading 2" [ref=e38]:
+              - img [ref=e39]
+            - button "Heading 3" [ref=e41]:
+              - img [ref=e42]
+          - generic [ref=e46]:
+            - button "Bold" [ref=e47]:
+              - img [ref=e48]
+            - button "Italic" [ref=e50]:
+              - img [ref=e51]
+            - button "Underline" [ref=e53]:
+              - img [ref=e54]
+            - button "Strikethrough" [ref=e56]:
+              - img [ref=e57]
+          - generic [ref=e61]:
+            - button "Bullet list" [ref=e62]:
+              - img [ref=e63]
+            - button "Ordered list" [ref=e64]:
+              - img [ref=e65]
+            - button "Blockquote" [ref=e68]:
+              - img [ref=e69]
+          - button "Link" [ref=e74]:
+            - img [ref=e75]
+        - paragraph [ref=e81]: Type, paste from Word, or upload a .docx to begin…
+      - generic [ref=e82]:
+        - generic [ref=e83]: A4 preview
+        - article [ref=e86]:
+          - paragraph [ref=e87]: The A4 preview renders your edited document at print scale. Start typing, paste from Word, or upload a .docx to fill this page.
+  - button "Open Next.js Dev Tools" [ref=e93] [cursor=pointer]:
+    - img [ref=e94]
+  - alert [ref=e97]
