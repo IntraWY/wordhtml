@@ -41,10 +41,22 @@ function walk(root: Node, visit: (node: Node) => void): void {
 }
 
 // ---------- 1. Remove inline styles ----------
+// Preserves structural layout properties: margin-left, text-indent (paragraph indent),
+// and width/height (image drag-resize). Everything else (Word mso-* junk) is stripped.
 export function removeInlineStyles(html: string): string {
   if (!html) return html;
   const doc = parse(html);
-  doc.body.querySelectorAll("[style]").forEach((el) => el.removeAttribute("style"));
+  const KEEP = ["margin-left", "text-indent", "width", "height"];
+  doc.body.querySelectorAll("[style]").forEach((el) => {
+    const s = (el as HTMLElement).style;
+    const saved: [string, string][] = KEEP
+      .map((p) => [p, s.getPropertyValue(p)] as [string, string])
+      .filter(([, v]) => v);
+    el.removeAttribute("style");
+    for (const [prop, val] of saved) {
+      (el as HTMLElement).style.setProperty(prop, val);
+    }
+  });
   return serialize(doc);
 }
 
