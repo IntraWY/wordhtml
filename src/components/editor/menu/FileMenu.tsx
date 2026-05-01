@@ -26,6 +26,12 @@ export function FileMenu(_props: EditorMenuProps) {
         onClick={reset}
       />
       <MenuItem label="เปิดไฟล์… (Open)" onClick={triggerFileOpen} />
+      <MenuItem
+        label="เปิดจาก Template…"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("wordhtml:open-templates"))
+        }
+      />
       <Sep />
       <MenuItem
         label="ส่งออก HTML"
