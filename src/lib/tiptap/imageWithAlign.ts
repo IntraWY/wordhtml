@@ -33,7 +33,12 @@ export const ImageWithAlign = Image.extend({
       },
       height: {
         default: null,
-        parseHTML: (el) => el.getAttribute("height") ?? null,
+        parseHTML: (el) => {
+          const attr = el.getAttribute("height");
+          if (attr) return attr;
+          const styleH = el.style.height;
+          return styleH ? styleH.replace(/px$/, "") : null;
+        },
         renderHTML: (attrs) => {
           if (!attrs.height) return {};
           const h = attrs.height as string;

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { CleaningToolbar } from "./CleaningToolbar";
 import { useEditorStore } from "@/store/editorStore";
 import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { downloadHtml } from "@/lib/export/exportHtml";
@@ -123,6 +124,8 @@ export function ExportDialog() {
               <X className="size-4" />
             </Dialog.Close>
           </header>
+
+          <CleaningToolbar />
 
           <div className="flex min-h-0 flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">

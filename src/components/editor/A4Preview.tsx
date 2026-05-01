@@ -11,13 +11,17 @@ const A4 = { wMm: 210, hMm: 297 };
 const LETTER = { wMm: 215.9, hMm: 279.4 };
 
 function mmToPx(mm: number): number {
-  return (mm / 10) * PX_PER_CM; // mm → cm → px
+  return (mm / 10) * PX_PER_CM;
 }
 
-export function A4Preview() {
+interface A4PreviewProps {
+  onIndentChange?: (marginLeft: number, textIndent: number) => void;
+  currentIndent?: { marginLeft: number; textIndent: number };
+}
+
+export function A4Preview({ onIndentChange, currentIndent }: A4PreviewProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
-  // Defer preview re-renders so typing in the editor stays responsive on long documents.
   const deferredHtml = useDeferredValue(documentHtml);
 
   const base = pageSetup.size === "Letter" ? LETTER : A4;
@@ -48,12 +52,15 @@ export function A4Preview() {
           >
             {/* corner */}
             <div className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-muted)]" />
-            {/* horizontal ruler */}
+            {/* horizontal ruler — interactive when editor is connected */}
             <Ruler
               orientation="horizontal"
               cm={widthMm / 10}
               marginStart={marginLeftPx}
               marginEnd={marginRightPx}
+              indentLeft={currentIndent?.marginLeft}
+              indentFirst={currentIndent?.textIndent}
+              onIndentChange={onIndentChange}
             />
             {/* vertical ruler */}
             <Ruler
@@ -73,8 +80,6 @@ export function A4Preview() {
                 paddingBottom: marginBottomPx,
                 paddingLeft: marginLeftPx,
               }}
-              // The user-provided HTML is already from their own paste/edit flow.
-              // It is sanitized at the conversion boundary (paste handler / mammoth output).
               dangerouslySetInnerHTML={{ __html: deferredHtml || "" }}
             />
           </div>

@@ -1,14 +1,19 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const PX_PER_CM = 794 / 21; // ~37.81
 
 interface RulerProps {
   orientation: "horizontal" | "vertical";
-  cm: number; // total cm to display (21 for H, 29.7 for V)
+  cm: number;
   marginStart: number; // px from edge to content start
-  marginEnd: number; // px from edge to content end
+  marginEnd: number;   // px from edge to content end
+  // Interactive indent handles (horizontal only, omit for visual-only ruler)
+  indentLeft?: number;  // cm
+  indentFirst?: number; // cm offset from indentLeft (can be negative)
+  onIndentChange?: (marginLeft: number, textIndent: number) => void;
 }
 
 interface Tick {
@@ -17,9 +22,27 @@ interface Tick {
   label: number | null;
 }
 
-export function Ruler({ orientation, cm, marginStart, marginEnd }: RulerProps) {
+interface DragState {
+  type: "left" | "first";
+  startX: number;
+  startLeft: number;
+  startFirst: number;
+}
+
+export function Ruler({
+  orientation,
+  cm,
+  marginStart,
+  marginEnd,
+  indentLeft = 0,
+  indentFirst = 0,
+  onIndentChange,
+}: RulerProps) {
   const isH = orientation === "horizontal";
   const totalPx = cm * PX_PER_CM;
+  const interactive = isH && !!onIndentChange;
+
+  const dragRef = useRef<DragState | null>(null);
 
   // Generate tick positions
   const ticks: Tick[] = [];
@@ -31,9 +54,57 @@ export function Ruler({ orientation, cm, marginStart, marginEnd }: RulerProps) {
     }
   }
 
-  // Margin guide positions
   const marginGuideStart = marginStart;
   const marginGuideEnd = totalPx - marginEnd;
+
+  // Pixel positions of the two triangles
+  const leftPx = marginStart + indentLeft * PX_PER_CM;
+  const firstPx = marginStart + (indentLeft + indentFirst) * PX_PER_CM;
+
+  const snap = (v: number) => Math.round(v * 10) / 10;
+  const clamp = (v: number) =>
+    Math.max(0, Math.min(v, (totalPx - marginEnd - marginStart) / PX_PER_CM));
+
+  useEffect(() => {
+    if (!interactive) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const drag = dragRef.current;
+      if (!drag || !onIndentChange) return;
+      const dx = e.clientX - drag.startX;
+      const dCm = dx / PX_PER_CM;
+
+      if (drag.type === "left") {
+        const newLeft = clamp(snap(drag.startLeft + dCm));
+        onIndentChange(newLeft, drag.startFirst);
+      } else {
+        const newFirst = snap(drag.startFirst + dCm);
+        onIndentChange(drag.startLeft, newFirst);
+      }
+    };
+
+    const onMouseUp = () => {
+      dragRef.current = null;
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [interactive, onIndentChange]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startDrag =
+    (type: "left" | "first") => (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragRef.current = {
+        type,
+        startX: e.clientX,
+        startLeft: indentLeft,
+        startFirst: indentFirst,
+      };
+    };
 
   return (
     <div
@@ -44,9 +115,7 @@ export function Ruler({ orientation, cm, marginStart, marginEnd }: RulerProps) {
         "border-[color:var(--color-border)]",
         isH ? "h-[18px] border-b" : "w-[18px] border-r"
       )}
-      style={{
-        [isH ? "width" : "height"]: `${totalPx}px`,
-      }}
+      style={{ [isH ? "width" : "height"]: `${totalPx}px` }}
     >
       {ticks.map((t, i) => (
         <div
@@ -81,7 +150,7 @@ export function Ruler({ orientation, cm, marginStart, marginEnd }: RulerProps) {
             {t.label}
           </span>
         ))}
-      {/* Margin guides (faint red lines) */}
+      {/* Margin guides */}
       <div
         className="absolute"
         style={{
@@ -100,6 +169,50 @@ export function Ruler({ orientation, cm, marginStart, marginEnd }: RulerProps) {
             : { top: `${marginGuideEnd}px`, left: 0, right: 0, height: "1px" }),
         }}
       />
+
+      {/* Indent triangles (horizontal interactive ruler only) */}
+      {interactive && (
+        <>
+          {/* ▽ Left indent — bottom triangle, blue */}
+          <div
+            aria-label={`left indent ${indentLeft.toFixed(1)}cm`}
+            title={`indent ซ้าย: ${indentLeft.toFixed(1)}cm — ลากเพื่อปรับ`}
+            onMouseDown={startDrag("left")}
+            style={{
+              position: "absolute",
+              left: `${leftPx}px`,
+              bottom: 0,
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "7px solid #2563eb",
+              cursor: "ew-resize",
+              zIndex: 10,
+            }}
+          />
+          {/* △ First-line indent — top triangle, purple */}
+          <div
+            aria-label={`first-line indent ${indentFirst.toFixed(1)}cm`}
+            title={`indent บรรทัดแรก: ${indentFirst.toFixed(1)}cm — ลากเพื่อปรับ`}
+            onMouseDown={startDrag("first")}
+            style={{
+              position: "absolute",
+              left: `${firstPx}px`,
+              top: 1,
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderBottom: "7px solid #7c3aed",
+              cursor: "ew-resize",
+              zIndex: 10,
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
 import { TopBar } from "./TopBar";
 import { MenuBar } from "./MenuBar";
-import { CleaningToolbar } from "./CleaningToolbar";
+import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
 import { A4Preview } from "./A4Preview";
 import { ExportDialog } from "./ExportDialog";
@@ -48,6 +48,7 @@ export function EditorShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
   const loadError = useEditorStore((s) => s.loadError);
   const clearError = useEditorStore((s) => s.clearError);
@@ -61,6 +62,7 @@ export function EditorShell() {
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
   const previewOpen = useEditorStore((s) => s.previewOpen);
+  const pageSetup = useEditorStore((s) => s.pageSetup);
 
   // Custom-event bridge between menu components and shell
   useEffect(() => {
@@ -148,6 +150,31 @@ export function EditorShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [openExportDialog, saveSnapshot, hasDoc, triggerFileOpen, reset, editor]);
 
+  // Track current paragraph indent for ruler triangles
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      const attrs = editor.getAttributes("paragraph");
+      setCurrentIndent({
+        marginLeft: (attrs.marginLeft as number) ?? 0,
+        textIndent: (attrs.textIndent as number) ?? 0,
+      });
+    };
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
+  const handleIndentChange = useCallback(
+    (marginLeft: number, textIndent: number) => {
+      editor?.commands.setIndent(marginLeft, textIndent);
+    },
+    [editor]
+  );
+
   // beforeunload warning when document has unsaved changes (current HTML
   // differs from the most-recent snapshot in history).
   useEffect(() => {
@@ -165,10 +192,24 @@ export function EditorShell() {
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
+  const PX_PER_CM = 794 / 21;
+  const mmToPx = (mm: number) => (mm / 10) * PX_PER_CM;
+  const base =
+    pageSetup.size === "Letter"
+      ? { wMm: 215.9, hMm: 279.4 }
+      : { wMm: 210, hMm: 297 };
+  const isLandscape = pageSetup.orientation === "landscape";
+  const widthMm = isLandscape ? base.hMm : base.wMm;
+  const editorMarginLeftPx = Math.round(mmToPx(pageSetup.marginMm.left));
+  const editorMarginRightPx = Math.round(mmToPx(pageSetup.marginMm.right));
+
   const rightPane = sourceOpen ? (
     <SourcePane />
   ) : previewOpen ? (
-    <A4Preview />
+    <A4Preview
+      onIndentChange={handleIndentChange}
+      currentIndent={currentIndent}
+    />
   ) : null;
 
   const gridCols = rightPane ? "grid-cols-2" : "grid-cols-1";
@@ -204,7 +245,6 @@ export function EditorShell() {
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((f) => !f)}
         />
-        <CleaningToolbar />
         {loadError && (
           <div
             role="alert"
@@ -253,7 +293,18 @@ export function EditorShell() {
             gridCols
           )}
         >
-          <VisualEditor onEditorReady={setEditor} />
+          <div className="flex min-h-0 flex-col overflow-hidden">
+            <Ruler
+              orientation="horizontal"
+              cm={widthMm / 10}
+              marginStart={editorMarginLeftPx}
+              marginEnd={editorMarginRightPx}
+              indentLeft={currentIndent.marginLeft}
+              indentFirst={currentIndent.textIndent}
+              onIndentChange={handleIndentChange}
+            />
+            <VisualEditor onEditorReady={setEditor} />
+          </div>
           {rightPane}
         </div>
 
