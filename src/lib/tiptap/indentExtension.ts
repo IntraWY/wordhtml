@@ -25,46 +25,42 @@ export const IndentExtension = Extension.create({
   },
 
   addKeyboardShortcuts() {
+    const blockIndent = (delta: 1 | -1) =>
+      this.editor.commands.command(({ tr, state }) => {
+        const { from, to } = state.selection;
+        let handled = false;
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (node.type.name === "paragraph" || node.type.name === "heading") {
+            const current = (node.attrs.indent as number) ?? 0;
+            const next = current + delta;
+            if (next >= 0 && next <= 8) {
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: next });
+              handled = true;
+            }
+          }
+        });
+        return handled;
+      });
+
     return {
       Tab: () => {
         if (this.editor.isActive("listItem")) {
           return this.editor.commands.sinkListItem("listItem");
         }
-        return this.editor.commands.command(({ tr, state }) => {
-          const { selection } = state;
-          const { from, to } = selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (node.type.name === "paragraph" || node.type.name === "heading") {
-              const currentIndent = (node.attrs.indent as number) ?? 0;
-              if (currentIndent < 8) {
-                tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: currentIndent + 1 });
-                handled = true;
-              }
-            }
-          });
-          return handled;
-        });
+        const { selection } = this.editor.state;
+        // cursor mid-text (not at start, no range selection) → insert tab stop
+        if (selection.empty && selection.$from.parentOffset > 0) {
+          return this.editor.commands.insertContent("    ");
+        }
+        // cursor at start of paragraph or range selected → block indent
+        return blockIndent(1);
       },
+
       "Shift-Tab": () => {
         if (this.editor.isActive("listItem")) {
           return this.editor.commands.liftListItem("listItem");
         }
-        return this.editor.commands.command(({ tr, state }) => {
-          const { selection } = state;
-          const { from, to } = selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (node.type.name === "paragraph" || node.type.name === "heading") {
-              const currentIndent = (node.attrs.indent as number) ?? 0;
-              if (currentIndent > 0) {
-                tr.setNodeMarkup(pos, undefined, { ...node.attrs, indent: currentIndent - 1 });
-                handled = true;
-              }
-            }
-          });
-          return handled;
-        });
+        return blockIndent(-1);
       },
     };
   },
