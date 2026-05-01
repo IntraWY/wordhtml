@@ -12,8 +12,10 @@ import { A4Preview } from "./A4Preview";
 import { ExportDialog } from "./ExportDialog";
 import { SearchPanel } from "./SearchPanel";
 import { PageSetupDialog } from "./PageSetupDialog";
+import { TemplatePanel } from "./TemplatePanel";
 import { MobileBlock } from "@/components/MobileBlock";
 import { useEditorStore } from "@/store/editorStore";
+import { useTemplateStore } from "@/store/templateStore";
 import { cn } from "@/lib/utils";
 
 function SourcePane() {
@@ -63,11 +65,14 @@ export function EditorShell() {
   useEffect(() => {
     const onSearch = () => setSearchOpen(true);
     const onPageSetup = () => setPageSetupOpen(true);
+    const onTemplates = () => useTemplateStore.getState().openPanel();
     window.addEventListener("wordhtml:open-search", onSearch);
     window.addEventListener("wordhtml:open-page-setup", onPageSetup);
+    window.addEventListener("wordhtml:open-templates", onTemplates);
     return () => {
       window.removeEventListener("wordhtml:open-search", onSearch);
       window.removeEventListener("wordhtml:open-page-setup", onPageSetup);
+      window.removeEventListener("wordhtml:open-templates", onTemplates);
     };
   }, []);
 
@@ -258,6 +263,7 @@ export function EditorShell() {
         )}
 
         <ExportDialog />
+        <TemplatePanel />
         <SearchPanel
           editor={editor}
           open={searchOpen}
