@@ -1,10 +1,29 @@
 import { Extension } from "@tiptap/core";
 
-// NOTE: indent is set as a runtime node attr without a formal schema definition.
-// This works under ProseMirror's lenient unknown-attr policy. If we ever add a
-// formal schema, addGlobalAttributes can be wired here. See plan.
 export const IndentExtension = Extension.create({
   name: "indent",
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["paragraph", "heading"],
+        attributes: {
+          indent: {
+            default: 0,
+            renderHTML: (attrs) => {
+              const level = attrs.indent as number;
+              if (!level || level === 0) return {};
+              return { "data-indent": String(level) };
+            },
+            parseHTML: (element) => ({
+              indent: parseInt(element.getAttribute("data-indent") ?? "0", 10),
+            }),
+          },
+        },
+      },
+    ];
+  },
+
   addKeyboardShortcuts() {
     return {
       Tab: () => {

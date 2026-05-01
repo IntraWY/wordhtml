@@ -80,6 +80,25 @@ body {
   pointer-events: none;
 }
 
+/* Paragraph / heading indent levels — driven by IndentExtension via data-indent attr.
+   Each level = 2em (~32px at 16px base), matching Word's 0.5-inch tab stop. */
+.prose-editor :is(p, h1, h2, h3)[data-indent="1"],
+.paper :is(p, h1, h2, h3)[data-indent="1"] { padding-left: 2em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="2"],
+.paper :is(p, h1, h2, h3)[data-indent="2"] { padding-left: 4em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="3"],
+.paper :is(p, h1, h2, h3)[data-indent="3"] { padding-left: 6em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="4"],
+.paper :is(p, h1, h2, h3)[data-indent="4"] { padding-left: 8em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="5"],
+.paper :is(p, h1, h2, h3)[data-indent="5"] { padding-left: 10em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="6"],
+.paper :is(p, h1, h2, h3)[data-indent="6"] { padding-left: 12em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="7"],
+.paper :is(p, h1, h2, h3)[data-indent="7"] { padding-left: 14em; }
+.prose-editor :is(p, h1, h2, h3)[data-indent="8"],
+.paper :is(p, h1, h2, h3)[data-indent="8"] { padding-left: 16em; }
+
 /* Dot grid "desk" canvas behind the editor content card */
 .editor-canvas {
   background-color: var(--color-muted);
