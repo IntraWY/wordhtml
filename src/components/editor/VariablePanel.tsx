@@ -46,28 +46,20 @@ export function VariablePanel() {
   const [newVarName, setNewVarName] = useState("");
   const [addError, setAddError] = useState("");
 
-  // Auto-detect variables when documentHtml changes
+  // Auto-detect variables when documentHtml changes — additive only:
+  // preserves manually-added variables even if not yet in document
   useEffect(() => {
     if (!templateMode) return;
     const detected = extractVariables(documentHtml);
     const currentVars = useEditorStore.getState().variables;
-    const existingMap = new Map(currentVars.map((v) => [v.name, v]));
-
-    const merged: TemplateVariable[] = detected.map((name) => {
-      const existing = existingMap.get(name);
-      if (existing) return existing;
-      return { name, value: "", isList: false };
-    });
-
     const currentNames = new Set(currentVars.map((v) => v.name));
-    const detectedNames = new Set(detected);
-    const hasChanges =
-      merged.length !== currentVars.length ||
-      detected.some((name) => !currentNames.has(name)) ||
-      currentVars.some((v) => !detectedNames.has(v.name));
 
-    if (hasChanges) {
-      setVariables(merged);
+    const newVars = detected
+      .filter((name) => !currentNames.has(name))
+      .map((name) => ({ name, value: "", isList: false } as TemplateVariable));
+
+    if (newVars.length > 0) {
+      setVariables([...currentVars, ...newVars]);
     }
   }, [documentHtml, templateMode, setVariables]);
 
@@ -227,10 +219,13 @@ export function VariablePanel() {
                           }
                         }}
                         onBlur={() => {
-                          if (!newVarName.trim()) {
-                            setIsAdding(false);
-                            setAddError("");
-                          }
+                          // Delay collapse so click events on sibling buttons finish first
+                          setTimeout(() => {
+                            if (!newVarName.trim()) {
+                              setIsAdding(false);
+                              setAddError("");
+                            }
+                          }, 150);
                         }}
                         placeholder="ชื่อตัวแปร"
                         className="flex-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
@@ -238,7 +233,9 @@ export function VariablePanel() {
                       <span className="text-[11px] text-[color:var(--color-muted-foreground)]">{"}}"}</span>
                     </div>
                     {addError && (
-                      <p className="text-[10px] text-red-600">{addError}</p>
+                      <p className="text-[10px] text-red-600" role="alert" aria-live="polite">
+                        {addError}
+                      </p>
                     )}
                   </div>
                 ) : (

@@ -262,7 +262,10 @@ export const useEditorStore = create<EditorState>()(
 
       // template actions
       toggleTemplateMode: () =>
-        set((s) => ({ templateMode: !s.templateMode })),
+        set((s) => ({
+          templateMode: !s.templateMode,
+          previewMode: s.templateMode ? "edit" : s.previewMode,
+        })),
       setVariables: (variables) => set({ variables }),
       setDataSet: (dataSet) => set({ dataSet }),
       setPreviewMode: (previewMode) => set({ previewMode }),

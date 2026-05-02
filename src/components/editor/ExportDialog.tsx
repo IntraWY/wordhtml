@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   X,
@@ -53,12 +53,21 @@ export function ExportDialog() {
 
   const selectedFormat = pendingFormat ?? "html";
 
-  const cleanedHtml = useMemo(
-    () => applyCleaners(documentHtml, enabledCleaners),
-    [documentHtml, enabledCleaners]
-  );
+  const cleanedHtml = useMemo(() => {
+    if (!open) return "";
+    return applyCleaners(documentHtml, enabledCleaners);
+  }, [open, documentHtml, enabledCleaners]);
 
 
+
+  // Reset tab to "file" when dialog opens — deferred to avoid sync setState in effect
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      queueMicrotask(() => setActiveTab("file"));
+    }
+    prevOpenRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!copied) return;
@@ -84,13 +93,13 @@ export function ExportDialog() {
   };
 
   const gasCode = useMemo(() => {
-    if (!templateMode) return "";
+    if (!open || !templateMode) return "";
     return generateGASFunction(documentHtml, variables, {
       functionName: gasFunctionName,
       includeGenerateFunction: true,
       includeSheetIntegration,
     }).code;
-  }, [templateMode, documentHtml, variables, gasFunctionName, includeSheetIntegration]);
+  }, [open, templateMode, documentHtml, variables, gasFunctionName, includeSheetIntegration]);
 
   const handleCopyGAS = async () => {
     try {
@@ -150,9 +159,11 @@ export function ExportDialog() {
 
           {/* Tabs */}
           {templateMode && (
-            <div className="flex shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6">
+            <div className="flex shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6" role="tablist" aria-label="ตัวเลือกการส่งออก">
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === "file"}
                 onClick={() => setActiveTab("file")}
                 className={cn(
                   "relative px-4 py-2.5 text-xs font-medium transition-colors",
@@ -168,6 +179,8 @@ export function ExportDialog() {
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === "gas"}
                 onClick={() => setActiveTab("gas")}
                 className={cn(
                   "relative px-4 py-2.5 text-xs font-medium transition-colors",
@@ -184,7 +197,7 @@ export function ExportDialog() {
             </div>
           )}
 
-          {activeTab === "file" ? (
+          {activeTab === "file" || !templateMode ? (
             <>
               <CleaningToolbar />
 

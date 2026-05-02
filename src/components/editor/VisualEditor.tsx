@@ -97,7 +97,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       handleDrop(view, event) {
         const text = event.dataTransfer?.getData("text/plain");
         if (!text) return false;
-        const match = /^\{\{([\w\u0E00-\u0E7F_]+)\}\}$/.exec(text);
+        const match = /^\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}$/.exec(text);
         if (!match) return false;
         const name = match[1];
         const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });

@@ -15,6 +15,7 @@ export function PreviewToggle() {
       <button
         type="button"
         onClick={() => setPreviewMode("edit")}
+        aria-pressed={previewMode === "edit"}
         className={cn(
           "rounded px-3 py-1 text-sm font-medium transition-colors",
           previewMode === "edit"
@@ -27,6 +28,7 @@ export function PreviewToggle() {
       <button
         type="button"
         onClick={() => setPreviewMode("preview")}
+        aria-pressed={previewMode === "preview"}
         className={cn(
           "rounded px-3 py-1 text-sm font-medium transition-colors",
           previewMode === "preview"

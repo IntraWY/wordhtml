@@ -43,7 +43,7 @@ export const VariableMark = Mark.create({
   addInputRules() {
     return [
       markInputRule({
-        find: /\{\{([\w\u0E00-\u0E7F_]+)\}\}/g,
+        find: /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/g,
         type: this.type,
         getAttributes: (match) => ({
           name: match[1],

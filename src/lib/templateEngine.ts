@@ -1,5 +1,7 @@
 import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
 
+const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/g;
+
 /**
  * Extract all {{variableName}} patterns from HTML.
  * Returns unique variable names in order of first appearance.
@@ -7,15 +9,16 @@ import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
 export function extractVariables(html: string): string[] {
   const seen = new Set<string>();
   const results: string[] = [];
-  const regex = /\{\{([\w\u0E00-\u0E7F_]+)\}\}/g;
   let match;
-  while ((match = regex.exec(html)) !== null) {
+  while ((match = VAR_REGEX.exec(html)) !== null) {
     const name = match[1];
     if (!seen.has(name)) {
       seen.add(name);
       results.push(name);
     }
   }
+  // Reset regex state for next call
+  VAR_REGEX.lastIndex = 0;
   return results;
 }
 
@@ -28,9 +31,9 @@ export function replaceVariables(
   variables: TemplateVariable[],
   dataRow: Record<string, string>
 ): string {
-  return html.replace(/\{\{([\w\u0E00-\u0E7F_]+)\}\}/g, (match, name) => {
+  return html.replace(VAR_REGEX, (match, name) => {
     const value = dataRow[name] ?? variables.find((v) => v.name === name)?.value;
-    if (value === undefined || value === null || value === "") {
+    if (value === undefined || value === null) {
       return `<span style="color:#dc2626;background:#fee2e2;padding:0 4px;border-radius:2px;font-size:12px;">[${name}]</span>`;
     }
     return escapeHtml(value);
@@ -40,7 +43,8 @@ export function replaceVariables(
 /**
  * Expand repeating rows in tables based on list variables.
  *
- * Uses regex-based replacement for reliability in both browser and Node.js.
+ * Uses DOM parsing when available (browser/jsdom) for robust handling of
+ * nested tables and attribute formatting. Falls back to regex in pure Node.
  */
 export function expandRepeatingRows(
   html: string,
@@ -50,26 +54,68 @@ export function expandRepeatingRows(
     (v) => v.isList && v.listValues && v.listValues.length > 0
   );
 
-  // Match <tr> tags with data-repeat="true"
-  const rowRegex = /<tr\b[^>]*\bdata-repeat=["']true["'][^>]*>(.*?)<\/tr>/gi;
+  if (listVars.length === 0) {
+    // No list variables — just strip data-repeat attributes
+    return html.replace(/\s*data-repeat=["']?true["']?/gi, "");
+  }
 
+  // Use DOM parsing when available for robustness
+  if (typeof DOMParser !== "undefined") {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const rows = doc.querySelectorAll('tr[data-repeat="true"]');
+
+    rows.forEach((row) => {
+      const rowHtml = row.outerHTML;
+      const usedVars = listVars.filter((v) => rowHtml.includes(`{{${v.name}}}`));
+
+      if (usedVars.length === 0) {
+        row.removeAttribute("data-repeat");
+        return;
+      }
+
+      const maxCount = Math.max(...usedVars.map((v) => v.listValues!.length));
+      const parent = row.parentNode;
+      if (!parent) return;
+
+      for (let i = 0; i < maxCount; i++) {
+        const clone = row.cloneNode(true) as Element;
+        clone.removeAttribute("data-repeat");
+        // Replace variables in the clone's HTML
+        clone.innerHTML = clone.innerHTML.replace(
+          VAR_REGEX,
+          (_match: string, name: string) => {
+            const variable = usedVars.find((v) => v.name === name);
+            if (!variable || !variable.listValues) return `{{${name}}}`;
+            return escapeHtml(variable.listValues[i] ?? "");
+          }
+        );
+        parent.insertBefore(clone, row);
+      }
+
+      parent.removeChild(row);
+    });
+
+    // Return body innerHTML (DOMParser wraps in <html><body>)
+    return doc.body.innerHTML;
+  }
+
+  // Fallback: regex-based for pure Node environments
+  const rowRegex = /<tr\b[^>]*\bdata-repeat=["']true["'][^>]*>[\s\S]*?<\/tr>/gi;
   return html.replace(rowRegex, (fullRowMatch) => {
-    // Find which list variables are used in this row
     const usedVars = listVars.filter((v) => fullRowMatch.includes(`{{${v.name}}}`));
 
     if (usedVars.length === 0) {
-      // No list vars in this row — just remove the data-repeat attribute
       return fullRowMatch.replace(/\s*data-repeat=["']true["']/i, "");
     }
 
     const maxCount = Math.max(...usedVars.map((v) => v.listValues!.length));
-
-    // Generate N rows
     const generatedRows: string[] = [];
+
     for (let i = 0; i < maxCount; i++) {
       const newRow = fullRowMatch
         .replace(/\s*data-repeat=["']true["']/i, "")
-        .replace(/\{\{([\w\u0E00-\u0E7F_]+)\}\}/g, (match: string, name: string) => {
+        .replace(VAR_REGEX, (match: string, name: string) => {
           const variable = usedVars.find((v) => v.name === name);
           if (!variable || !variable.listValues) return match;
           return escapeHtml(variable.listValues[i] ?? "");
@@ -96,9 +142,13 @@ export function processTemplate(
   // Check for missing variables before replacement
   const allVars = extractVariables(templateHtml);
   const missing = allVars.filter((name) => {
-    const hasDataValue = dataRow[name] !== undefined && dataRow[name] !== "";
-    const varValue = variables.find((v) => v.name === name)?.value;
-    const hasVarValue = varValue !== undefined && varValue !== "";
+    const dataValue = dataRow[name];
+    const hasDataValue = dataValue !== undefined && dataValue !== "";
+    const v = variables.find((varDef) => varDef.name === name);
+    const varValue = v?.value;
+    const hasVarValue = v?.isList
+      ? (v.listValues && v.listValues.length > 0)
+      : (varValue !== undefined && varValue !== "");
     return !hasDataValue && !hasVarValue;
   });
   if (missing.length > 0) {
@@ -115,7 +165,10 @@ export function processTemplate(
 }
 
 function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

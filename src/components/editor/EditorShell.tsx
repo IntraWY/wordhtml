@@ -102,6 +102,17 @@ export function EditorShell() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // Skip shortcuts when user is typing in an input, textarea, or contenteditable
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (event.key === "F11") {
         event.preventDefault();
         setIsFullscreen((f) => !f);
