@@ -102,6 +102,13 @@ export function EditorShell() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // Ctrl+Enter → Insert page break (works even inside editor)
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        editor?.chain().focus().insertPageBreak().run();
+        return;
+      }
+
       // Skip shortcuts when user is typing in an input, textarea, or contenteditable
       const target = event.target as HTMLElement | null;
       if (
@@ -216,6 +223,13 @@ export function EditorShell() {
     const mergedRow = { ...variableFallback, ...dataRow };
     return processTemplate(documentHtml, variables, mergedRow).html;
   }, [previewMode, templateMode, documentHtml, variables, dataSet]);
+
+  // Count pages from page breaks in the document
+  const pageCount = useMemo(() => {
+    if (!documentHtml) return 1;
+    const breaks = (documentHtml.match(/<div[^>]*\bpage-break\b[^>]*>/gi) || []).length;
+    return breaks + 1;
+  }, [documentHtml]);
 
   // beforeunload warning when document has unsaved changes (current HTML
   // differs from the most-recent snapshot in history).
@@ -378,6 +392,13 @@ export function EditorShell() {
                     </div>
                   </div>
                 )}
+              </div>
+              {/* Status bar */}
+              <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-4 py-1 text-[11px] text-[color:var(--color-muted-foreground)]">
+                <span>{pageCount} หน้า (Pages)</span>
+                <span className="text-[color:var(--color-border-strong)]">
+                  Ctrl+Enter = ตัวแบ่งหน้า
+                </span>
               </div>
             </div>
             {sourceOpen && <SourcePane />}

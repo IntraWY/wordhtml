@@ -34,7 +34,6 @@ import {
   Split,
 } from "lucide-react";
 
-import { useEditorStore } from "@/store/editorStore";
 import { TemplateModeToggle } from "./TemplateModeToggle";
 
 import { cn } from "@/lib/utils";
@@ -404,27 +403,22 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
 
       <Divider />
 
-      {/* Template mode toggle & page break */}
-      <TemplateToolbarSection editor={editor} />
-    </div>
-  );
-}
+      <Divider />
 
-function TemplateToolbarSection({ editor }: { editor: Editor }) {
-  const templateMode = useEditorStore((s) => s.templateMode);
-
-  return (
-    <ToolGroup>
-      {templateMode && (
+      {/* Page break — always available */}
+      <ToolGroup>
         <ToolButton
           label="แทรกตัวแบ่งหน้า (Page Break)"
           onClick={() => editor.chain().focus().insertPageBreak().run()}
         >
           <Split />
         </ToolButton>
-      )}
+      </ToolGroup>
+
+      <Divider />
+
       <TemplateModeToggle />
-    </ToolGroup>
+    </div>
   );
 }
 

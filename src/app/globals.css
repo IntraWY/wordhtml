@@ -343,6 +343,15 @@ body {
   break-after: page;
 }
 
+/* Tiptap node view for page break */
+.ProseMirror .page-break {
+  position: relative;
+}
+
+.ProseMirror .page-break::before {
+  content: none;
+}
+
 /* ── Print stylesheet ── */
 @media print {
   /* Hide UI chrome */

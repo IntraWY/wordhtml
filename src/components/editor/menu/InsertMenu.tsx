@@ -100,6 +100,23 @@ export function InsertMenu({ editor }: EditorMenuProps) {
           disabled={!hasEditor}
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
         />
+        <Sep />
+        <MenuItem
+          label="แทรกตัวแบ่งหน้า (Page Break)"
+          shortcut="Ctrl+Enter"
+          disabled={!hasEditor}
+          onClick={() => editor?.chain().focus().insertPageBreak().run()}
+        />
+        <MenuItem
+          label="เพิ่มหน้าใหม่ (Add Page)"
+          disabled={!hasEditor}
+          onClick={() => {
+            // Go to end of document and insert a page break
+            if (!editor) return;
+            const endPos = editor.state.doc.content.size;
+            editor.chain().focus().setTextSelection(endPos).insertPageBreak().run();
+          }}
+        />
       </MenuDropdown>
     </>
   );

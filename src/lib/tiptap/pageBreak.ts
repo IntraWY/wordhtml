@@ -42,13 +42,39 @@ export const PageBreak = Node.create({
       const dom = document.createElement("div");
       dom.className = "page-break";
       dom.style.pageBreakAfter = "always";
-      dom.style.height = "1px";
-      dom.style.borderTop = "1px dashed var(--color-border)";
-      dom.style.margin = "12px 0";
+      dom.style.margin = "16px 0";
       dom.contentEditable = "false";
-      return {
-        dom,
-      };
+
+      const line = document.createElement("div");
+      line.style.display = "flex";
+      line.style.alignItems = "center";
+      line.style.gap = "8px";
+      line.style.pointerEvents = "none";
+
+      const left = document.createElement("span");
+      left.style.flex = "1";
+      left.style.height = "1px";
+      left.style.borderTop = "1px dashed var(--color-border)";
+
+      const label = document.createElement("span");
+      label.textContent = "ตัวแบ่งหน้า (Page Break)";
+      label.style.fontSize = "10px";
+      label.style.color = "var(--color-muted-foreground)";
+      label.style.textTransform = "uppercase";
+      label.style.letterSpacing = "0.05em";
+      label.style.whiteSpace = "nowrap";
+
+      const right = document.createElement("span");
+      right.style.flex = "1";
+      right.style.height = "1px";
+      right.style.borderTop = "1px dashed var(--color-border)";
+
+      line.appendChild(left);
+      line.appendChild(label);
+      line.appendChild(right);
+      dom.appendChild(line);
+
+      return { dom };
     };
   },
 
