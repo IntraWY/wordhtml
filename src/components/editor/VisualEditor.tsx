@@ -24,7 +24,6 @@ import { Upload, FileText, Keyboard } from "lucide-react";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { IndentExtension } from "@/lib/tiptap/indentExtension";
 import { ImageWithAlign } from "@/lib/tiptap/imageWithAlign";
-import { FormattingToolbar } from "./FormattingToolbar";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -110,33 +109,23 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
     onEditorReady?.(editor);
   }, [editor, onEditorReady]);
 
+  if (!editor) {
+    return (
+      <div className="space-y-3 animate-pulse" aria-hidden="true">
+        <div className="h-4 rounded bg-[color:var(--color-border)] w-3/4" />
+        <div className="h-4 rounded bg-[color:var(--color-border)] w-full" />
+        <div className="h-4 rounded bg-[color:var(--color-border)] w-5/6" />
+        <div className="h-4 rounded bg-[color:var(--color-border)] w-2/3" />
+        <div className="mt-6 h-4 rounded bg-[color:var(--color-border)] w-full" />
+        <div className="h-4 rounded bg-[color:var(--color-border)] w-4/5" />
+      </div>
+    );
+  }
   return (
-    <div className="flex h-full flex-col">
-      <div className="shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
-        โปรแกรมแก้ไข
-      </div>
-      {editor && <FormattingToolbar editor={editor} />}
-      <div className="editor-canvas flex-1 min-h-0 overflow-auto p-6">
-        {!editor ? (
-          <div
-            className="bg-white shadow space-y-3 animate-pulse px-10 py-8"
-            aria-hidden="true"
-          >
-            <div className="h-4 rounded bg-[color:var(--color-border)] w-3/4" />
-            <div className="h-4 rounded bg-[color:var(--color-border)] w-full" />
-            <div className="h-4 rounded bg-[color:var(--color-border)] w-5/6" />
-            <div className="h-4 rounded bg-[color:var(--color-border)] w-2/3" />
-            <div className="mt-6 h-4 rounded bg-[color:var(--color-border)] w-full" />
-            <div className="h-4 rounded bg-[color:var(--color-border)] w-4/5" />
-          </div>
-        ) : (
-          <div className="bg-white shadow min-h-full px-10 py-8">
-            <EditorContent editor={editor} className="h-full" />
-            {isEmpty && <EmptyHint />}
-          </div>
-        )}
-      </div>
-    </div>
+    <>
+      <EditorContent editor={editor} className="h-full" />
+      {isEmpty && <EmptyHint />}
+    </>
   );
 }
 

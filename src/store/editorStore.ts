@@ -58,7 +58,6 @@ interface EditorState {
   loadError: string | null;
   lastLoadWarnings: MammothMessage[];
   sourceOpen: boolean;
-  previewOpen: boolean;
   // actions
   setHtml: (html: string) => void;
   setFileName: (name: string | null) => void;
@@ -73,7 +72,6 @@ interface EditorState {
   clearLoadWarnings: () => void;
   reset: () => void;
   toggleSource: () => void;
-  togglePreview: () => void;
   // history actions
   saveSnapshot: () => void;
   loadSnapshot: (id: string) => void;
@@ -103,7 +101,6 @@ export const useEditorStore = create<EditorState>()(
       loadError: null,
       lastLoadWarnings: [],
       sourceOpen: false,
-      previewOpen: true,
 
       setHtml: (html) => {
         set({ documentHtml: html, lastEditAt: Date.now() });
@@ -149,7 +146,6 @@ export const useEditorStore = create<EditorState>()(
       clearError: () => set({ loadError: null }),
       clearLoadWarnings: () => set({ lastLoadWarnings: [] }),
       toggleSource: () => set((s) => ({ sourceOpen: !s.sourceOpen })),
-      togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),
       loadFile: async (file) => {
         const name = file.name;
         const lower = name.toLowerCase();

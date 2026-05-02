@@ -1,7 +1,7 @@
 "use client";
 
 import { useEditorStore } from "@/store/editorStore";
-import { MenuDropdown, MenuItem, Sep } from "./primitives";
+import { MenuDropdown, MenuItem } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
 interface ViewMenuProps extends EditorMenuProps {
@@ -11,9 +11,7 @@ interface ViewMenuProps extends EditorMenuProps {
 
 export function ViewMenu({ isFullscreen, onToggleFullscreen }: ViewMenuProps) {
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
-  const previewOpen = useEditorStore((s) => s.previewOpen);
   const toggleSource = useEditorStore((s) => s.toggleSource);
-  const togglePreview = useEditorStore((s) => s.togglePreview);
 
   return (
     <MenuDropdown label="มุมมอง (View)">
@@ -21,12 +19,6 @@ export function ViewMenu({ isFullscreen, onToggleFullscreen }: ViewMenuProps) {
         label="ซอร์ส HTML"
         checked={sourceOpen}
         onClick={toggleSource}
-      />
-      <Sep />
-      <MenuItem
-        label="A4 Preview"
-        checked={previewOpen}
-        onClick={togglePreview}
       />
       <MenuItem
         label="เต็มหน้าจอ (Fullscreen)"

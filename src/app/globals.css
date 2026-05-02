@@ -204,7 +204,7 @@ body {
   height: auto;
 }
 
-/* A4Preview / export: alignment via data-align on <img> */
+/* Export: alignment via data-align on <img> */
 .paper img:not([data-align]) { display: block; margin: 1em 0; }
 .paper img[data-align="left"]   { float: left;  margin: 0.5em 1em 0.5em 0; clear: left; }
 .paper img[data-align="center"] { display: block; margin: 1em auto; clear: both; float: none; }

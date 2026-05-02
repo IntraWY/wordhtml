@@ -8,7 +8,7 @@ import { TopBar } from "./TopBar";
 import { MenuBar } from "./MenuBar";
 import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
-import { A4Preview } from "./A4Preview";
+import { FormattingToolbar } from "./FormattingToolbar";
 import { ExportDialog } from "./ExportDialog";
 import { SearchPanel } from "./SearchPanel";
 import { PageSetupDialog } from "./PageSetupDialog";
@@ -18,6 +18,7 @@ import { MobileBlock } from "@/components/MobileBlock";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
 import { cn } from "@/lib/utils";
+import { A4, LETTER, mmToPx } from "@/lib/page";
 
 function SourcePane() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
@@ -61,7 +62,6 @@ export function EditorShell() {
   const loadFile = useEditorStore((s) => s.loadFile);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
-  const previewOpen = useEditorStore((s) => s.previewOpen);
   const pageSetup = useEditorStore((s) => s.pageSetup);
 
   // Custom-event bridge between menu components and shell
@@ -192,27 +192,16 @@ export function EditorShell() {
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
-  const PX_PER_CM = 794 / 21;
-  const mmToPx = (mm: number) => (mm / 10) * PX_PER_CM;
-  const base =
-    pageSetup.size === "Letter"
-      ? { wMm: 215.9, hMm: 279.4 }
-      : { wMm: 210, hMm: 297 };
+  const base = pageSetup.size === "Letter" ? LETTER : A4;
   const isLandscape = pageSetup.orientation === "landscape";
   const widthMm = isLandscape ? base.hMm : base.wMm;
-  const editorMarginLeftPx = Math.round(mmToPx(pageSetup.marginMm.left));
-  const editorMarginRightPx = Math.round(mmToPx(pageSetup.marginMm.right));
-
-  const rightPane = sourceOpen ? (
-    <SourcePane />
-  ) : previewOpen ? (
-    <A4Preview
-      onIndentChange={handleIndentChange}
-      currentIndent={currentIndent}
-    />
-  ) : null;
-
-  const gridCols = rightPane ? "grid-cols-2" : "grid-cols-1";
+  const heightMm = isLandscape ? base.wMm : base.hMm;
+  const widthPx = Math.round(mmToPx(widthMm));
+  const heightPx = Math.round(mmToPx(heightMm));
+  const marginTopPx = Math.round(mmToPx(pageSetup.marginMm.top));
+  const marginRightPx = Math.round(mmToPx(pageSetup.marginMm.right));
+  const marginBottomPx = Math.round(mmToPx(pageSetup.marginMm.bottom));
+  const marginLeftPx = Math.round(mmToPx(pageSetup.marginMm.left));
 
   return (
     <>
@@ -290,22 +279,54 @@ export function EditorShell() {
         <div
           className={cn(
             "grid flex-1 gap-px overflow-hidden bg-[color:var(--color-border)]",
-            gridCols
+            sourceOpen ? "grid-cols-2" : "grid-cols-1"
           )}
         >
           <div className="flex min-h-0 flex-col overflow-hidden">
-            <Ruler
-              orientation="horizontal"
-              cm={widthMm / 10}
-              marginStart={editorMarginLeftPx}
-              marginEnd={editorMarginRightPx}
-              indentLeft={currentIndent.marginLeft}
-              indentFirst={currentIndent.textIndent}
-              onIndentChange={handleIndentChange}
-            />
-            <VisualEditor onEditorReady={setEditor} />
+            {editor && <FormattingToolbar editor={editor} />}
+            <div className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
+              <div className="mx-auto" style={{ width: widthPx + 18 }}>
+                <div
+                  className="grid"
+                  style={{
+                    gridTemplateColumns: `18px ${widthPx}px`,
+                    gridTemplateRows: `18px auto`,
+                  }}
+                >
+                  <div className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-muted)]" />
+                  <Ruler
+                    orientation="horizontal"
+                    cm={widthMm / 10}
+                    marginStart={marginLeftPx}
+                    marginEnd={marginRightPx}
+                    indentLeft={currentIndent.marginLeft}
+                    indentFirst={currentIndent.textIndent}
+                    onIndentChange={handleIndentChange}
+                  />
+                  <Ruler
+                    orientation="vertical"
+                    cm={heightMm / 10}
+                    marginStart={marginTopPx}
+                    marginEnd={marginBottomPx}
+                  />
+                  <article
+                    className="paper printable-paper bg-white shadow-sm"
+                    style={{
+                      minHeight: heightPx,
+                      width: widthPx,
+                      paddingTop: marginTopPx,
+                      paddingRight: marginRightPx,
+                      paddingBottom: marginBottomPx,
+                      paddingLeft: marginLeftPx,
+                    }}
+                  >
+                    <VisualEditor onEditorReady={setEditor} />
+                  </article>
+                </div>
+              </div>
+            </div>
           </div>
-          {rightPane}
+          {sourceOpen && <SourcePane />}
         </div>
 
         {isDragging && (
