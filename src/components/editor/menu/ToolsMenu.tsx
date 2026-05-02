@@ -6,6 +6,7 @@ import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
 export function ToolsMenu(_props: EditorMenuProps) {
+  void _props;
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const hasDoc = documentHtml.trim().length > 0;
 

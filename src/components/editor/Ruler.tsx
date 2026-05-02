@@ -61,12 +61,13 @@ export function Ruler({
   const leftPx = marginStart + indentLeft * PX_PER_CM;
   const firstPx = marginStart + (indentLeft + indentFirst) * PX_PER_CM;
 
-  const snap = (v: number) => Math.round(v * 10) / 10;
-  const clamp = (v: number) =>
-    Math.max(0, Math.min(v, (totalPx - marginEnd - marginStart) / PX_PER_CM));
+  const maxIndentCm = (totalPx - marginEnd - marginStart) / PX_PER_CM;
 
   useEffect(() => {
     if (!interactive) return;
+
+    const snap = (v: number) => Math.round(v * 10) / 10;
+    const clamp = (v: number) => Math.max(0, Math.min(v, maxIndentCm));
 
     const onMouseMove = (e: MouseEvent) => {
       const drag = dragRef.current;
@@ -93,11 +94,12 @@ export function Ruler({
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
     };
-  }, [interactive, onIndentChange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [interactive, onIndentChange, maxIndentCm]);
 
   const startDrag =
     (type: "left" | "first") => (e: React.MouseEvent) => {
       e.preventDefault();
+      // eslint-disable-next-line react-hooks/refs
       dragRef.current = {
         type,
         startX: e.clientX,

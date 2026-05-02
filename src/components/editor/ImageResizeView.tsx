@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
 
@@ -71,7 +71,7 @@ export function ImageResizeView({
     };
   }, [drag, updateAttributes]);
 
-  const startDrag =
+  const startDrag = useCallback(
     (handle: "bl" | "br") => (e: React.MouseEvent) => {
       e.preventDefault();
       const img = imgRef.current;
@@ -85,7 +85,9 @@ export function ImageResizeView({
         startH: rect.height,
         ratio: rect.width / Math.max(1, rect.height),
       });
-    };
+    },
+    []
+  );
 
   const applyPreset = (preset: string) => (e: React.MouseEvent) => {
     e.preventDefault();

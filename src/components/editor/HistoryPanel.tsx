@@ -3,7 +3,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash } from "lucide-react";
 
-import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
 import { cn } from "@/lib/utils";
 import type { DocumentSnapshot } from "@/types";
@@ -34,7 +33,6 @@ export function HistoryPanel() {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content
           className="fixed left-1/2 top-1/2 z-50 w-[min(560px,92vw)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2 flex flex-col overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-          aria-describedby={undefined}
         >
           <header className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
             <div className="flex items-center gap-2">
@@ -42,6 +40,9 @@ export function HistoryPanel() {
               <Dialog.Title className="text-base font-semibold tracking-tight">
                 ประวัติเอกสาร
               </Dialog.Title>
+              <Dialog.Description className="sr-only">
+                ดูและกู้คืน snapshot เอกสารที่บันทึกไว้
+              </Dialog.Description>
             </div>
             <div className="flex items-center gap-2">
               {history.length > 0 && (

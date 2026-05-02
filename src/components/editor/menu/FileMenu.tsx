@@ -10,6 +10,7 @@ export interface EditorMenuProps {
 }
 
 export function FileMenu(_props: EditorMenuProps) {
+  void _props;
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const reset = useEditorStore((s) => s.reset);
   const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);

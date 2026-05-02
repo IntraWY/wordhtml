@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
+import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
 import type {
   CleanerKey,
@@ -14,11 +15,6 @@ import type {
 const MAX_HISTORY = 20;
 const AUTO_SNAPSHOT_IDLE_MS = 120_000; // 2 minutes idle
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
-
-function countWords(html: string): number {
-  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  return text ? text.split(" ").length : 0;
-}
 
 export interface PageSetup {
   size: "A4" | "Letter";
@@ -66,6 +62,7 @@ interface EditorState {
   setPageSetup: (partial: Partial<PageSetup>) => void;
   openExportDialog: (format?: ExportFormat) => void;
   closeExportDialog: () => void;
+  setPendingExportFormat: (format: ExportFormat | null) => void;
   loadFile: (file: File) => Promise<void>;
   triggerFileOpen: () => void;
   clearError: () => void;
@@ -138,6 +135,8 @@ export const useEditorStore = create<EditorState>()(
       },
       closeExportDialog: () =>
         set({ exportDialogOpen: false, pendingExportFormat: null }),
+      setPendingExportFormat: (format: ExportFormat | null) =>
+        set({ pendingExportFormat: format }),
       triggerFileOpen: () => {
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("wordhtml:open-file"));

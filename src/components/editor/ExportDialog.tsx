@@ -35,18 +35,14 @@ export function ExportDialog() {
   const setImageMode = useEditorStore((s) => s.setImageMode);
   const fileName = useEditorStore((s) => s.fileName);
   const pendingFormat = useEditorStore((s) => s.pendingExportFormat);
+  const setPendingExportFormat = useEditorStore(
+    (s) => s.setPendingExportFormat
+  );
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
-  // Track which format is highlighted as primary. When the dialog is opened
-  // with a pre-selected format (via openExportDialog(format)), default to it.
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>(
-    pendingFormat ?? "html"
-  );
 
-  useEffect(() => {
-    if (pendingFormat) setSelectedFormat(pendingFormat);
-  }, [pendingFormat]);
+  const selectedFormat = pendingFormat ?? "html";
 
   const cleanedHtml = useMemo(
     () => applyCleaners(documentHtml, enabledCleaners),
@@ -102,13 +98,15 @@ export function ExportDialog() {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content
           className="fixed left-1/2 top-1/2 z-50 grid w-[min(900px,92vw)] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_1fr_auto] overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-          aria-describedby={undefined}
         >
           <header className="flex items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
             <div>
               <Dialog.Title className="text-base font-semibold tracking-tight">
                 ส่งออก HTML
               </Dialog.Title>
+              <Dialog.Description className="sr-only">
+                ตัวอย่าง HTML ที่ผ่านการทำความสะอาดและตัวเลือกการส่งออก
+              </Dialog.Description>
               <p className="mt-0.5 text-xs text-[color:var(--color-muted-foreground)]">
                 {activeCleaners.length === 0
                   ? "ไม่มีตัวทำความสะอาดที่เปิดใช้"
@@ -147,7 +145,7 @@ export function ExportDialog() {
           </div>
 
           <footer className="flex flex-col gap-4 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-            {selectedFormat === "md" ? (
+            {(pendingFormat ?? "html") === "md" ? (
               <p className="text-xs text-[color:var(--color-muted-foreground)]">
                 หมายเหตุ: Markdown จะฝังรูปภาพในรูปแบบ <code className="font-mono">![alt](src)</code> เสมอ ตัวเลือกรูปภาพด้านล่างใช้กับ HTML/ZIP เท่านั้น
               </p>
@@ -158,7 +156,7 @@ export function ExportDialog() {
               <Button
                 variant={selectedFormat === "docx" ? "primary" : "secondary"}
                 onClick={() => {
-                  setSelectedFormat("docx");
+                  setPendingExportFormat("docx");
                   handleDownload("docx");
                 }}
                 disabled={busy !== null}
@@ -169,7 +167,7 @@ export function ExportDialog() {
               <Button
                 variant={selectedFormat === "zip" ? "primary" : "secondary"}
                 onClick={() => {
-                  setSelectedFormat("zip");
+                  setPendingExportFormat("zip");
                   handleDownload("zip");
                 }}
                 disabled={busy !== null}
@@ -180,7 +178,7 @@ export function ExportDialog() {
               <Button
                 variant={selectedFormat === "html" ? "primary" : "secondary"}
                 onClick={() => {
-                  setSelectedFormat("html");
+                  setPendingExportFormat("html");
                   handleDownload("html");
                 }}
                 disabled={busy !== null}
@@ -195,7 +193,7 @@ export function ExportDialog() {
               <Button
                 variant={selectedFormat === "md" ? "primary" : "secondary"}
                 onClick={() => {
-                  setSelectedFormat("md");
+                  setPendingExportFormat("md");
                   handleDownload("md");
                 }}
                 disabled={busy !== null}

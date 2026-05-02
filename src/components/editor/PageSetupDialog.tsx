@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
@@ -17,13 +17,10 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
 
-  // Local form state — initialized from store, applied on Save
+  // Local form state — initialized from store, applied on Save.
+  // We do not reset when the dialog re-opens so the user keeps their
+  // last edits; the initial mount always picks up the current store value.
   const [draft, setDraft] = useState<PageSetup>(pageSetup);
-
-  // Reset draft when dialog opens
-  useEffect(() => {
-    if (open) setDraft(pageSetup);
-  }, [open, pageSetup]);
 
   const handleSave = () => {
     setPageSetup(draft);
@@ -39,6 +36,9 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
             <Dialog.Title className="text-base font-semibold tracking-tight">
               ตั้งค่าหน้ากระดาษ (Page Setup)
             </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              ปรับขนาดกระดาด การวาง และระยะขอบ
+            </Dialog.Description>
             <Dialog.Close asChild>
               <button
                 type="button"

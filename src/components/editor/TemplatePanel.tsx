@@ -98,7 +98,6 @@ export function TemplatePanel() {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content
           className="fixed left-1/2 top-1/2 z-50 flex w-[min(560px,92vw)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-          aria-describedby={undefined}
         >
           <header className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
             <div className="flex items-center gap-2">
@@ -106,6 +105,9 @@ export function TemplatePanel() {
               <Dialog.Title className="text-base font-semibold tracking-tight">
                 Template ของฉัน
               </Dialog.Title>
+              <Dialog.Description className="sr-only">
+                จัดการ template เอกสารที่บันทึกไว้
+              </Dialog.Description>
             </div>
             <Dialog.Close
               aria-label="ปิด"

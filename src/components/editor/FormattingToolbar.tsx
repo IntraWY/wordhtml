@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import {
   Bold,
@@ -42,13 +43,20 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
   const textColorRef = useRef<HTMLInputElement>(null);
   const highlightColorRef = useRef<HTMLInputElement>(null);
 
-  const currentTextColor = editor.getAttributes("textStyle").color as string | undefined;
-  const currentHighlight = editor.getAttributes("highlight").color as string | undefined;
+  const state = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      textColor: (e?.getAttributes("textStyle").color as string | undefined) ?? undefined,
+      highlightColor: (e?.getAttributes("highlight").color as string | undefined) ?? undefined,
+      isImage: e?.isActive("image") ?? false,
+      imageAlign: (e?.getAttributes("image").align as string | undefined) ?? undefined,
+    }),
+  });
 
-  const isImage = editor.isActive("image");
-  const imageAttrs = editor.getAttributes("image") as {
-    align?: string;
-  };
+  const currentTextColor = state?.textColor;
+  const currentHighlight = state?.highlightColor;
+  const isImage = state?.isImage ?? false;
+  const imageAttrs = { align: state?.imageAlign };
 
   const setImageAlign = (align: "left" | "center" | "right") => {
     editor.chain().focus().updateAttributes("image", { align }).run();
