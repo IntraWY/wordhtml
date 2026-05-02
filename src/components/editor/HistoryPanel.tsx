@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { useState, useEffect, useRef } from "react";
 import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
@@ -25,6 +26,7 @@ export function HistoryPanel() {
   const loadSnapshot = useEditorStore((s) => s.loadSnapshot);
   const duplicateSnapshot = useEditorStore((s) => s.duplicateSnapshot);
   const deleteSnapshot = useEditorStore((s) => s.deleteSnapshot);
+  const renameSnapshot = useEditorStore((s) => s.renameSnapshot);
   const clearHistory = useEditorStore((s) => s.clearHistory);
 
   return (
@@ -88,6 +90,7 @@ export function HistoryPanel() {
                     onLoad={() => loadSnapshot(snap.id)}
                     onDuplicate={() => duplicateSnapshot(snap.id)}
                     onDelete={() => deleteSnapshot(snap.id)}
+                    onRename={(name) => renameSnapshot(snap.id, name)}
                   />
                 ))}
               </ul>
@@ -110,16 +113,69 @@ interface SnapshotRowProps {
   onLoad: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onRename: (name: string | null) => void;
 }
 
-function SnapshotRow({ snap, onLoad, onDuplicate, onDelete }: SnapshotRowProps) {
+function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: SnapshotRowProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(snap.fileName ?? "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const displayName = snap.fileName ?? "เอกสารไม่มีชื่อ";
+
+  const startEdit = () => {
+    setDraft(snap.fileName ?? "");
+    setEditing(true);
+  };
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    onRename(trimmed || null);
+    setEditing(false);
+  };
+
+  const cancel = () => {
+    setDraft(snap.fileName ?? "");
+    setEditing(false);
+  };
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
   return (
     <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]">
       <FileText className="size-8 shrink-0 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-1.5 text-[color:var(--color-muted-foreground)]" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">
-          {snap.fileName ?? "เอกสารไม่มีชื่อ"}
-        </p>
+        {editing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") cancel();
+            }}
+            onBlur={commit}
+            aria-label="แก้ไขชื่อเอกสาร"
+            className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-0.5 text-sm font-medium outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={startEdit}
+            title="คลิกเพื่อแก้ไขชื่อ"
+            className="block w-full text-left"
+          >
+            <p className="truncate text-sm font-medium">
+              {displayName}
+            </p>
+          </button>
+        )}
         <p className="mt-0.5 text-xs text-[color:var(--color-muted-foreground)]">
           {formatDate(snap.savedAt)} · {snap.wordCount.toLocaleString()} คำ
         </p>

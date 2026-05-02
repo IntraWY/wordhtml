@@ -81,6 +81,7 @@ interface EditorState {
   loadSnapshot: (id: string) => void;
   duplicateSnapshot: (id: string) => void;
   deleteSnapshot: (id: string) => void;
+  renameSnapshot: (id: string, fileName: string | null) => void;
   clearHistory: () => void;
   openHistoryPanel: () => void;
   closeHistoryPanel: () => void;
@@ -253,6 +254,14 @@ export const useEditorStore = create<EditorState>()(
       deleteSnapshot: (id) => {
         set((state) => ({
           history: state.history.filter((s) => s.id !== id),
+        }));
+      },
+
+      renameSnapshot: (id, fileName) => {
+        set((state) => ({
+          history: state.history.map((s) =>
+            s.id === id ? { ...s, fileName: fileName || null } : s
+          ),
         }));
       },
 
