@@ -102,13 +102,6 @@ export function EditorShell() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      // Ctrl+Enter → Insert page break (works even inside editor)
-      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-        event.preventDefault();
-        editor?.chain().focus().insertPageBreak().run();
-        return;
-      }
-
       // Skip shortcuts when user is typing in an input, textarea, or contenteditable
       const target = event.target as HTMLElement | null;
       if (

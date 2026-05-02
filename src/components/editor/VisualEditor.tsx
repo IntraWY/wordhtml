@@ -42,6 +42,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   // updates that originated from the editor (e.g., when the source pane
   // mirrors the editor, we don't want to re-set content and lose the cursor).
   const lastWrittenHtml = useRef<string>("");
+  const editorRef = useRef<Editor | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -94,6 +95,19 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       transformPastedHTML(html) {
         return cleanPastedHtml(html);
       },
+      handleKeyDown(_view, event) {
+        // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+          event.preventDefault();
+          // Use the editor instance from closure (set below)
+          const ed = editorRef.current;
+          if (ed) {
+            ed.chain().focus().insertPageBreak().run();
+          }
+          return true;
+        }
+        return false;
+      },
       handleDrop(view, event) {
         const text = event.dataTransfer?.getData("text/plain");
         if (!text) return false;
@@ -115,6 +129,10 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       setHtml(html);
     },
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
