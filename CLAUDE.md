@@ -4,7 +4,7 @@
 
 ## What this is
 
-**wordhtml** is a static Next.js 16 web app that converts Word (`.docx`) ↔ HTML in the browser, with a visual editor + A4 preview and configurable cleaning options. It is a redesigned clone of [wordhtml.com](https://wordhtml.com/), built fresh with a "Modern Productivity" aesthetic (Linear / Vercel / Notion influence).
+**wordhtml** is a static Next.js 16 web app that converts Word (`.docx`) ↔ HTML in the browser, with a WYSIWYG A4-paper editor and configurable cleaning options. It is a redesigned clone of [wordhtml.com](https://wordhtml.com/), built fresh with a "Modern Productivity" aesthetic (Linear / Vercel / Notion influence).
 
 Everything runs **client-side** — no API routes, no server processing. The site is exported as static HTML/CSS/JS and can be deployed to Vercel, Netlify, Cloudflare Pages, or any static host.
 
@@ -14,7 +14,7 @@ Everything runs **client-side** — no API routes, no server processing. The sit
 npm install
 npm run dev          # http://localhost:3000
 npm run build        # produces ./out — static export
-npm test             # vitest run (107 tests across 8 files)
+npm test             # vitest run (112 tests across 9 files)
 npm run lint
 ```
 
@@ -50,8 +50,9 @@ src/
 │   └── help/page.tsx             # /help docs
 ├── components/
 │   ├── editor/
-│   │   ├── EditorShell.tsx       # outer shell — drag-drop, beforeunload, keyboard,
-│   │   │                         #   search panel, page-setup dialog, source pane
+│   │   ├── EditorShell.tsx       # outer shell — owns A4 paper grid (corner + H/V ruler +
+│   │   │                         #   article.paper), FormattingToolbar, drag-drop,
+│   │   │                         #   beforeunload, keyboard, search panel, page-setup dialog
 │   │   ├── TopBar.tsx            # logo + filename + history/upload/export
 │   │   ├── MenuBar.tsx           # 7-menu nav, slim composition
 │   │   ├── menu/
@@ -59,15 +60,15 @@ src/
 │   │   │   ├── FileMenu.tsx      # New, Open, Export HTML/ZIP/DOCX/MD, Snapshot
 │   │   │   ├── EditMenu.tsx      # Undo/Redo/Copy-as-HTML/Select All
 │   │   │   ├── InsertMenu.tsx    # Link, Image upload/URL, Table, HR, Soft Break, Code
-│   │   │   ├── ViewMenu.tsx      # Source HTML, A4 Preview, Fullscreen
+│   │   │   ├── ViewMenu.tsx      # Source HTML, Fullscreen
 │   │   │   ├── FormatMenu.tsx    # paragraph, B/I/U/Strike, Sub/Sup/Code,
 │   │   │   │                     #   Align submenu, Font submenu, Clear Formatting
 │   │   │   ├── TableMenu.tsx     # Insert Table, row/column ops, Delete Table
 │   │   │   └── ToolsMenu.tsx     # Word Count, Find/Replace, Page Setup, Cleaning
 │   │   ├── CleaningToolbar.tsx   # cleaner pills row
-│   │   ├── VisualEditor.tsx      # Tiptap editor (slim) + cursor preservation
+│   │   ├── VisualEditor.tsx      # Tiptap editor setup + EditorContent + EmptyHint only
+│   │   │                         #   (no outer container — rendered inside article.paper)
 │   │   ├── FormattingToolbar.tsx # icon toolbar — image-aware align/size, sub/sup, code
-│   │   ├── A4Preview.tsx         # paper rendering driven by pageSetup, with Ruler
 │   │   ├── Ruler.tsx             # H/V cm rulers with margin guides (PX_PER_CM=37.81)
 │   │   ├── SearchPanel.tsx       # Ctrl+F floating Find & Replace panel
 │   │   ├── PageSetupDialog.tsx   # A4/Letter, portrait/landscape, margins
@@ -97,6 +98,7 @@ src/
 │   ├── tiptap/
 │   │   └── imageWithAlign.ts     # Image extension extended with align/width attrs
 │   ├── images.ts                 # extract base64 <img> → File[] for ZIP
+│   ├── page.ts                   # A4/LETTER constants + mmToPx (shared by EditorShell & Ruler)
 │   ├── text.ts                   # plainTextFromHtml, Thai-aware countWords (+ tests)
 │   └── utils.ts                  # cn() — clsx + tailwind-merge
 ├── store/editorStore.ts          # Zustand global store
@@ -115,7 +117,7 @@ Persists to localStorage under `wordhtml-editor`. `partialize` whitelists:
 - `history` — up to 20 `DocumentSnapshot[]`, with 4MB total size guard
 - `pageSetup` — `{ size, orientation, marginMm }`
 
-Session-scoped (not persisted): `documentHtml`, `sourceOpen`, `previewOpen`, `pendingExportFormat`, `lastLoadWarnings`, `lastEditAt`.
+Session-scoped (not persisted): `documentHtml`, `sourceOpen`, `pendingExportFormat`, `lastLoadWarnings`, `lastEditAt`.
 
 Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML differs from the most recent.
 
@@ -124,9 +126,9 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 - **No server code.** All conversion, cleaning, and exporting happens in `'use client'` components or in pure-function libraries called from them. Do not introduce API routes, Server Actions, or `'use server'` blocks.
 - **Store as single source of truth for editor state.** UI components read with separate selectors (`useEditorStore((s) => s.x)`) — avoid destructuring the whole store, which causes unnecessary re-renders. The `MenuBar` perf bug from history was exactly this pattern.
 - **Cleaners are pure.** Each cleaner takes an HTML string and returns a new one. They use `DOMParser`, which is a browser API and also available under jsdom for tests.
-- **Cleaners apply only at export.** Editing should stay snappy; the A4 Preview reflects the *current* document, not the cleaned-for-export version.
+- **Cleaners apply only at export.** Editing should stay snappy; the paper editor shows the *current* document, not the cleaned-for-export version.
 - **Document never persists.** localStorage holds only preferences (cleaners, imageMode, pageSetup) and history snapshots. The current document is gone on reload — by design, for privacy. `beforeunload` warns if there are unsaved changes (current HTML differs from latest snapshot).
-- **UI toggles are session-scoped.** `sourceOpen` (HTML source pane), `previewOpen` (A4 preview), and `isFullscreen` reset on reload.
+- **UI toggles are session-scoped.** `sourceOpen` (HTML source pane) and `isFullscreen` reset on reload.
 - **History is local-only.** Up to 20 document snapshots in localStorage. Auto-snapshot fires after 2 min idle. Total serialized size is capped at 4MB; oldest snapshots are dropped first.
 - **Cleaner order matters.** See `src/lib/cleaning/pipeline.ts` — comments → styles → classes → attributes → **unwrapDeprecatedTags** → unwrapSpans → empty tags → spaces → (terminal) plainText.
 - **Editor reactivity for menus.** Menu components that show active/disabled states based on cursor position (e.g., `FormatMenu`, `EditMenu`) use `useEditorState` from `@tiptap/react` to subscribe to selection changes. Without it, checkmarks go stale.
@@ -139,8 +141,8 @@ Tokens live in `src/app/globals.css` under `@theme inline`. Tailwind v4 picks th
 - **Palette:** zinc-based monochrome (`#fafafa` / `#18181b`) with success green and danger red. No dark mode (light only).
 - **Type:** Geist Sans for UI and body, Geist Mono for code/terminal surfaces. Font menu also offers Sarabun, Noto Sans Thai, system-ui, serif.
 - **Radius:** 4 / 6 / 8 / 12 / 16 px (`--radius-xs` … `--radius-xl`).
-- **Editor & A4 preview share `.prose-editor` / `.paper` rules** so what you type matches what you see in the right pane and what you export.
-- **A4 dimensions:** 794×1123 px @ 96 DPI = 210×297 mm. Conversion `1 cm = 794/21 ≈ 37.81 px`. Letter is 215.9×279.4 mm. Page setup drives both `<A4Preview>` and the print stylesheet.
+- **Editor IS the paper.** The Tiptap `EditorContent` renders directly inside `<article class="paper printable-paper">` in `EditorShell`. `.prose-editor` and `.paper` share the same typography rules in `globals.css` so exports look identical to what you type.
+- **A4 dimensions:** 794×1123 px @ 96 DPI = 210×297 mm. Conversion `1 cm = 794/21 ≈ 37.81 px` — see `src/lib/page.ts`. Letter is 215.9×279.4 mm. Page setup drives the paper padding and the print stylesheet.
 - **Ruler:** 18 px wide/tall, ticks every 0.5 cm, labels at every 1 cm, faint red guides at margin start/end. Scrolls with paper so cm marks always align.
 - **i18n style:** Thai labels primary, English in parentheses. Example: `"ไฟล์ (File)"`, `"ตัวหนา (Bold)"`. Keep this consistent for any new menu/toolbar item.
 
@@ -166,7 +168,7 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 Before writing new code:
 1. Check existing patterns in this file.
 2. Read the relevant Next.js 16 doc in `node_modules/next/dist/docs/`.
-3. Reuse: `cn()`, `Button`, `useEditorStore`, the cleaner pipeline, `MenuItem`/`MenuDropdown` primitives, `Ruler`, `countWords`/`plainTextFromHtml`.
+3. Reuse: `cn()`, `Button`, `useEditorStore`, the cleaner pipeline, `MenuItem`/`MenuDropdown` primitives, `Ruler`, `mmToPx`/`A4`/`LETTER` from `src/lib/page.ts`, `countWords`/`plainTextFromHtml`.
 4. New cleaners: add to `cleaners.ts`, register in `pipeline.ts`'s `ORDER`, add to `CLEANERS` in `types/index.ts`, add an example to `EXAMPLES` in `CleanerExplainers.tsx`, add a test in `cleaners.test.ts`.
 5. New menu items: pick the right menu file under `components/editor/menu/`. Use `MenuItem` / `MenuSub` / `Sep` primitives. For shortcut text, only display what's actually wired in `EditorShell` or in Tiptap's keymap — don't display unwired shortcuts.
 6. New Tiptap extensions: install, then register in `VisualEditor.tsx` extensions array. Verify default vs named export — most v3 packages support both.
@@ -174,7 +176,7 @@ Before writing new code:
 
 ## Testing
 
-- Pure libs in `lib/cleaning/`, `lib/export/`, `lib/conversion/`, `lib/text.ts`, `lib/images.ts` are unit-tested with Vitest + jsdom (107 tests across 8 files).
+- Pure libs in `lib/cleaning/`, `lib/export/`, `lib/conversion/`, `lib/text.ts`, `lib/images.ts` are unit-tested with Vitest + jsdom (112 tests across 9 files).
 - No E2E suite is wired up — verify manually via `npm run dev`. Past sessions have also used Playwright MCP for smoke testing.
 - TypeScript runs as part of `next build` — `npm run build` is your type-check.
 
