@@ -78,15 +78,27 @@ export function EditorShell() {
     const onSearch = () => setSearchOpen(true);
     const onPageSetup = () => setPageSetupOpen(true);
     const onTemplates = () => useTemplateStore.getState().openPanel();
+    const onInsertVariable = (e: Event) => {
+      const name = (e as CustomEvent).detail as string;
+      if (!editor || !name) return;
+      const { state } = editor;
+      const pos = state.selection.from;
+      const mark = state.schema.marks.variable.create({ name });
+      const text = state.schema.text(`{{${name}}}`, [mark]);
+      editor.view.dispatch(state.tr.insert(pos, text));
+      editor.commands.focus();
+    };
     window.addEventListener("wordhtml:open-search", onSearch);
     window.addEventListener("wordhtml:open-page-setup", onPageSetup);
     window.addEventListener("wordhtml:open-templates", onTemplates);
+    window.addEventListener("wordhtml:insert-variable", onInsertVariable);
     return () => {
       window.removeEventListener("wordhtml:open-search", onSearch);
       window.removeEventListener("wordhtml:open-page-setup", onPageSetup);
       window.removeEventListener("wordhtml:open-templates", onTemplates);
+      window.removeEventListener("wordhtml:insert-variable", onInsertVariable);
     };
-  }, []);
+  }, [editor]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

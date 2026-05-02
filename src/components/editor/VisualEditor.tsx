@@ -94,6 +94,20 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       transformPastedHTML(html) {
         return cleanPastedHtml(html);
       },
+      handleDrop(view, event) {
+        const text = event.dataTransfer?.getData("text/plain");
+        if (!text) return false;
+        const match = /^\{\{([\w\u0E00-\u0E7F_]+)\}\}$/.exec(text);
+        if (!match) return false;
+        const name = match[1];
+        const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        if (!coords) return false;
+        const pos = coords.pos;
+        const mark = view.state.schema.marks.variable.create({ name });
+        const node = view.state.schema.text(text, [mark]);
+        view.dispatch(view.state.tr.insert(pos, node));
+        return true;
+      },
     },
     onUpdate({ editor }) {
       const html = editor.getHTML();

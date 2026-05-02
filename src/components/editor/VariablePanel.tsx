@@ -11,6 +11,9 @@ import {
   ChevronLeft,
   List,
   Check,
+  Plus,
+  GripVertical,
+  MousePointerClick,
 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
@@ -39,6 +42,9 @@ export function VariablePanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteKey, setPasteKey] = useState(0);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newVarName, setNewVarName] = useState("");
+  const [addError, setAddError] = useState("");
 
   // Auto-detect variables when documentHtml changes
   useEffect(() => {
@@ -92,6 +98,42 @@ export function VariablePanel() {
     },
     [setDataSet]
   );
+
+  const handleInsertVariable = useCallback((name: string) => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("wordhtml:insert-variable", { detail: name })
+      );
+    }
+  }, []);
+
+  const validateVarName = (raw: string): string | null => {
+    const sanitized = raw.trim().replace(/\s+/g, "_").replace(/[^\w\u0E00-\u0E7F_]/g, "");
+    if (!sanitized) return "ชื่อตัวแปรต้องไม่ว่างเปล่า";
+    if (/^\d/.test(sanitized)) return "ห้ามขึ้นต้นด้วยตัวเลข";
+    const existing = useEditorStore.getState().variables;
+    if (existing.some((v) => v.name === sanitized)) return "มีตัวแปรนี้อยู่แล้ว";
+    return null;
+  };
+
+  const handleAddVariable = useCallback(() => {
+    const error = validateVarName(newVarName);
+    if (error) {
+      setAddError(error);
+      return;
+    }
+    const sanitized = newVarName.trim().replace(/\s+/g, "_").replace(/[^\w\u0E00-\u0E7F_]/g, "");
+    const currentVars = useEditorStore.getState().variables;
+    setVariables([...currentVars, { name: sanitized, value: "", isList: false }]);
+    setNewVarName("");
+    setIsAdding(false);
+    setAddError("");
+  }, [newVarName, setVariables]);
+
+  const handleDragStart = useCallback((e: React.DragEvent, name: string) => {
+    e.dataTransfer.setData("text/plain", `{{${name}}}`);
+    e.dataTransfer.effectAllowed = "copy";
+  }, []);
 
   if (!templateMode) return null;
 
@@ -163,12 +205,59 @@ export function VariablePanel() {
                   )}
                 </div>
 
+                {/* Add variable input */}
+                {isAdding ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-[color:var(--color-muted-foreground)]">{"{{"}</span>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newVarName}
+                        onChange={(e) => {
+                          setNewVarName(e.target.value);
+                          setAddError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddVariable();
+                          if (e.key === "Escape") {
+                            setIsAdding(false);
+                            setNewVarName("");
+                            setAddError("");
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!newVarName.trim()) {
+                            setIsAdding(false);
+                            setAddError("");
+                          }
+                        }}
+                        placeholder="ชื่อตัวแปร"
+                        className="flex-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
+                      />
+                      <span className="text-[11px] text-[color:var(--color-muted-foreground)]">{"}}"}</span>
+                    </div>
+                    {addError && (
+                      <p className="text-[10px] text-red-600">{addError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsAdding(true)}
+                    className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-muted)]/50 px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-muted-foreground)] transition-colors hover:border-[color:var(--color-foreground)] hover:text-[color:var(--color-foreground)]"
+                  >
+                    <Plus className="size-3.5" />
+                    เพิ่มตัวแปร (Add Variable)
+                  </button>
+                )}
+
                 {variables.length === 0 ? (
                   <div className="rounded-md border border-dashed border-[color:var(--color-border)] px-3 py-4 text-center">
                     <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
                       พิมพ์ {"{{ชื่อตัวแปร}}"} ในเอกสาร
                       <br />
-                      Type {"{{variableName}}"} in doc
+                      หรือคลิกเพิ่มด้านบน
                     </p>
                   </div>
                 ) : (
@@ -178,6 +267,8 @@ export function VariablePanel() {
                         key={v.name}
                         variable={v}
                         onUpdate={(patch) => handleUpdateVariable(v.name, patch)}
+                        onInsert={() => handleInsertVariable(v.name)}
+                        onDragStart={(e) => handleDragStart(e, v.name)}
                       />
                     ))}
                   </div>
@@ -240,9 +331,11 @@ export function VariablePanel() {
 interface VariableRowProps {
   variable: TemplateVariable;
   onUpdate: (patch: Partial<TemplateVariable>) => void;
+  onInsert?: () => void;
+  onDragStart?: (e: React.DragEvent) => void;
 }
 
-function VariableRow({ variable, onUpdate }: VariableRowProps) {
+function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowProps) {
   const { name, value, isList, delimiter } = variable;
 
   const activeDelimiter = delimiter || ",";
@@ -276,13 +369,24 @@ function VariableRow({ variable, onUpdate }: VariableRowProps) {
   };
 
   return (
-    <div className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-2 space-y-1.5">
+    <div
+      className="group rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-2 space-y-1.5 transition-colors hover:border-[color:var(--color-foreground)]/30"
+      draggable
+      onDragStart={onDragStart}
+    >
       <div className="flex items-center gap-1.5">
-        <code className="truncate text-[11px] font-semibold text-[color:var(--color-accent)]">
+        <GripVertical className="size-3 shrink-0 cursor-grab text-[color:var(--color-border-strong)] active:cursor-grabbing group-hover:text-[color:var(--color-muted-foreground)]" />
+        <button
+          type="button"
+          onClick={onInsert}
+          title="คลิกเพื่อแทรกที่ cursor (Click to insert at cursor)"
+          className="inline-flex items-center gap-1 rounded bg-orange-50 px-1.5 py-0.5 text-[11px] font-semibold text-orange-700 transition-colors hover:bg-orange-100"
+        >
+          <MousePointerClick className="size-3" />
           {"{{"}
           {name}
           {"}}"}
-        </code>
+        </button>
         {isList && (
           <span className="inline-flex items-center gap-0.5 rounded bg-[color:var(--color-muted)] px-1 py-0.5 text-[10px] text-[color:var(--color-muted-foreground)]">
             <List className="size-2.5" />
