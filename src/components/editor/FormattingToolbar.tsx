@@ -403,12 +403,11 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
 
       <Divider />
 
-      <Divider />
-
       {/* Page break — always available */}
       <ToolGroup>
         <ToolButton
           label="แทรกตัวแบ่งหน้า (Page Break)"
+          disabled={!editor.can().insertPageBreak()}
           onClick={() => editor.chain().focus().insertPageBreak().run()}
         >
           <Split />

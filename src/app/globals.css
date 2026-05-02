@@ -341,15 +341,12 @@ body {
 .page-break {
   page-break-after: always;
   break-after: page;
+  min-height: 8px;
 }
 
 /* Tiptap node view for page break */
 .ProseMirror .page-break {
   position: relative;
-}
-
-.ProseMirror .page-break::before {
-  content: none;
 }
 
 /* ── Print stylesheet ── */
@@ -385,6 +382,12 @@ body {
   }
 
   .printable-paper:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Prevent double page break when a page-break node exists inside printable-paper */
+  .printable-paper .page-break {
     page-break-after: auto;
     break-after: auto;
   }

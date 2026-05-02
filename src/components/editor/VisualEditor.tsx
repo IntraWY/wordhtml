@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import Gapcursor from "@tiptap/extension-gapcursor";
 // NOTE: dynamic-import for Table extensions deferred — adds complexity
 // not justified by current bundle size. Revisit if Lighthouse flags it.
 import { Table, TableCell, TableHeader } from "@tiptap/extension-table";
@@ -82,6 +83,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TaskList,
       TaskItem.configure({ nested: true }),
       FontFamily,
+      Gapcursor,
     ],
     content: documentHtml,
     editorProps: {
@@ -109,6 +111,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         return false;
       },
       handleDrop(view, event) {
+        event.preventDefault();
         const text = event.dataTransfer?.getData("text/plain");
         if (!text) return false;
         const match = /^\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}$/.exec(text);

@@ -19,6 +19,8 @@ export const PageBreak = Node.create({
 
   atom: true,
 
+  allowGapCursor: true,
+
   parseHTML() {
     return [
       {
@@ -33,8 +35,13 @@ export const PageBreak = Node.create({
       {
         class: "page-break",
         style: "page-break-after: always;",
+        contenteditable: "false",
       },
     ];
+  },
+
+  renderText() {
+    return "\n--- Page Break ---\n";
   },
 
   addNodeView() {
@@ -85,6 +92,12 @@ export const PageBreak = Node.create({
         ({ chain }) => {
           return chain().insertContent({ type: this.name }).focus().run();
         },
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      "Mod-Enter": () => this.editor.commands.insertPageBreak(),
     };
   },
 
