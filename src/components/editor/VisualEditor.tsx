@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 // NOTE: dynamic-import for Table extensions deferred — adds complexity
 // not justified by current bundle size. Revisit if Lighthouse flags it.
-import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
+import { Table, TableCell, TableHeader } from "@tiptap/extension-table";
+import { RepeatingRow } from "@/lib/tiptap/repeatingRow";
+import { VariableMark } from "@/lib/tiptap/variableMark";
+import { PageBreak } from "@/lib/tiptap/pageBreak";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -64,9 +67,11 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       Highlight.configure({ multicolor: true }),
       IndentExtension,
       Table.configure({ resizable: true }),
-      TableRow,
+      RepeatingRow,
       TableHeader,
       TableCell,
+      VariableMark,
+      PageBreak,
       SearchAndReplace.configure({
         searchResultClass: "search-result",
         disableRegex: false,

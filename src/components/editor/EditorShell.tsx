@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
@@ -13,7 +13,11 @@ import { ExportDialog } from "./ExportDialog";
 import { SearchPanel } from "./SearchPanel";
 import { PageSetupDialog } from "./PageSetupDialog";
 import { TemplatePanel } from "./TemplatePanel";
+import { VariablePanel } from "./VariablePanel";
+import { PreviewToggle } from "./PreviewToggle";
+import { MultiPagePreview } from "./MultiPagePreview";
 import { Toast } from "./Toast";
+import { processTemplate } from "@/lib/templateEngine";
 import { MobileBlock } from "@/components/MobileBlock";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
@@ -63,6 +67,11 @@ export function EditorShell() {
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
   const pageSetup = useEditorStore((s) => s.pageSetup);
+  const templateMode = useEditorStore((s) => s.templateMode);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const variables = useEditorStore((s) => s.variables);
+  const dataSet = useEditorStore((s) => s.dataSet);
+  const documentHtml = useEditorStore((s) => s.documentHtml);
 
   // Custom-event bridge between menu components and shell
   useEffect(() => {
@@ -175,6 +184,16 @@ export function EditorShell() {
     [editor]
   );
 
+  const processedHtml = useMemo(() => {
+    if (previewMode !== "preview" || !templateMode) return "";
+    const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
+    const variableFallback = Object.fromEntries(
+      variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
+    );
+    const mergedRow = { ...variableFallback, ...dataRow };
+    return processTemplate(documentHtml, variables, mergedRow).html;
+  }, [previewMode, templateMode, documentHtml, variables, dataSet]);
+
   // beforeunload warning when document has unsaved changes (current HTML
   // differs from the most-recent snapshot in history).
   useEffect(() => {
@@ -276,57 +295,71 @@ export function EditorShell() {
             </button>
           </div>
         )}
-        <div
-          className={cn(
-            "grid flex-1 gap-px overflow-hidden bg-[color:var(--color-border)]",
-            sourceOpen ? "grid-cols-2" : "grid-cols-1"
-          )}
-        >
-          <div className="flex min-h-0 flex-col overflow-hidden">
-            {editor && <FormattingToolbar editor={editor} />}
-            <div className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
-              <div className="mx-auto" style={{ width: widthPx + 18 }}>
-                <div
-                  className="grid"
-                  style={{
-                    gridTemplateColumns: `18px ${widthPx}px`,
-                    gridTemplateRows: `18px auto`,
-                  }}
-                >
-                  <div className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-muted)]" />
-                  <Ruler
-                    orientation="horizontal"
-                    cm={widthMm / 10}
-                    marginStart={marginLeftPx}
-                    marginEnd={marginRightPx}
-                    indentLeft={currentIndent.marginLeft}
-                    indentFirst={currentIndent.textIndent}
-                    onIndentChange={handleIndentChange}
-                  />
-                  <Ruler
-                    orientation="vertical"
-                    cm={heightMm / 10}
-                    marginStart={marginTopPx}
-                    marginEnd={marginBottomPx}
-                  />
-                  <article
-                    className="paper printable-paper bg-white shadow-sm"
-                    style={{
-                      minHeight: heightPx,
-                      width: widthPx,
-                      paddingTop: marginTopPx,
-                      paddingRight: marginRightPx,
-                      paddingBottom: marginBottomPx,
-                      paddingLeft: marginLeftPx,
-                    }}
-                  >
-                    <VisualEditor onEditorReady={setEditor} />
-                  </article>
+        <div className="flex flex-1 overflow-hidden">
+          <div
+            className={cn(
+              "grid flex-1 gap-px overflow-hidden bg-[color:var(--color-border)]",
+              sourceOpen ? "grid-cols-2" : "grid-cols-1"
+            )}
+          >
+            <div className="flex min-h-0 flex-col overflow-hidden">
+              {editor && previewMode !== "preview" && <FormattingToolbar editor={editor} />}
+              {templateMode && (
+                <div className="shrink-0 flex justify-center border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5">
+                  <PreviewToggle />
                 </div>
+              )}
+              <div className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
+                {previewMode === "preview" && templateMode ? (
+                  <div className="mx-auto" style={{ width: widthPx }}>
+                    <MultiPagePreview html={processedHtml} pageSetup={pageSetup} />
+                  </div>
+                ) : (
+                  <div className="mx-auto" style={{ width: widthPx + 18 }}>
+                    <div
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: `18px ${widthPx}px`,
+                        gridTemplateRows: `18px auto`,
+                      }}
+                    >
+                      <div className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-muted)]" />
+                      <Ruler
+                        orientation="horizontal"
+                        cm={widthMm / 10}
+                        marginStart={marginLeftPx}
+                        marginEnd={marginRightPx}
+                        indentLeft={currentIndent.marginLeft}
+                        indentFirst={currentIndent.textIndent}
+                        onIndentChange={handleIndentChange}
+                      />
+                      <Ruler
+                        orientation="vertical"
+                        cm={heightMm / 10}
+                        marginStart={marginTopPx}
+                        marginEnd={marginBottomPx}
+                      />
+                      <article
+                        className="paper printable-paper bg-white shadow-sm"
+                        style={{
+                          minHeight: heightPx,
+                          width: widthPx,
+                          paddingTop: marginTopPx,
+                          paddingRight: marginRightPx,
+                          paddingBottom: marginBottomPx,
+                          paddingLeft: marginLeftPx,
+                        }}
+                      >
+                        <VisualEditor onEditorReady={setEditor} />
+                      </article>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+            {sourceOpen && <SourcePane />}
           </div>
-          {sourceOpen && <SourcePane />}
+          {templateMode && <VariablePanel />}
         </div>
 
         {isDragging && (

@@ -31,7 +31,11 @@ import {
   Highlighter,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
+  Split,
 } from "lucide-react";
+
+import { useEditorStore } from "@/store/editorStore";
+import { TemplateModeToggle } from "./TemplateModeToggle";
 
 import { cn } from "@/lib/utils";
 
@@ -397,7 +401,30 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
           />
         </div>
       </ToolGroup>
+
+      <Divider />
+
+      {/* Template mode toggle & page break */}
+      <TemplateToolbarSection editor={editor} />
     </div>
+  );
+}
+
+function TemplateToolbarSection({ editor }: { editor: Editor }) {
+  const templateMode = useEditorStore((s) => s.templateMode);
+
+  return (
+    <ToolGroup>
+      {templateMode && (
+        <ToolButton
+          label="แทรกตัวแบ่งหน้า (Page Break)"
+          onClick={() => editor.chain().focus().insertPageBreak().run()}
+        >
+          <Split />
+        </ToolButton>
+      )}
+      <TemplateModeToggle />
+    </ToolGroup>
   );
 }
 

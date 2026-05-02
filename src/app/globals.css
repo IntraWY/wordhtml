@@ -324,23 +324,62 @@ body {
   font-size: 0.875em;
 }
 
+/* ── Variable badge in editor ── */
+.variable-badge {
+  display: inline-block;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Page break in editor preview ── */
+.page-break {
+  page-break-after: always;
+  break-after: page;
+}
+
 /* ── Print stylesheet ── */
 @media print {
-  /* Hide everything except the paper */
+  /* Hide UI chrome */
+  .editor-canvas,
+  .ruler,
+  .formatting-toolbar,
+  .menu-bar,
+  .top-bar,
+  .variable-panel,
+  .preview-toggle-bar,
+  .source-pane,
+  .mobile-block,
+  .drag-overlay,
+  .toast,
+  .search-panel,
+  .error-banner,
+  .warning-banner {
+    display: none !important;
+  }
+
+  /* Hide everything except printable content */
   body * { visibility: hidden; }
   .printable-paper, .printable-paper * { visibility: visible; }
+
   .printable-paper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+    position: static;
     box-shadow: none !important;
+    margin: 0 auto;
+    page-break-after: always;
+    break-after: page;
   }
-  /* Also hide the paper's own controls if any */
-  .printable-paper {
-    margin: 0;
+
+  .printable-paper:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
-  /* Don't show background colors of cleaning toolbar / etc. */
+
   @page {
     size: A4;
     margin: 0;

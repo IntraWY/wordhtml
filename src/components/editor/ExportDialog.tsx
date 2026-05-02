@@ -21,10 +21,13 @@ import { downloadHtml } from "@/lib/export/exportHtml";
 import { downloadZip } from "@/lib/export/exportZip";
 import { downloadDocx } from "@/lib/export/exportDocx";
 import { exportMarkdown } from "@/lib/export/exportMarkdown";
-import { CLEANERS, type ExportFormat, type ImageMode } from "@/types";
+import { generateGASFunction } from "@/lib/gasGenerator";
+import type { ExportFormat, ImageMode } from "@/types";
 import { cn } from "@/lib/utils";
 
 type ExportKind = ExportFormat;
+
+type ExportTab = "file" | "gas";
 
 export function ExportDialog() {
   const open = useEditorStore((s) => s.exportDialogOpen);
@@ -38,9 +41,15 @@ export function ExportDialog() {
   const setPendingExportFormat = useEditorStore(
     (s) => s.setPendingExportFormat
   );
+  const templateMode = useEditorStore((s) => s.templateMode);
+  const variables = useEditorStore((s) => s.variables);
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
+  const [gasCopied, setGasCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<ExportTab>("file");
+  const [gasFunctionName, setGasFunctionName] = useState("generateDocument");
+  const [includeSheetIntegration, setIncludeSheetIntegration] = useState(true);
 
   const selectedFormat = pendingFormat ?? "html";
 
@@ -49,10 +58,7 @@ export function ExportDialog() {
     [documentHtml, enabledCleaners]
   );
 
-  const activeCleaners = useMemo(
-    () => CLEANERS.filter((c) => enabledCleaners.includes(c.key)),
-    [enabledCleaners]
-  );
+
 
   useEffect(() => {
     if (!copied) return;
@@ -60,10 +66,36 @@ export function ExportDialog() {
     return () => clearTimeout(id);
   }, [copied]);
 
+  useEffect(() => {
+    if (!gasCopied) return;
+    const id = setTimeout(() => setGasCopied(false), 1500);
+    return () => clearTimeout(id);
+  }, [gasCopied]);
+
+
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(cleanedHtml);
       setCopied(true);
+    } catch {
+      // ignore clipboard rejection
+    }
+  };
+
+  const gasCode = useMemo(() => {
+    if (!templateMode) return "";
+    return generateGASFunction(documentHtml, variables, {
+      functionName: gasFunctionName,
+      includeGenerateFunction: true,
+      includeSheetIntegration,
+    }).code;
+  }, [templateMode, documentHtml, variables, gasFunctionName, includeSheetIntegration]);
+
+  const handleCopyGAS = async () => {
+    try {
+      await navigator.clipboard.writeText(gasCode);
+      setGasCopied(true);
     } catch {
       // ignore clipboard rejection
     }
@@ -102,18 +134,11 @@ export function ExportDialog() {
           <header className="flex items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
             <div>
               <Dialog.Title className="text-base font-semibold tracking-tight">
-                ส่งออก HTML
+                ส่งออก (Export)
               </Dialog.Title>
               <Dialog.Description className="sr-only">
-                ตัวอย่าง HTML ที่ผ่านการทำความสะอาดและตัวเลือกการส่งออก
+                ตัวเลือกการส่งออกเอกสารและโค้ด
               </Dialog.Description>
-              <p className="mt-0.5 text-xs text-[color:var(--color-muted-foreground)]">
-                {activeCleaners.length === 0
-                  ? "ไม่มีตัวทำความสะอาดที่เปิดใช้"
-                  : `เปิดใช้ตัวทำความสะอาด ${activeCleaners.length} รายการ: ${activeCleaners
-                      .map((c) => c.label)
-                      .join(", ")}`}
-              </p>
             </div>
             <Dialog.Close
               aria-label="ปิด"
@@ -123,90 +148,174 @@ export function ExportDialog() {
             </Dialog.Close>
           </header>
 
-          <CleaningToolbar />
-
-          <div className="flex min-h-0 flex-col overflow-hidden">
-            <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
-                ตัวอย่าง
-              </span>
+          {/* Tabs */}
+          {templateMode && (
+            <div className="flex shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6">
               <button
                 type="button"
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                onClick={() => setActiveTab("file")}
+                className={cn(
+                  "relative px-4 py-2.5 text-xs font-medium transition-colors",
+                  activeTab === "file"
+                    ? "text-[color:var(--color-foreground)]"
+                    : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
+                )}
               >
-                {copied ? <Check className="size-3.5 text-[color:var(--color-success)]" /> : <Copy className="size-3.5" />}
-                {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+                ไฟล์ (File)
+                {activeTab === "file" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("gas")}
+                className={cn(
+                  "relative px-4 py-2.5 text-xs font-medium transition-colors",
+                  activeTab === "gas"
+                    ? "text-[color:var(--color-foreground)]"
+                    : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
+                )}
+              >
+                GAS (Apps Script)
+                {activeTab === "gas" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
+                )}
               </button>
             </div>
-            <pre className="m-0 flex-1 overflow-auto bg-[color:var(--color-background)] p-6 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)]">
-              <code>{cleanedHtml || "<!-- เอกสารว่างเปล่า -->"}</code>
-            </pre>
-          </div>
+          )}
 
-          <footer className="flex flex-col gap-4 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-            {(pendingFormat ?? "html") === "md" ? (
-              <p className="text-xs text-[color:var(--color-muted-foreground)]">
-                หมายเหตุ: Markdown จะฝังรูปภาพในรูปแบบ <code className="font-mono">![alt](src)</code> เสมอ ตัวเลือกรูปภาพด้านล่างใช้กับ HTML/ZIP เท่านั้น
-              </p>
-            ) : null}
-            <ImageModeToggle imageMode={imageMode} onChange={setImageMode} />
+          {activeTab === "file" ? (
+            <>
+              <CleaningToolbar />
 
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
-                variant={selectedFormat === "docx" ? "primary" : "secondary"}
-                onClick={() => {
-                  setPendingExportFormat("docx");
-                  handleDownload("docx");
-                }}
-                disabled={busy !== null}
-              >
-                {busy === "docx" ? <Loader2 className="animate-spin" /> : <FileText />}
-                ดาวน์โหลด .docx
-              </Button>
-              <Button
-                variant={selectedFormat === "zip" ? "primary" : "secondary"}
-                onClick={() => {
-                  setPendingExportFormat("zip");
-                  handleDownload("zip");
-                }}
-                disabled={busy !== null}
-              >
-                {busy === "zip" ? <Loader2 className="animate-spin" /> : <FileArchive />}
-                ดาวน์โหลด .zip
-              </Button>
-              <Button
-                variant={selectedFormat === "html" ? "primary" : "secondary"}
-                onClick={() => {
-                  setPendingExportFormat("html");
-                  handleDownload("html");
-                }}
-                disabled={busy !== null}
-              >
-                {busy === "html" ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <FileCode2 />
-                )}
-                ดาวน์โหลด .html
-              </Button>
-              <Button
-                variant={selectedFormat === "md" ? "primary" : "secondary"}
-                onClick={() => {
-                  setPendingExportFormat("md");
-                  handleDownload("md");
-                }}
-                disabled={busy !== null}
-              >
-                {busy === "md" ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <FileType2 />
-                )}
-                ดาวน์โหลด .md
-              </Button>
-            </div>
-          </footer>
+              <div className="flex min-h-0 flex-col overflow-hidden">
+                <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
+                    ตัวอย่าง
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                  >
+                    {copied ? <Check className="size-3.5 text-[color:var(--color-success)]" /> : <Copy className="size-3.5" />}
+                    {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+                  </button>
+                </div>
+                <pre className="m-0 flex-1 overflow-auto bg-[color:var(--color-background)] p-6 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)]">
+                  <code>{cleanedHtml || "<!-- เอกสารว่างเปล่า -->"}</code>
+                </pre>
+              </div>
+
+              <footer className="flex flex-col gap-4 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
+                {(pendingFormat ?? "html") === "md" ? (
+                  <p className="text-xs text-[color:var(--color-muted-foreground)]">
+                    หมายเหตุ: Markdown จะฝังรูปภาพในรูปแบบ <code className="font-mono">![alt](src)</code> เสมอ ตัวเลือกรูปภาพด้านล่างใช้กับ HTML/ZIP เท่านั้น
+                  </p>
+                ) : null}
+                <ImageModeToggle imageMode={imageMode} onChange={setImageMode} />
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    variant={selectedFormat === "docx" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setPendingExportFormat("docx");
+                      handleDownload("docx");
+                    }}
+                    disabled={busy !== null}
+                  >
+                    {busy === "docx" ? <Loader2 className="animate-spin" /> : <FileText />}
+                    ดาวน์โหลด .docx
+                  </Button>
+                  <Button
+                    variant={selectedFormat === "zip" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setPendingExportFormat("zip");
+                      handleDownload("zip");
+                    }}
+                    disabled={busy !== null}
+                  >
+                    {busy === "zip" ? <Loader2 className="animate-spin" /> : <FileArchive />}
+                    ดาวน์โหลด .zip
+                  </Button>
+                  <Button
+                    variant={selectedFormat === "html" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setPendingExportFormat("html");
+                      handleDownload("html");
+                    }}
+                    disabled={busy !== null}
+                  >
+                    {busy === "html" ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <FileCode2 />
+                    )}
+                    ดาวน์โหลด .html
+                  </Button>
+                  <Button
+                    variant={selectedFormat === "md" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setPendingExportFormat("md");
+                      handleDownload("md");
+                    }}
+                    disabled={busy !== null}
+                  >
+                    {busy === "md" ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <FileType2 />
+                    )}
+                    ดาวน์โหลด .md
+                  </Button>
+                </div>
+              </footer>
+            </>
+          ) : (
+            <>
+              <div className="flex min-h-0 flex-col overflow-hidden">
+                <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
+                    โค้ด GAS (GAS Code)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyGAS}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                  >
+                    {gasCopied ? <Check className="size-3.5 text-[color:var(--color-success)]" /> : <Copy className="size-3.5" />}
+                    {gasCopied ? "คัดลอกแล้ว" : "คัดลอก"}
+                  </button>
+                </div>
+                <pre className="m-0 flex-1 overflow-auto bg-[color:var(--color-background)] p-6 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)]">
+                  <code>{gasCode || "// เปิดโหมด Template และเพิ่มตัวแปรเพื่อสร้างโค้ด\n// Enable Template Mode and add variables to generate code"}</code>
+                </pre>
+              </div>
+
+              <footer className="flex flex-col gap-3 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-[color:var(--color-muted-foreground)]">
+                    ชื่อฟังก์ชัน:
+                  </label>
+                  <input
+                    type="text"
+                    value={gasFunctionName}
+                    onChange={(e) => setGasFunctionName(e.target.value)}
+                    className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-[color:var(--color-foreground)]"
+                  />
+                </div>
+                <label className="inline-flex items-center gap-2 text-xs text-[color:var(--color-muted-foreground)]">
+                  <input
+                    type="checkbox"
+                    checked={includeSheetIntegration}
+                    onChange={(e) => setIncludeSheetIntegration(e.target.checked)}
+                    className="rounded border-[color:var(--color-border-strong)]"
+                  />
+                  รวมฟังก์ชัน integrate กับ Google Sheets
+                </label>
+              </footer>
+            </>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

@@ -67,6 +67,18 @@ export type ImageMode = "inline" | "separate";
 
 export type ExportFormat = "html" | "zip" | "docx" | "md";
 
+// Template Studio types
+export type {
+  TemplateVariable,
+  DataSet,
+  TemplateModeState,
+  RepeatingRowConfig,
+  GASExportOptions,
+  ProcessedTemplate,
+  GeneratedGAS,
+  ParsedCSV,
+} from "./template";
+
 export interface DocumentSnapshot {
   id: string;
   fileName: string | null;

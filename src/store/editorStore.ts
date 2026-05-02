@@ -10,6 +10,8 @@ import type {
   ImageMode,
   DocumentSnapshot,
   ExportFormat,
+  TemplateVariable,
+  DataSet,
 } from "@/types";
 
 const MAX_HISTORY = 20;
@@ -54,6 +56,11 @@ interface EditorState {
   loadError: string | null;
   lastLoadWarnings: MammothMessage[];
   sourceOpen: boolean;
+  // template mode
+  templateMode: boolean;
+  variables: TemplateVariable[];
+  dataSet: DataSet | null;
+  previewMode: "edit" | "preview";
   // actions
   setHtml: (html: string) => void;
   setFileName: (name: string | null) => void;
@@ -77,6 +84,11 @@ interface EditorState {
   clearHistory: () => void;
   openHistoryPanel: () => void;
   closeHistoryPanel: () => void;
+  // template actions
+  toggleTemplateMode: () => void;
+  setVariables: (variables: TemplateVariable[]) => void;
+  setDataSet: (dataSet: DataSet | null) => void;
+  setPreviewMode: (mode: "edit" | "preview") => void;
 }
 
 const DEFAULT_CLEANERS: CleanerKey[] = ["removeInlineStyles", "removeEmptyTags"];
@@ -98,6 +110,10 @@ export const useEditorStore = create<EditorState>()(
       loadError: null,
       lastLoadWarnings: [],
       sourceOpen: false,
+      templateMode: false,
+      variables: [],
+      dataSet: null,
+      previewMode: "edit",
 
       setHtml: (html) => {
         set({ documentHtml: html, lastEditAt: Date.now() });
@@ -243,6 +259,13 @@ export const useEditorStore = create<EditorState>()(
       clearHistory: () => set({ history: [] }),
       openHistoryPanel: () => set({ historyPanelOpen: true }),
       closeHistoryPanel: () => set({ historyPanelOpen: false }),
+
+      // template actions
+      toggleTemplateMode: () =>
+        set((s) => ({ templateMode: !s.templateMode })),
+      setVariables: (variables) => set({ variables }),
+      setDataSet: (dataSet) => set({ dataSet }),
+      setPreviewMode: (previewMode) => set({ previewMode }),
     }),
     {
       name: "wordhtml-editor",
@@ -252,6 +275,7 @@ export const useEditorStore = create<EditorState>()(
         imageMode: state.imageMode,
         history: state.history,
         pageSetup: state.pageSetup,
+        templateMode: state.templateMode,
       }),
     }
   )
