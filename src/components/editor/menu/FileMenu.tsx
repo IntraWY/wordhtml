@@ -26,7 +26,13 @@ export function FileMenu(_props: EditorMenuProps) {
         shortcut="Ctrl+Shift+N"
         onClick={reset}
       />
-      <MenuItem label="เปิดไฟล์… (Open)" onClick={triggerFileOpen} />
+      <MenuItem label="เปิดไฟล์… (Open .docx, .html, .md)" onClick={triggerFileOpen} />
+      <MenuItem
+        label="แปลงเป็นกลุ่ม (Batch Convert)…"
+        onClick={() =>
+          window.dispatchEvent(new CustomEvent("wordhtml:open-batch-convert"))
+        }
+      />
       <MenuItem
         label="เปิดจาก Template…"
         onClick={() =>

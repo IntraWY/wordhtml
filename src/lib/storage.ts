@@ -135,6 +135,7 @@ export const editorStorage = createSafeStorage<{
   templateMode: boolean;
   variables: unknown[];
   dataSet: unknown | null;
+  autoCompressImages: boolean;
 }>(migrateEditorData);
 
 export const templateStorage = createSafeStorage<{

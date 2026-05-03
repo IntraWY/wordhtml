@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { StatusBar } from "./StatusBar";
 import { ShortcutsPanel } from "./ShortcutsPanel";
+import { TableOfContentsPanel } from "./TableOfContentsPanel";
 import type { Editor } from "@tiptap/react";
 
 import { TopBar } from "./TopBar";
@@ -12,6 +13,7 @@ import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { ExportDialog } from "./ExportDialog";
+import { BatchUploadDialog } from "./BatchUploadDialog";
 import { SearchPanel } from "./SearchPanel";
 import { PageSetupDialog } from "./PageSetupDialog";
 import { TemplatePanel } from "./TemplatePanel";
@@ -25,6 +27,7 @@ import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
 import { cn } from "@/lib/utils";
 import { A4, LETTER, mmToPx } from "@/lib/page";
+import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 
 function SourcePane() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
@@ -55,6 +58,7 @@ export function EditorShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
@@ -81,6 +85,7 @@ export function EditorShell() {
     const onSearch = () => setSearchOpen(true);
     const onPageSetup = () => setPageSetupOpen(true);
     const onShortcuts = () => setShortcutsOpen(true);
+    const onToc = () => setTocOpen(true);
     const onTemplates = () => useTemplateStore.getState().openPanel();
     const onInsertVariable = (e: Event) => {
       const name = (e as CustomEvent).detail as string;
@@ -95,12 +100,14 @@ export function EditorShell() {
     window.addEventListener("wordhtml:open-search", onSearch);
     window.addEventListener("wordhtml:open-page-setup", onPageSetup);
     window.addEventListener("wordhtml:open-shortcuts", onShortcuts);
+    window.addEventListener("wordhtml:open-toc", onToc);
     window.addEventListener("wordhtml:open-templates", onTemplates);
     window.addEventListener("wordhtml:insert-variable", onInsertVariable);
     return () => {
       window.removeEventListener("wordhtml:open-search", onSearch);
       window.removeEventListener("wordhtml:open-page-setup", onPageSetup);
       window.removeEventListener("wordhtml:open-shortcuts", onShortcuts);
+      window.removeEventListener("wordhtml:open-toc", onToc);
       window.removeEventListener("wordhtml:open-templates", onTemplates);
       window.removeEventListener("wordhtml:insert-variable", onInsertVariable);
     };
@@ -296,11 +303,35 @@ export function EditorShell() {
           if (e.currentTarget.contains(e.relatedTarget as Node)) return;
           setIsDragging(false);
         }}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault();
           setIsDragging(false);
-          const file = e.dataTransfer.files?.[0];
-          if (file) loadFile(file);
+          const files = Array.from(e.dataTransfer.files ?? []);
+          const images = files.filter((f) => f.type.startsWith("image/"));
+          const others = files.filter((f) => !f.type.startsWith("image/"));
+
+          if (images.length > 0 && editor) {
+            const autoCompress = useEditorStore.getState().autoCompressImages;
+            for (const file of images) {
+              try {
+                const finalFile = await compressImageIfEnabled(file, autoCompress);
+                const src = await readFileAsDataURL(finalFile);
+                editor.chain().focus().setImage({ src, alt: finalFile.name }).run();
+              } catch {
+                // fallback: insert original without compression
+                try {
+                  const src = await readFileAsDataURL(file);
+                  editor.chain().focus().setImage({ src, alt: file.name }).run();
+                } catch {
+                  /* ignore */
+                }
+              }
+            }
+          }
+
+          if (others.length > 0) {
+            loadFile(others[0]);
+          }
         }}
       >
         <TopBar />
@@ -426,6 +457,7 @@ export function EditorShell() {
         )}
 
         <ExportDialog />
+        <BatchUploadDialog />
         <TemplatePanel />
         <Toast />
         <SearchPanel
@@ -440,6 +472,11 @@ export function EditorShell() {
         <ShortcutsPanel
           open={shortcutsOpen}
           onClose={() => setShortcutsOpen(false)}
+        />
+        <TableOfContentsPanel
+          editor={editor}
+          open={tocOpen}
+          onClose={() => setTocOpen(false)}
         />
         <MobileBlock />
       </div>

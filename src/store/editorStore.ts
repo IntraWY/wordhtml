@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
+import { markdownToHtml } from "@/lib/importMarkdown";
 import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
 import { editorStorage } from "@/lib/storage";
@@ -62,12 +63,15 @@ interface EditorState {
   variables: TemplateVariable[];
   dataSet: DataSet | null;
   previewMode: "edit" | "preview";
+  // image compression
+  autoCompressImages: boolean;
   // actions
   setHtml: (html: string) => void;
   setFileName: (name: string | null) => void;
   toggleCleaner: (key: CleanerKey) => void;
   setImageMode: (mode: ImageMode) => void;
   setPageSetup: (partial: Partial<PageSetup>) => void;
+  toggleAutoCompressImages: () => void;
   openExportDialog: (format?: ExportFormat) => void;
   closeExportDialog: () => void;
   setPendingExportFormat: (format: ExportFormat | null) => void;
@@ -116,6 +120,7 @@ export const useEditorStore = create<EditorState>()(
       variables: [],
       dataSet: null,
       previewMode: "edit",
+      autoCompressImages: true,
 
       setHtml: (html) => {
         set({ documentHtml: html, lastEditAt: Date.now() });
@@ -136,6 +141,8 @@ export const useEditorStore = create<EditorState>()(
             : [...state.enabledCleaners, key],
         })),
       setImageMode: (imageMode) => set({ imageMode }),
+      toggleAutoCompressImages: () =>
+        set((state) => ({ autoCompressImages: !state.autoCompressImages })),
       setPageSetup: (partial) =>
         set((s) => ({
           pageSetup: {
@@ -176,8 +183,10 @@ export const useEditorStore = create<EditorState>()(
             warnings = result.warnings;
           } else if (lower.endsWith(".html") || lower.endsWith(".htm")) {
             html = await loadHtmlFile(file);
+          } else if (lower.endsWith(".md")) {
+            html = await markdownToHtml(file);
           } else {
-            throw new Error("ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx หรือ .html");
+            throw new Error("ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, หรือ .md");
           }
           set({
             documentHtml: html,
@@ -292,6 +301,7 @@ export const useEditorStore = create<EditorState>()(
         templateMode: state.templateMode,
         variables: state.variables,
         dataSet: state.dataSet,
+        autoCompressImages: state.autoCompressImages,
       }),
     }
   )

@@ -28,6 +28,9 @@ import { Upload, FileText, Keyboard } from "lucide-react";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { IndentExtension } from "@/lib/tiptap/indentExtension";
 import { ImageWithAlign } from "@/lib/tiptap/imageWithAlign";
+import { HeadingWithId } from "@/lib/tiptap/headingWithId";
+import { BulletListWithClass } from "@/lib/tiptap/bulletListWithClass";
+import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -49,10 +52,13 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
+        heading: false,
+        bulletList: false,
         link: false,
         underline: false,
       }),
+      HeadingWithId.configure({ levels: [1, 2, 3] }),
+      BulletListWithClass,
       Underline,
       Link.configure({
         openOnClick: false,
@@ -123,6 +129,38 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         const mark = view.state.schema.marks.variable.create({ name });
         const node = view.state.schema.text(text, [mark]);
         view.dispatch(view.state.tr.insert(pos, node));
+        return true;
+      },
+      handlePaste(_view, event) {
+        const files = event.clipboardData?.files;
+        if (!files || files.length === 0) return false;
+        const imageFiles = Array.from(files).filter((f) =>
+          f.type.startsWith("image/")
+        );
+        if (imageFiles.length === 0) return false;
+
+        event.preventDefault();
+        const autoCompress = useEditorStore.getState().autoCompressImages;
+
+        for (const file of imageFiles) {
+          compressImageIfEnabled(file, autoCompress)
+            .then((finalFile) => readFileAsDataURL(finalFile))
+            .then((src) => {
+              const ed = editorRef.current;
+              if (ed) {
+                ed.chain().focus().setImage({ src, alt: file.name }).run();
+              }
+            })
+            .catch(() => {
+              // fallback: insert original without compression
+              readFileAsDataURL(file).then((src) => {
+                const ed = editorRef.current;
+                if (ed) {
+                  ed.chain().focus().setImage({ src, alt: file.name }).run();
+                }
+              });
+            });
+        }
         return true;
       },
     },

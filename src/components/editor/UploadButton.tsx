@@ -37,7 +37,7 @@ export function UploadButton() {
         size="sm"
         onClick={() => inputRef.current?.click()}
         disabled={isLoadingFile}
-        aria-label="อัปโหลดไฟล์ .docx หรือ .html"
+        aria-label="อัปโหลดไฟล์ .docx, .html, หรือ .md"
       >
         {isLoadingFile ? (
           <Loader2 className="animate-spin" />
@@ -49,7 +49,7 @@ export function UploadButton() {
       <input
         ref={inputRef}
         type="file"
-        accept=".docx,.html,.htm"
+        accept=".docx,.html,.htm,.md"
         className="hidden"
         onChange={handleChange}
       />

@@ -4,6 +4,9 @@ import { useRef } from "react";
 
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
+import { assignHeadingIds, buildTocHtml, generateToc } from "@/lib/toc";
+import { useEditorStore } from "@/store/editorStore";
+import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -13,7 +16,7 @@ export function InsertMenu({ editor }: EditorMenuProps) {
 
   const promptFor = (msg: string): string => window.prompt(msg) ?? "";
 
-  const insertImageFromFile = (file: File) => {
+  const insertImageFromFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       window.alert("กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, GIF, WebP, SVG)");
       return;
@@ -22,15 +25,16 @@ export function InsertMenu({ editor }: EditorMenuProps) {
       window.alert("ไฟล์รูปภาพใหญ่เกิน 10MB");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const src = reader.result;
-      if (typeof src === "string" && editor) {
-        editor.chain().focus().setImage({ src, alt: file.name }).run();
+    try {
+      const autoCompress = useEditorStore.getState().autoCompressImages;
+      const finalFile = await compressImageIfEnabled(file, autoCompress);
+      const src = await readFileAsDataURL(finalFile);
+      if (editor) {
+        editor.chain().focus().setImage({ src, alt: finalFile.name }).run();
       }
-    };
-    reader.onerror = () => window.alert("ไม่สามารถอ่านไฟล์ได้");
-    reader.readAsDataURL(file);
+    } catch {
+      window.alert("ไม่สามารถอ่านไฟล์ได้");
+    }
   };
 
   return (
@@ -99,6 +103,22 @@ export function InsertMenu({ editor }: EditorMenuProps) {
           label="บล็อกโค้ด (Code Block)"
           disabled={!hasEditor}
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+        />
+        <Sep />
+        <MenuItem
+          label="สารบัญ (Table of Contents)"
+          disabled={!hasEditor}
+          onClick={() => {
+            if (!editor) return;
+            assignHeadingIds(editor);
+            const tocItems = generateToc(editor.getHTML());
+            if (tocItems.length === 0) {
+              window.alert("ไม่พบหัวข้อในเอกสาร");
+              return;
+            }
+            const tocHtml = buildTocHtml(tocItems);
+            editor.chain().focus().insertContent(tocHtml).run();
+          }}
         />
         <Sep />
         <MenuItem

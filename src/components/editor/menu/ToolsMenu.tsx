@@ -13,6 +13,8 @@ export function ToolsMenu(_props: EditorMenuProps) {
   void _props;
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const hasDoc = documentHtml.trim().length > 0;
+  const autoCompressImages = useEditorStore((s) => s.autoCompressImages);
+  const toggleAutoCompressImages = useEditorStore((s) => s.toggleAutoCompressImages);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleExport = async () => {
@@ -46,6 +48,15 @@ export function ToolsMenu(_props: EditorMenuProps) {
         onClick={() => {
           const count = countWords(documentHtml);
           window.alert(`จำนวนคำ: ${count.toLocaleString()} คำ`);
+        }}
+      />
+      <MenuItem
+        label="แสดงสารบัญ (Show TOC)"
+        disabled={!hasDoc}
+        onClick={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wordhtml:open-toc"));
+          }
         }}
       />
       <Sep />
@@ -107,6 +118,12 @@ export function ToolsMenu(_props: EditorMenuProps) {
           handleImportFile(file);
           e.target.value = "";
         }}
+      />
+      <Sep />
+      <MenuItem
+        label="บีบอัดรูปภาพอัตโนมัติ (Auto-compress images)"
+        checked={autoCompressImages}
+        onClick={toggleAutoCompressImages}
       />
       <Sep />
       <MenuItem
