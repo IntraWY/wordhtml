@@ -5,6 +5,7 @@ import { Download, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
 
@@ -37,6 +38,7 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <button
             type="button"
             onClick={openHistoryPanel}
@@ -61,7 +63,7 @@ export function TopBar() {
             <Download />
             ส่งออก HTML
             {enabledCleaners.length > 0 && (
-              <span className="ml-1 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+              <span className="ml-1 rounded-full bg-[color:var(--color-accent-foreground)]/20 px-1.5 py-0.5 text-[10px] font-semibold leading-none">
                 {enabledCleaners.length}
               </span>
             )}

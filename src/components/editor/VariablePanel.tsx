@@ -416,7 +416,7 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
                 : "border-[color:var(--color-border-strong)] bg-[color:var(--color-background)]"
             )}
           >
-            {isList && <Check className="size-2.5 text-white" />}
+            {isList && <Check className="size-2.5 text-[color:var(--color-accent-foreground)]" />}
           </span>
           <span className="text-[11px] text-[color:var(--color-muted-foreground)]">
             รายการ (List)

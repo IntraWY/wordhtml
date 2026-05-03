@@ -1,8 +1,11 @@
 "use client";
 
+import { useRef } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { countWords } from "@/lib/text";
 import { clearAllAppData } from "@/lib/storage";
+import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
+import { triggerDownload } from "@/lib/export/wrap";
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
@@ -10,6 +13,30 @@ export function ToolsMenu(_props: EditorMenuProps) {
   void _props;
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const hasDoc = documentHtml.trim().length > 0;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExport = async () => {
+    try {
+      const blob = await exportAllSettings();
+      triggerDownload(blob, `wordhtml-backup-${new Date().toISOString().slice(0, 10)}.wordhtml-backup.json`);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "ไม่สามารถสำรองข้อมูลได้");
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    if (!window.confirm("ข้อมูลปัจจุบันจะถูกแทนที่ด้วยข้อมูลจากไฟล์สำรอง ดำเนินการต่อ?")) {
+      return;
+    }
+    try {
+      await importAllSettings(file);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "ไม่สามารถกู้คืนข้อมูลได้");
+    }
+  };
 
   return (
     <MenuDropdown label="เครื่องมือ (Tools)">
@@ -41,11 +68,44 @@ export function ToolsMenu(_props: EditorMenuProps) {
       />
       <Sep />
       <MenuItem
+        label="คีย์ลัด (Shortcuts)…"
+        shortcut="F1"
+        onClick={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wordhtml:open-shortcuts"));
+          }
+        }}
+      />
+      <Sep />
+      <MenuItem
         label="ตัวเลือกการทำความสะอาด…"
         onClick={() => {
           document
             .querySelector<HTMLElement>("[data-cleaning-toolbar]")
             ?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+      <Sep />
+      <MenuItem
+        label="สำรองข้อมูล (Export Settings)…"
+        onClick={handleExport}
+      />
+      <MenuItem
+        label="กู้คืนข้อมูล (Import Settings)…"
+        onClick={() => {
+          fileInputRef.current?.click();
+        }}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          handleImportFile(file);
+          e.target.value = "";
         }}
       />
       <Sep />

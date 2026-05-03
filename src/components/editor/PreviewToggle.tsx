@@ -19,7 +19,7 @@ export function PreviewToggle() {
         className={cn(
           "rounded px-3 py-1 text-sm font-medium transition-colors",
           previewMode === "edit"
-            ? "bg-white text-[color:var(--color-foreground)] shadow-sm"
+            ? "bg-[color:var(--color-background)] text-[color:var(--color-foreground)] shadow-sm"
             : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
         )}
       >
@@ -32,7 +32,7 @@ export function PreviewToggle() {
         className={cn(
           "rounded px-3 py-1 text-sm font-medium transition-colors",
           previewMode === "preview"
-            ? "bg-white text-[color:var(--color-foreground)] shadow-sm"
+            ? "bg-[color:var(--color-background)] text-[color:var(--color-foreground)] shadow-sm"
             : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
         )}
       >

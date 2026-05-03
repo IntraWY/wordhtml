@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
+import { StatusBar } from "./StatusBar";
+import { ShortcutsPanel } from "./ShortcutsPanel";
 import type { Editor } from "@tiptap/react";
 
 import { TopBar } from "./TopBar";
@@ -52,6 +54,7 @@ export function EditorShell() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
@@ -77,6 +80,7 @@ export function EditorShell() {
   useEffect(() => {
     const onSearch = () => setSearchOpen(true);
     const onPageSetup = () => setPageSetupOpen(true);
+    const onShortcuts = () => setShortcutsOpen(true);
     const onTemplates = () => useTemplateStore.getState().openPanel();
     const onInsertVariable = (e: Event) => {
       const name = (e as CustomEvent).detail as string;
@@ -90,11 +94,13 @@ export function EditorShell() {
     };
     window.addEventListener("wordhtml:open-search", onSearch);
     window.addEventListener("wordhtml:open-page-setup", onPageSetup);
+    window.addEventListener("wordhtml:open-shortcuts", onShortcuts);
     window.addEventListener("wordhtml:open-templates", onTemplates);
     window.addEventListener("wordhtml:insert-variable", onInsertVariable);
     return () => {
       window.removeEventListener("wordhtml:open-search", onSearch);
       window.removeEventListener("wordhtml:open-page-setup", onPageSetup);
+      window.removeEventListener("wordhtml:open-shortcuts", onShortcuts);
       window.removeEventListener("wordhtml:open-templates", onTemplates);
       window.removeEventListener("wordhtml:insert-variable", onInsertVariable);
     };
@@ -130,6 +136,11 @@ export function EditorShell() {
       if (event.key === "F11") {
         event.preventDefault();
         setIsFullscreen((f) => !f);
+        return;
+      }
+      if (event.key === "F1") {
+        event.preventDefault();
+        setShortcutsOpen(true);
         return;
       }
       const meta = event.metaKey || event.ctrlKey;
@@ -401,17 +412,7 @@ export function EditorShell() {
                   </div>
                 )}
               </div>
-              {/* Status bar */}
-              <div
-                className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-4 py-1 text-[11px] text-[color:var(--color-muted-foreground)]"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                <span>{pageCount} หน้า (Pages)</span>
-                <span className="text-[color:var(--color-border-strong)]">
-                  Ctrl+Enter / Cmd+Enter = ตัวแบ่งหน้า
-                </span>
-              </div>
+              <StatusBar pageCount={pageCount} />
             </div>
             {sourceOpen && <SourcePane />}
           </div>
@@ -435,6 +436,10 @@ export function EditorShell() {
         <PageSetupDialog
           open={pageSetupOpen}
           onClose={() => setPageSetupOpen(false)}
+        />
+        <ShortcutsPanel
+          open={shortcutsOpen}
+          onClose={() => setShortcutsOpen(false)}
         />
         <MobileBlock />
       </div>
