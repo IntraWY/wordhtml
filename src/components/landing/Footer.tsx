@@ -23,7 +23,7 @@ export function Footer() {
             วิธีใช้
           </Link>
           <Link
-            href="/app"
+            href="/"
             className="transition-colors hover:text-[color:var(--color-foreground)]"
           >
             โปรแกรมแก้ไข

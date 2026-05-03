@@ -1,19 +1,13 @@
-import { Header } from "@/components/landing/Header";
-import { Hero } from "@/components/landing/Hero";
-import { Features } from "@/components/landing/Features";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Footer } from "@/components/landing/Footer";
+import type { Metadata } from "next";
+
+import { EditorShell } from "@/components/editor/EditorShell";
+
+export const metadata: Metadata = {
+  title: "โปรแกรมแก้ไข",
+  description:
+    "แก้ไขเอกสารด้วยโปรแกรมแก้ไขแบบ Visual พร้อม A4 Preview แล้วส่งออก HTML ที่สะอาด",
+};
 
 export default function HomePage() {
-  return (
-    <>
-      <Header />
-      <main className="flex flex-1 flex-col">
-        <Hero />
-        <Features />
-        <HowItWorks />
-      </main>
-      <Footer />
-    </>
-  );
+  return <EditorShell />;
 }

@@ -28,7 +28,7 @@ export function Header() {
           </a>
         </nav>
         <Button asChild size="sm">
-          <Link href="/app">เปิดโปรแกรมแก้ไข</Link>
+          <Link href="/">เปิดโปรแกรมแก้ไข</Link>
         </Button>
       </div>
     </header>

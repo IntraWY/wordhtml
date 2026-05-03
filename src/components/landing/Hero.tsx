@@ -20,7 +20,7 @@ export function Hero() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <Link href="/app">
+              <Link href="/">
                 เปิดโปรแกรมแก้ไข
                 <ArrowRight />
               </Link>

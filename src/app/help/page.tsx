@@ -49,7 +49,7 @@ export default function HelpPage() {
             </p>
             <div className="mt-4">
               <Button asChild>
-                <Link href="/app">
+                <Link href="/">
                   เปิดโปรแกรมแก้ไข
                   <ArrowRight />
                 </Link>
