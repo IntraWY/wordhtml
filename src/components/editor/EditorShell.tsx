@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
@@ -99,6 +99,20 @@ export function EditorShell() {
       window.removeEventListener("wordhtml:insert-variable", onInsertVariable);
     };
   }, [editor]);
+
+  // Cross-tab sync: rehydrate stores when localStorage changes in another tab
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "wordhtml-editor") {
+        (useEditorStore as unknown as { persist?: { rehydrate: () => void } }).persist?.rehydrate?.();
+      }
+      if (e.key === "wordhtml-templates") {
+        (useTemplateStore as unknown as { persist?: { rehydrate: () => void } }).persist?.rehydrate?.();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

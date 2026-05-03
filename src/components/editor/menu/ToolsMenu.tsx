@@ -2,6 +2,7 @@
 
 import { useEditorStore } from "@/store/editorStore";
 import { countWords } from "@/lib/text";
+import { clearAllAppData } from "@/lib/storage";
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
@@ -45,6 +46,15 @@ export function ToolsMenu(_props: EditorMenuProps) {
           document
             .querySelector<HTMLElement>("[data-cleaning-toolbar]")
             ?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+      <Sep />
+      <MenuItem
+        label="ลบข้อมูลที่บันทึก (Clear Data)"
+        onClick={() => {
+          if (window.confirm("ลบข้อมูลทั้งหมดที่บันทึกไว้? รวมถึง Snapshot และ Template")) {
+            clearAllAppData();
+          }
         }}
       />
     </MenuDropdown>

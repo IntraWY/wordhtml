@@ -1,10 +1,11 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
+import { editorStorage } from "@/lib/storage";
 import type {
   CleanerKey,
   ImageMode,
@@ -281,13 +282,16 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name: "wordhtml-editor",
-      storage: createJSONStorage(() => localStorage),
+      storage: editorStorage,
       partialize: (state) => ({
+        _v: 1,
         enabledCleaners: state.enabledCleaners,
         imageMode: state.imageMode,
         history: state.history,
         pageSetup: state.pageSetup,
         templateMode: state.templateMode,
+        variables: state.variables,
+        dataSet: state.dataSet,
       }),
     }
   )

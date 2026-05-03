@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import type { PageSetup } from "./editorStore";
+import { templateStorage } from "@/lib/storage";
 
 const MAX_TEMPLATES = 50;
 const TEMPLATE_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB
@@ -69,8 +70,8 @@ export const useTemplateStore = create<TemplateState>()(
     }),
     {
       name: "wordhtml-templates",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ templates: state.templates }),
+      storage: templateStorage,
+      partialize: (state) => ({ _v: 1, templates: state.templates }),
     }
   )
 );
