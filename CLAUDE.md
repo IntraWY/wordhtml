@@ -25,7 +25,7 @@ npm run lint
 | Framework | **Next.js 16** (App Router) | `output: "export"` for static deploy |
 | Language | **TypeScript** | strict mode |
 | Styling | **Tailwind CSS v4** | tokens defined in `src/app/globals.css` via `@theme inline` |
-| Editor | **Tiptap v3** | StarterKit + Underline + Link + ImageWithAlign + Placeholder + TextAlign + Color + Highlight + Table + Subscript + Superscript + TaskList + FontFamily + SearchAndReplace + custom IndentExtension |
+| Editor | **Tiptap v3** | StarterKit + Underline + Link + ImageWithAlign + Placeholder + TextAlign + Color + Highlight + Table + Subscript + Superscript + TaskList + FontFamily + TextStyle + FontSize (custom mark) + SearchAndReplace + custom ParagraphFormatExtension (indent + spacing) |
 | Find/Replace | `@sereneinserenade/tiptap-search-and-replace` | community pkg via `--legacy-peer-deps` |
 | State | **Zustand** | `src/store/editorStore.ts`; cleaner prefs / pageSetup / history persisted to localStorage |
 | docx → HTML | **mammoth.js** | uses package `browser` field; ambient types in `src/types/mammoth.d.ts` |
@@ -62,14 +62,20 @@ src/
 │   │   │   ├── InsertMenu.tsx    # Link, Image upload/URL, Table, HR, Soft Break, Code
 │   │   │   ├── ViewMenu.tsx      # Source HTML, Fullscreen
 │   │   │   ├── FormatMenu.tsx    # paragraph, B/I/U/Strike, Sub/Sup/Code,
-│   │   │   │                     #   Align submenu, Font submenu, Clear Formatting
+│   │   │   │                     #   Align submenu, Font submenu, Font Size submenu, Paragraph dialog, Clear Formatting
 │   │   │   ├── TableMenu.tsx     # Insert Table, row/column ops, Delete Table
 │   │   │   └── ToolsMenu.tsx     # Word Count, Find/Replace, Page Setup, Cleaning
 │   │   ├── CleaningToolbar.tsx   # cleaner pills row
 │   │   ├── VisualEditor.tsx      # Tiptap editor setup + EditorContent + EmptyHint only
 │   │   │                         #   (no outer container — rendered inside article.paper)
-│   │   ├── FormattingToolbar.tsx # icon toolbar — image-aware align/size, sub/sup, code
-│   │   ├── Ruler.tsx             # H/V cm rulers with margin guides (PX_PER_CM=37.81)
+│   │   ├── FormattingToolbar.tsx # icon toolbar — image-aware align/size, sub/sup, code, font, paragraph dialog
+│   │   ├── ParagraphDialog.tsx   # Word-style Paragraph dialog: indents + spacing
+│   │   ├── FontSelector.tsx      # Font family dropdown (TH Sarabun, Noto Sans Thai, etc.)
+│   │   ├── FontSizeSelector.tsx  # Font size dropdown (10-36px)
+│   │   ├── Ruler.tsx             # H/V cm rulers with margin guides (PX_PER_CM=37.81).
+│   │   │                         #   Vertical ruler auto-extends to content height via ResizeObserver.
+│   │   │                         #   Horizontal ruler has draggable margin handles (left/right)
+│   │   │                         #   + indent triangles (left/first-line).
 │   │   ├── SearchPanel.tsx       # Ctrl+F floating Find & Replace panel
 │   │   ├── PageSetupDialog.tsx   # A4/Letter, portrait/landscape, margins
 │   │   ├── ExportDialog.tsx      # 4-format download + cleaner preview
@@ -96,6 +102,15 @@ src/
 │   │   ├── exportMarkdown.ts     # turndown wrapper with GFM tables (+ tests)
 │   │   └── wrap.ts               # wrapAsDocument({ title, pageSetup }), @page CSS
 │   ├── tiptap/
+│   │   ├── paragraphFormat.ts    # ParagraphFormatExtension: marginLeft/Right, textIndent,
+│   │   │                         #   spaceBefore/After, lineHeight/lineHeightMode
+│   │   ├── fontSize.ts           # Custom Mark for inline font-size spans
+│   │   ├── indentExtension.ts    # (legacy) replaced by paragraphFormat.ts
+│   │   ├── pageBreak.ts          # Block-level page break node
+│   │   ├── variableMark.ts       # Template variable {{name}} mark
+│   │   ├── repeatingRow.ts       # Table row with data-repeat attrs
+│   │   ├── headingWithId.ts      # Heading with preserved id attr
+│   │   ├── bulletListWithClass.ts# BulletList with preserved class attr
 │   │   └── imageWithAlign.ts     # Image extension extended with align/width attrs
 │   ├── images.ts                 # extract base64 <img> → File[] for ZIP
 │   ├── page.ts                   # A4/LETTER constants + mmToPx (shared by EditorShell & Ruler)
@@ -130,6 +145,7 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 - **Document never persists.** localStorage holds only preferences (cleaners, imageMode, pageSetup) and history snapshots. The current document is gone on reload — by design, for privacy. `beforeunload` warns if there are unsaved changes (current HTML differs from latest snapshot).
 - **UI toggles are session-scoped.** `sourceOpen` (HTML source pane) and `isFullscreen` reset on reload.
 - **History is local-only.** Up to 20 document snapshots in localStorage. Auto-snapshot fires after 2 min idle. Total serialized size is capped at 4MB; oldest snapshots are dropped first.
+- **Templates are local-only.** Up to 50 document templates in localStorage (`wordhtml-templates`). Each stores `id`, `name`, `createdAt`, `html`, `pageSetup`. Export downloads all as JSON; import reads JSON and merges (skips duplicate `id`).
 - **Cleaner order matters.** See `src/lib/cleaning/pipeline.ts` — comments → styles → classes → attributes → **unwrapDeprecatedTags** → unwrapSpans → empty tags → spaces → (terminal) plainText.
 - **Editor reactivity for menus.** Menu components that show active/disabled states based on cursor position (e.g., `FormatMenu`, `EditMenu`) use `useEditorState` from `@tiptap/react` to subscribe to selection changes. Without it, checkmarks go stale.
 - **Cross-component coordination via custom events.** Menu items dispatch `wordhtml:open-search`, `wordhtml:open-page-setup`, `wordhtml:open-file` on `window`. `EditorShell` and `UploadButton` listen. Avoids passing dialog state through props.
@@ -139,12 +155,38 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 Tokens live in `src/app/globals.css` under `@theme inline`. Tailwind v4 picks them up automatically as `bg-background`, `text-foreground`, etc.
 
 - **Palette:** zinc-based monochrome (`#fafafa` / `#18181b`) with success green and danger red. No dark mode (light only).
-- **Type:** Geist Sans for UI and body, Geist Mono for code/terminal surfaces. Font menu also offers Sarabun, Noto Sans Thai, system-ui, serif.
+- **Type:** Geist Sans for UI and body, Geist Mono for code/terminal surfaces. Font menu also offers TH Sarabun PSK, Sarabun, Noto Sans Thai, Kanit, Prompt, system-ui, serif, monospace.
 - **Radius:** 4 / 6 / 8 / 12 / 16 px (`--radius-xs` … `--radius-xl`).
 - **Editor IS the paper.** The Tiptap `EditorContent` renders directly inside `<article class="paper printable-paper">` in `EditorShell`. `.prose-editor` and `.paper` share the same typography rules in `globals.css` so exports look identical to what you type.
 - **A4 dimensions:** 794×1123 px @ 96 DPI = 210×297 mm. Conversion `1 cm = 794/21 ≈ 37.81 px` — see `src/lib/page.ts`. Letter is 215.9×279.4 mm. Page setup drives the paper padding and the print stylesheet.
-- **Ruler:** 18 px wide/tall, ticks every 0.5 cm, labels at every 1 cm, faint red guides at margin start/end. Scrolls with paper so cm marks always align.
+- **Ruler:** 18 px wide/tall, ticks every 0.5 cm, labels at every 1 cm, faint red guides at margin start/end.
+  - Vertical ruler auto-extends to full content height (multi-page docs) via `ResizeObserver` on `<article>`.
+  - Horizontal ruler has draggable grey square handles at left/right margin guides (adjusts page margins in mm).
+  - Indent triangles (▽ blue for left indent, △ purple for first-line indent) drag to set paragraph indents.
 - **i18n style:** Thai labels primary, English in parentheses. Example: `"ไฟล์ (File)"`, `"ตัวหนา (Bold)"`. Keep this consistent for any new menu/toolbar item.
+
+## Paragraph Formatting (Word-style)
+
+Implemented via `ParagraphFormatExtension` (`src/lib/tiptap/paragraphFormat.ts`) — a Tiptap Extension with `addGlobalAttributes()` targeting `paragraph` and `heading` nodes.
+
+**Indents:**
+- `marginLeft` (cm) → `style="margin-left:Xcm"`
+- `marginRight` (cm) → `style="margin-right:Xcm"`
+- `textIndent` (cm) → positive = first-line indent, negative = hanging indent
+
+**Spacing:**
+- `spaceBefore` (pt) → `style="margin-top:Xpt"`
+- `spaceAfter` (pt) → `style="margin-bottom:Xpt"`
+- `lineHeightMode` + `lineHeight` → `style="line-height:X"`
+  - `single` → 1.15, `oneHalf` → 1.5, `double` → 2
+  - `atLeast`/`exactly` → value in pt, `multiple` → multiplier
+
+**UI:**
+- `ParagraphDialog.tsx` — Radix Dialog with two fieldsets: "เยื้อง (Indents)" and "ระยะห่าง (Spacing)"
+- Accessible from: FormattingToolbar icon (between Align and List), FormatMenu → "ย่อหน้า... (Paragraph...)"
+- Dialog reads current node attrs from cursor position and applies via `editor.commands.setParagraphFormat()`
+
+**Default font:** New empty documents auto-apply `THSarabunPSK` (with Google Font `Sarabun` fallback) via `useEffect` in `VisualEditor.tsx`.
 
 ## Keyboard shortcuts
 
@@ -162,6 +204,7 @@ Wired in `EditorShell.tsx`:
 | F11 | Toggle fullscreen |
 
 Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
+ParagraphFormatExtension handles: Tab (block indent +0.5cm, or sink list), Shift+Tab (block indent -0.5cm, or lift list).
 
 ## Adding features
 
@@ -173,6 +216,7 @@ Before writing new code:
 5. New menu items: pick the right menu file under `components/editor/menu/`. Use `MenuItem` / `MenuSub` / `Sep` primitives. For shortcut text, only display what's actually wired in `EditorShell` or in Tiptap's keymap — don't display unwired shortcuts.
 6. New Tiptap extensions: install, then register in `VisualEditor.tsx` extensions array. Verify default vs named export — most v3 packages support both.
 7. New keyboard shortcuts: add to `EditorShell.tsx`'s consolidated keydown listener, then update the menu/toolbar shortcut text.
+8. New dialogs: follow `ParagraphDialog.tsx` pattern — Radix Dialog with overlay, title, body sections, and OK/Cancel footer.
 
 ## Testing
 
