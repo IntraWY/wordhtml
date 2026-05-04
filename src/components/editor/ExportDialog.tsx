@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { CleaningToolbar } from "./CleaningToolbar";
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
 import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { downloadHtml } from "@/lib/export/exportHtml";
 import { downloadZip } from "@/lib/export/exportZip";
@@ -30,10 +31,8 @@ type ExportKind = ExportFormat;
 type ExportTab = "file" | "gas";
 
 export function ExportDialog() {
-  const open = useEditorStore((s) => s.exportDialogOpen);
-  const close = useEditorStore((s) => s.closeExportDialog);
-  const documentHtml = useEditorStore((s) => s.documentHtml);
-  const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
+  const open = useUiStore((s) => s.exportDialogOpen);
+  const close = useUiStore((s) => s.closeExportDialog);
   const imageMode = useEditorStore((s) => s.imageMode);
   const setImageMode = useEditorStore((s) => s.setImageMode);
   const fileName = useEditorStore((s) => s.fileName);
@@ -42,7 +41,7 @@ export function ExportDialog() {
     (s) => s.setPendingExportFormat
   );
   const templateMode = useEditorStore((s) => s.templateMode);
-  const variables = useEditorStore((s) => s.variables);
+  const documentHtml = useEditorStore((s) => s.documentHtml);
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
@@ -50,15 +49,25 @@ export function ExportDialog() {
   const [activeTab, setActiveTab] = useState<ExportTab>("file");
   const [gasFunctionName, setGasFunctionName] = useState("generateDocument");
   const [includeSheetIntegration, setIncludeSheetIntegration] = useState(true);
+  const [cleanedHtml, setCleanedHtml] = useState("");
 
   const selectedFormat = pendingFormat ?? "html";
 
-  const cleanedHtml = useMemo(() => {
-    if (!open) return "";
-    return applyCleaners(documentHtml, enabledCleaners);
-  }, [open, documentHtml, enabledCleaners]);
+  const primaryBtnRef = useRef<HTMLButtonElement>(null);
 
-
+  // Conditional computation: only subscribe to documentHtml when dialog is open
+  useEffect(() => {
+    if (!open) {
+      setCleanedHtml("");
+      return;
+    }
+    const compute = () => {
+      const s = useEditorStore.getState();
+      setCleanedHtml(applyCleaners(s.documentHtml, s.enabledCleaners));
+    };
+    compute();
+    return useEditorStore.subscribe(compute);
+  }, [open]);
 
   // Reset tab to "file" when dialog opens — deferred to avoid sync setState in effect
   const prevOpenRef = useRef(open);
@@ -81,7 +90,12 @@ export function ExportDialog() {
     return () => clearTimeout(id);
   }, [gasCopied]);
 
-
+  useEffect(() => {
+    if (open && primaryBtnRef.current) {
+      const id = setTimeout(() => primaryBtnRef.current?.focus(), 60);
+      return () => clearTimeout(id);
+    }
+  }, [open]);
 
   const handleCopy = async () => {
     try {
@@ -94,12 +108,13 @@ export function ExportDialog() {
 
   const gasCode = useMemo(() => {
     if (!open || !templateMode) return "";
-    return generateGASFunction(documentHtml, variables, {
+    const s = useEditorStore.getState();
+    return generateGASFunction(s.documentHtml, s.variables, {
       functionName: gasFunctionName,
       includeGenerateFunction: true,
       includeSheetIntegration,
     }).code;
-  }, [open, templateMode, documentHtml, variables, gasFunctionName, includeSheetIntegration]);
+  }, [open, templateMode, gasFunctionName, includeSheetIntegration]);
 
   const handleCopyGAS = async () => {
     try {
@@ -138,6 +153,10 @@ export function ExportDialog() {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            primaryBtnRef.current?.focus();
+          }}
           className="fixed left-1/2 top-1/2 z-50 grid w-[min(900px,92vw)] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_1fr_auto] overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
         >
           <header className="flex items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
@@ -216,7 +235,20 @@ export function ExportDialog() {
                   </button>
                 </div>
                 <pre className="m-0 flex-1 overflow-auto bg-[color:var(--color-background)] p-6 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)]">
-                  <code>{cleanedHtml || "<!-- เอกสารว่างเปล่า -->"}</code>
+                  {cleanedHtml === "" && documentHtml.length > 0 ? (
+                    <div
+                      role="progressbar"
+                      aria-label="กำลังประมวลผลตัวอย่าง (Loading preview)"
+                      className="space-y-2 animate-pulse"
+                    >
+                      <div className="h-3 rounded bg-[color:var(--color-border)] w-3/4" />
+                      <div className="h-3 rounded bg-[color:var(--color-border)] w-full" />
+                      <div className="h-3 rounded bg-[color:var(--color-border)] w-5/6" />
+                      <div className="h-3 rounded bg-[color:var(--color-border)] w-2/3" />
+                    </div>
+                  ) : (
+                    <code>{cleanedHtml || "<!-- เอกสารว่างเปล่า -->"}</code>
+                  )}
                 </pre>
               </div>
 
@@ -236,8 +268,14 @@ export function ExportDialog() {
                       handleDownload("docx");
                     }}
                     disabled={busy !== null}
+                    aria-busy={busy === "docx"}
+                    aria-label={busy === "docx" ? "กำลังดาวน์โหลด .docx" : "ดาวน์โหลด .docx"}
                   >
-                    {busy === "docx" ? <Loader2 className="animate-spin" /> : <FileText />}
+                    {busy === "docx" ? (
+                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .docx" />
+                    ) : (
+                      <FileText />
+                    )}
                     ดาวน์โหลด .docx
                   </Button>
                   <Button
@@ -247,20 +285,29 @@ export function ExportDialog() {
                       handleDownload("zip");
                     }}
                     disabled={busy !== null}
+                    aria-busy={busy === "zip"}
+                    aria-label={busy === "zip" ? "กำลังดาวน์โหลด .zip" : "ดาวน์โหลด .zip"}
                   >
-                    {busy === "zip" ? <Loader2 className="animate-spin" /> : <FileArchive />}
+                    {busy === "zip" ? (
+                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .zip" />
+                    ) : (
+                      <FileArchive />
+                    )}
                     ดาวน์โหลด .zip
                   </Button>
                   <Button
+                    ref={primaryBtnRef}
                     variant={selectedFormat === "html" ? "primary" : "secondary"}
                     onClick={() => {
                       setPendingExportFormat("html");
                       handleDownload("html");
                     }}
                     disabled={busy !== null}
+                    aria-busy={busy === "html"}
+                    aria-label={busy === "html" ? "กำลังดาวน์โหลด .html" : "ดาวน์โหลด .html"}
                   >
                     {busy === "html" ? (
-                      <Loader2 className="animate-spin" />
+                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .html" />
                     ) : (
                       <FileCode2 />
                     )}
@@ -273,9 +320,11 @@ export function ExportDialog() {
                       handleDownload("md");
                     }}
                     disabled={busy !== null}
+                    aria-busy={busy === "md"}
+                    aria-label={busy === "md" ? "กำลังดาวน์โหลด .md" : "ดาวน์โหลด .md"}
                   >
                     {busy === "md" ? (
-                      <Loader2 className="animate-spin" />
+                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .md" />
                     ) : (
                       <FileType2 />
                     )}

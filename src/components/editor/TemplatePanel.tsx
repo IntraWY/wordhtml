@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload } from "lucide-react";
 
-import { useEditorStore, type PageSetup } from "@/store/editorStore";
+import { useEditorStore } from "@/store/editorStore";
+import type { PageSetup } from "@/types";
 import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/store/templateStore";
 import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/lib/utils";
@@ -45,14 +46,21 @@ export function TemplatePanel() {
   function handleLoad(id: string) {
     const template = templates.find((t) => t.id === id);
     if (!template) return;
-    if (
-      hasDoc &&
-      !window.confirm(
-        "โหลด template จะแทนที่เอกสารปัจจุบัน — ดำเนินการต่อไหม?"
-      )
-    ) {
-      return;
+    if (hasDoc) {
+      const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+      openConfirm(
+        "โหลด Template (Load Template)",
+        "โหลด template จะแทนที่เอกสารปัจจุบัน — ดำเนินการต่อไหม?",
+        () => {
+          doLoad(template);
+        }
+      );
+    } else {
+      doLoad(template);
     }
+  }
+
+  function doLoad(template: typeof templates[0]) {
     setHtml(template.html);
     setPageSetup(template.pageSetup);
     setFileName(template.name);
@@ -204,10 +212,15 @@ export function TemplatePanel() {
                     onRenameCommit={() => handleRenameCommit(t.id)}
                     onRenameAbort={handleRenameAbort}
                     onDelete={() => {
-                      if (window.confirm(`ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`)) {
-                        deleteTemplate(t.id);
-                        useToastStore.getState().show(`ลบ Template "${t.name}" แล้ว`);
-                      }
+                      const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+                      openConfirm(
+                        "ลบ Template (Delete Template)",
+                        `ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`,
+                        () => {
+                          deleteTemplate(t.id);
+                          useToastStore.getState().show(`ลบ Template "${t.name}" แล้ว`);
+                        }
+                      );
                     }}
                   />
                 ))}
@@ -277,8 +290,6 @@ function TemplateRow({
   onRenameAbort,
   onDelete,
 }: TemplateRowProps) {
-  // Tracks whether Escape was pressed so onBlur doesn't commit after abort.
-  const keyHandledRef = useRef(false);
 
   return (
     <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]">
@@ -295,17 +306,11 @@ function TemplateRow({
             onChange={(e) => onRenameValueChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                keyHandledRef.current = true;
                 onRenameCommit();
               }
               if (e.key === "Escape") {
-                keyHandledRef.current = true;
                 onRenameAbort();
               }
-            }}
-            onBlur={() => {
-              if (!keyHandledRef.current) onRenameCommit();
-              keyHandledRef.current = false;
             }}
             className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-0.5 text-sm font-medium outline-none focus:ring-2 focus:ring-[color:var(--color-foreground)]"
           />

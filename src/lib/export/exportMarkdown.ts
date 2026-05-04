@@ -27,7 +27,8 @@ function getTurndown(): TurndownService {
   td.addRule("table", {
     filter: "table",
     replacement: (_, node) => {
-      const table = node as HTMLTableElement;
+      if (!(node instanceof HTMLTableElement)) return "";
+      const table = node;
       const rows = Array.from(table.rows);
       if (rows.length === 0) return "";
       const cells = (row: HTMLTableRowElement) =>

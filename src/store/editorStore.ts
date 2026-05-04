@@ -7,6 +7,7 @@ import { markdownToHtml } from "@/lib/importMarkdown";
 import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
 import { editorStorage } from "@/lib/storage";
+import { dispatchOpenFile } from "@/lib/events";
 import type {
   CleanerKey,
   ImageMode,
@@ -14,22 +15,28 @@ import type {
   ExportFormat,
   TemplateVariable,
   DataSet,
+  PageSetup,
 } from "@/types";
 
 const MAX_HISTORY = 20;
 const AUTO_SNAPSHOT_IDLE_MS = 120_000; // 2 minutes idle
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
 
-export interface PageSetup {
-  size: "A4" | "Letter";
-  orientation: "portrait" | "landscape";
-  marginMm: { top: number; right: number; bottom: number; left: number };
-}
-
 const DEFAULT_PAGE_SETUP: PageSetup = {
   size: "A4",
   orientation: "portrait",
   marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
+  headerFooter: {
+    enabled: false,
+    headerHtml: "",
+    footerHtml: "หน้า {page} จาก {total}",
+    differentFirstPage: false,
+    differentOddEven: false,
+    firstPageHeaderHtml: "",
+    firstPageFooterHtml: "",
+    evenHeaderHtml: "",
+    evenFooterHtml: "",
+  },
 };
 
 // Module-scoped debounce timer for auto-snapshot. Lives outside the store
@@ -44,11 +51,9 @@ interface EditorState {
   enabledCleaners: CleanerKey[];
   // export
   imageMode: ImageMode;
-  exportDialogOpen: boolean;
   pendingExportFormat: ExportFormat | null;
   // history
   history: DocumentSnapshot[];
-  historyPanelOpen: boolean;
   // page setup
   pageSetup: PageSetup;
   // editing telemetry
@@ -57,7 +62,6 @@ interface EditorState {
   isLoadingFile: boolean;
   loadError: string | null;
   lastLoadWarnings: MammothMessage[];
-  sourceOpen: boolean;
   // template mode
   templateMode: boolean;
   variables: TemplateVariable[];
@@ -72,15 +76,13 @@ interface EditorState {
   setImageMode: (mode: ImageMode) => void;
   setPageSetup: (partial: Partial<PageSetup>) => void;
   toggleAutoCompressImages: () => void;
-  openExportDialog: (format?: ExportFormat) => void;
-  closeExportDialog: () => void;
+  prepareExport: (format?: ExportFormat) => void;
   setPendingExportFormat: (format: ExportFormat | null) => void;
   loadFile: (file: File) => Promise<void>;
   triggerFileOpen: () => void;
   clearError: () => void;
   clearLoadWarnings: () => void;
   reset: () => void;
-  toggleSource: () => void;
   // history actions
   saveSnapshot: () => void;
   loadSnapshot: (id: string) => void;
@@ -88,8 +90,6 @@ interface EditorState {
   deleteSnapshot: (id: string) => void;
   renameSnapshot: (id: string, fileName: string | null) => void;
   clearHistory: () => void;
-  openHistoryPanel: () => void;
-  closeHistoryPanel: () => void;
   // template actions
   toggleTemplateMode: () => void;
   setVariables: (variables: TemplateVariable[]) => void;
@@ -106,16 +106,13 @@ export const useEditorStore = create<EditorState>()(
       fileName: null,
       enabledCleaners: DEFAULT_CLEANERS,
       imageMode: "inline",
-      exportDialogOpen: false,
       pendingExportFormat: null,
       history: [],
-      historyPanelOpen: false,
       pageSetup: DEFAULT_PAGE_SETUP,
       lastEditAt: 0,
       isLoadingFile: false,
       loadError: null,
       lastLoadWarnings: [],
-      sourceOpen: false,
       templateMode: false,
       variables: [],
       dataSet: null,
@@ -152,24 +149,22 @@ export const useEditorStore = create<EditorState>()(
               ...s.pageSetup.marginMm,
               ...(partial.marginMm ?? {}),
             },
+            headerFooter: partial.headerFooter
+              ? { ...s.pageSetup.headerFooter, ...partial.headerFooter }
+              : s.pageSetup.headerFooter,
           },
         })),
-      openExportDialog: (format) => {
+      prepareExport: (format) => {
         get().saveSnapshot();
-        set({ exportDialogOpen: true, pendingExportFormat: format ?? null });
+        set({ pendingExportFormat: format ?? null });
       },
-      closeExportDialog: () =>
-        set({ exportDialogOpen: false, pendingExportFormat: null }),
       setPendingExportFormat: (format: ExportFormat | null) =>
         set({ pendingExportFormat: format }),
       triggerFileOpen: () => {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("wordhtml:open-file"));
-        }
+        dispatchOpenFile();
       },
       clearError: () => set({ loadError: null }),
       clearLoadWarnings: () => set({ lastLoadWarnings: [] }),
-      toggleSource: () => set((s) => ({ sourceOpen: !s.sourceOpen })),
       loadFile: async (file) => {
         const name = file.name;
         const lower = name.toLowerCase();
@@ -204,7 +199,6 @@ export const useEditorStore = create<EditorState>()(
         set({
           documentHtml: "",
           fileName: null,
-          exportDialogOpen: false,
           loadError: null,
           lastLoadWarnings: [],
           pendingExportFormat: null,
@@ -223,13 +217,11 @@ export const useEditorStore = create<EditorState>()(
         };
         let updated = [snapshot, ...history].slice(0, MAX_HISTORY);
 
-        // Size guard: drop oldest snapshots until serialized list fits within
-        // the size budget. Always keep at least the newest snapshot.
         while (
           updated.length > 1 &&
           JSON.stringify(updated).length > SNAPSHOT_SIZE_LIMIT
         ) {
-          updated = updated.slice(0, -1); // drop oldest
+          updated = updated.slice(0, -1);
         }
 
         set({ history: updated });
@@ -243,7 +235,6 @@ export const useEditorStore = create<EditorState>()(
         set({
           documentHtml: snap.html,
           fileName: snap.fileName,
-          historyPanelOpen: false,
         });
       },
 
@@ -276,8 +267,6 @@ export const useEditorStore = create<EditorState>()(
       },
 
       clearHistory: () => set({ history: [] }),
-      openHistoryPanel: () => set({ historyPanelOpen: true }),
-      closeHistoryPanel: () => set({ historyPanelOpen: false }),
 
       // template actions
       toggleTemplateMode: () =>

@@ -5,6 +5,7 @@ import { Upload, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
+import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 
 export function UploadButton() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,9 +25,9 @@ export function UploadButton() {
     const handler = () => {
       inputRef.current?.click();
     };
-    window.addEventListener("wordhtml:open-file", handler);
+    addEventListener(EVENT_NAMES.openFile, handler);
     return () => {
-      window.removeEventListener("wordhtml:open-file", handler);
+      removeEventListener(EVENT_NAMES.openFile, handler);
     };
   }, []);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const PX_PER_CM = 794 / 21; // ~37.81
@@ -38,7 +38,7 @@ interface DragState {
   startMarginRightMm: number;
 }
 
-export function Ruler({
+function RulerInner({
   orientation,
   cm,
   marginStart,
@@ -61,14 +61,17 @@ export function Ruler({
   const dragRef = useRef<DragState | null>(null);
 
   // Generate tick positions
-  const ticks: Tick[] = [];
-  const totalCm = Math.floor(isH ? cm : rulerHeightPx / PX_PER_CM);
-  for (let i = 0; i <= totalCm; i++) {
-    ticks.push({ pos: i * PX_PER_CM, major: true, label: i });
-    if (i < totalCm) {
-      ticks.push({ pos: (i + 0.5) * PX_PER_CM, major: false, label: null });
+  const ticks: Tick[] = useMemo(() => {
+    const result: Tick[] = [];
+    const totalCm = Math.floor(isH ? cm : rulerHeightPx / PX_PER_CM);
+    for (let i = 0; i <= totalCm; i++) {
+      result.push({ pos: i * PX_PER_CM, major: true, label: i });
+      if (i < totalCm) {
+        result.push({ pos: (i + 0.5) * PX_PER_CM, major: false, label: null });
+      }
     }
-  }
+    return result;
+  }, [isH, cm, rulerHeightPx]);
 
   const marginGuideStart = marginStart;
   const marginGuideEnd = totalPx - marginEnd;
@@ -165,6 +168,52 @@ export function Ruler({
       };
     };
 
+  const handleMarginKeyDown =
+    (type: "marginLeft" | "marginRight") => (e: React.KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      if (!onMarginChange) return;
+      const step = 1; // 1 mm per arrow key press
+      if (type === "marginLeft") {
+        const delta = e.key === "ArrowRight" ? step : -step;
+        const newLeft = Math.max(
+          0,
+          Math.min(
+            pageWidthMm - marginRightMm - minContentMm,
+            marginLeftMm + delta
+          )
+        );
+        onMarginChange(newLeft, marginRightMm);
+      } else {
+        const delta = e.key === "ArrowLeft" ? step : -step;
+        const newRight = Math.max(
+          0,
+          Math.min(
+            pageWidthMm - marginLeftMm - minContentMm,
+            marginRightMm + delta
+          )
+        );
+        onMarginChange(marginLeftMm, newRight);
+      }
+    };
+
+  const handleIndentKeyDown =
+    (type: "left" | "first") => (e: React.KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      if (!onIndentChange) return;
+      const step = 0.1; // 0.1 cm per arrow key press
+      if (type === "left") {
+        const delta = e.key === "ArrowRight" ? step : -step;
+        const newLeft = Math.max(0, Math.min(maxIndentCm, indentLeft + delta));
+        onIndentChange(newLeft, indentFirst);
+      } else {
+        const delta = e.key === "ArrowRight" ? step : -step;
+        const newFirst = indentFirst + delta;
+        onIndentChange(indentLeft, newFirst);
+      }
+    };
+
   return (
     <div
       className={cn(
@@ -234,9 +283,13 @@ export function Ruler({
         <>
           {/* Left margin handle */}
           <div
-            aria-label={`left margin ${marginLeftMm.toFixed(1)}mm`}
-            title={`ขอบซ้าย: ${marginLeftMm.toFixed(1)}mm — ลากเพื่อปรับ`}
+            role="slider"
+            tabIndex={0}
+            aria-label={`ขอบซ้าย (Left margin) ${marginLeftMm.toFixed(1)} มม.`}
+            aria-valuenow={Math.round(marginLeftMm)}
+            title={`ขอบซ้าย: ${marginLeftMm.toFixed(1)}mm — ลากเพื่อปรับ หรือใช้ลูกศรซ้าย/ขวา`}
             onMouseDown={startMarginDrag("marginLeft")}
+            onKeyDown={handleMarginKeyDown("marginLeft")}
             style={{
               position: "absolute",
               left: `${marginGuideStart}px`,
@@ -252,9 +305,13 @@ export function Ruler({
           />
           {/* Right margin handle */}
           <div
-            aria-label={`right margin ${marginRightMm.toFixed(1)}mm`}
-            title={`ขอบขวา: ${marginRightMm.toFixed(1)}mm — ลากเพื่อปรับ`}
+            role="slider"
+            tabIndex={0}
+            aria-label={`ขอบขวา (Right margin) ${marginRightMm.toFixed(1)} มม.`}
+            aria-valuenow={Math.round(marginRightMm)}
+            title={`ขอบขวา: ${marginRightMm.toFixed(1)}mm — ลากเพื่อปรับ หรือใช้ลูกศรซ้าย/ขวา`}
             onMouseDown={startMarginDrag("marginRight")}
+            onKeyDown={handleMarginKeyDown("marginRight")}
             style={{
               position: "absolute",
               left: `${marginGuideEnd}px`,
@@ -276,9 +333,13 @@ export function Ruler({
         <>
           {/* ▽ Left indent — bottom triangle, blue */}
           <div
-            aria-label={`left indent ${indentLeft.toFixed(1)}cm`}
-            title={`indent ซ้าย: ${indentLeft.toFixed(1)}cm — ลากเพื่อปรับ`}
+            role="slider"
+            tabIndex={0}
+            aria-label={`ย่อหน้าซ้าย (Left indent) ${indentLeft.toFixed(1)} ซม.`}
+            aria-valuenow={Math.round(indentLeft * 10)}
+            title={`indent ซ้าย: ${indentLeft.toFixed(1)}cm — ลากเพื่อปรับ หรือใช้ลูกศรซ้าย/ขวา`}
             onMouseDown={startIndentDrag("left")}
+            onKeyDown={handleIndentKeyDown("left")}
             style={{
               position: "absolute",
               left: `${leftPx}px`,
@@ -295,9 +356,13 @@ export function Ruler({
           />
           {/* △ First-line indent — top triangle, purple */}
           <div
-            aria-label={`first-line indent ${indentFirst.toFixed(1)}cm`}
-            title={`indent บรรทัดแรก: ${indentFirst.toFixed(1)}cm — ลากเพื่อปรับ`}
+            role="slider"
+            tabIndex={0}
+            aria-label={`ย่อหน้าแรก (First-line indent) ${indentFirst.toFixed(1)} ซม.`}
+            aria-valuenow={Math.round(indentFirst * 10)}
+            title={`indent บรรทัดแรก: ${indentFirst.toFixed(1)}cm — ลากเพื่อปรับ หรือใช้ลูกศรซ้าย/ขวา`}
             onMouseDown={startIndentDrag("first")}
+            onKeyDown={handleIndentKeyDown("first")}
             style={{
               position: "absolute",
               left: `${firstPx}px`,
@@ -317,3 +382,5 @@ export function Ruler({
     </div>
   );
 }
+
+export const Ruler = memo(RulerInner);

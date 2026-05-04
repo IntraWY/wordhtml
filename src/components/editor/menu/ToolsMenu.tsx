@@ -1,15 +1,24 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
 import { countWords } from "@/lib/text";
+import { useDialogStore } from "@/store/dialogStore";
 import { clearAllAppData } from "@/lib/storage";
 import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
 import { triggerDownload } from "@/lib/export/wrap";
+import {
+  dispatchOpenToc,
+  dispatchOpenSearch,
+  dispatchOpenPageSetup,
+  dispatchOpenShortcuts,
+  dispatchOpenHeaderFooter,
+} from "@/lib/events";
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
-export function ToolsMenu(_props: EditorMenuProps) {
+function ToolsMenuInner(_props: EditorMenuProps) {
   void _props;
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const hasDoc = documentHtml.trim().length > 0;
@@ -22,22 +31,27 @@ export function ToolsMenu(_props: EditorMenuProps) {
       const blob = await exportAllSettings();
       triggerDownload(blob, `wordhtml-backup-${new Date().toISOString().slice(0, 10)}.wordhtml-backup.json`);
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "ไม่สามารถสำรองข้อมูลได้");
+      useDialogStore.getState().openAlert("สำรองข้อมูล (Export Settings)", e instanceof Error ? e.message : "ไม่สามารถสำรองข้อมูลได้");
     }
   };
 
   const handleImportFile = async (file: File) => {
-    if (!window.confirm("ข้อมูลปัจจุบันจะถูกแทนที่ด้วยข้อมูลจากไฟล์สำรอง ดำเนินการต่อ?")) {
-      return;
-    }
-    try {
-      await importAllSettings(file);
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "ไม่สามารถกู้คืนข้อมูลได้");
-    }
+    useDialogStore.getState().openConfirm(
+      "กู้คืนข้อมูล (Import Settings)",
+      "ข้อมูลปัจจุบันจะถูกแทนที่ด้วยข้อมูลจากไฟล์สำรอง ดำเนินการต่อ?",
+      () => {
+        (async () => {
+          try {
+            await importAllSettings(file);
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } catch (e) {
+            useDialogStore.getState().openAlert("กู้คืนข้อมูล (Import Settings)", e instanceof Error ? e.message : "ไม่สามารถกู้คืนข้อมูลได้");
+          }
+        })();
+      }
+    );
   };
 
   return (
@@ -47,45 +61,33 @@ export function ToolsMenu(_props: EditorMenuProps) {
         disabled={!hasDoc}
         onClick={() => {
           const count = countWords(documentHtml);
-          window.alert(`จำนวนคำ: ${count.toLocaleString()} คำ`);
+          useDialogStore.getState().openAlert("นับคำ (Word Count)", `จำนวนคำ: ${count.toLocaleString()} คำ`);
         }}
       />
       <MenuItem
         label="แสดงสารบัญ (Show TOC)"
         disabled={!hasDoc}
-        onClick={() => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("wordhtml:open-toc"));
-          }
-        }}
+        onClick={dispatchOpenToc}
       />
       <Sep />
       <MenuItem
         label="ค้นหา/แทนที่ (Find & Replace)"
         shortcut="Ctrl+F"
-        onClick={() => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("wordhtml:open-search"));
-          }
-        }}
+        onClick={dispatchOpenSearch}
       />
       <MenuItem
         label="ตั้งค่าหน้ากระดาษ (Page Setup)…"
-        onClick={() => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("wordhtml:open-page-setup"));
-          }
-        }}
+        onClick={dispatchOpenPageSetup}
+      />
+      <MenuItem
+        label="หัวกระดาษ/ท้ายกระดาษ (Header & Footer)…"
+        onClick={dispatchOpenHeaderFooter}
       />
       <Sep />
       <MenuItem
         label="คีย์ลัด (Shortcuts)…"
         shortcut="F1"
-        onClick={() => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("wordhtml:open-shortcuts"));
-          }
-        }}
+        onClick={dispatchOpenShortcuts}
       />
       <Sep />
       <MenuItem
@@ -129,11 +131,17 @@ export function ToolsMenu(_props: EditorMenuProps) {
       <MenuItem
         label="ลบข้อมูลที่บันทึก (Clear Data)"
         onClick={() => {
-          if (window.confirm("ลบข้อมูลทั้งหมดที่บันทึกไว้? รวมถึง Snapshot และ Template")) {
-            clearAllAppData();
-          }
+          useDialogStore.getState().openConfirm(
+            "ลบข้อมูลที่บันทึก (Clear Data)",
+            "ลบข้อมูลทั้งหมดที่บันทึกไว้? รวมถึง Snapshot และ Template",
+            () => {
+              clearAllAppData();
+            }
+          );
         }}
       />
     </MenuDropdown>
   );
 }
+
+export const ToolsMenu = memo(ToolsMenuInner);

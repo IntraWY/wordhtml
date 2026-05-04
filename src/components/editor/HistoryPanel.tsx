@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 import type { DocumentSnapshot } from "@/types";
 
@@ -20,8 +21,8 @@ function formatDate(iso: string): string {
 }
 
 export function HistoryPanel() {
-  const open = useEditorStore((s) => s.historyPanelOpen);
-  const close = useEditorStore((s) => s.closeHistoryPanel);
+  const open = useUiStore((s) => s.historyPanelOpen);
+  const close = useUiStore((s) => s.closeHistoryPanel);
   const history = useEditorStore((s) => s.history);
   const loadSnapshot = useEditorStore((s) => s.loadSnapshot);
   const duplicateSnapshot = useEditorStore((s) => s.duplicateSnapshot);
@@ -51,9 +52,14 @@ export function HistoryPanel() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (window.confirm("ต้องการล้างประวัติทั้งหมดหรือไม่?")) {
-                      clearHistory();
-                    }
+                    const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+                    openConfirm(
+                      "ล้างประวัติ (Clear History)",
+                      "ต้องการล้างประวัติทั้งหมดหรือไม่?",
+                      () => {
+                        clearHistory();
+                      }
+                    );
                   }}
                   className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[color:var(--color-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                 >
@@ -160,7 +166,6 @@ function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: Snapshot
               if (e.key === "Enter") commit();
               if (e.key === "Escape") cancel();
             }}
-            onBlur={commit}
             aria-label="แก้ไขชื่อเอกสาร"
             className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-0.5 text-sm font-medium outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
           />

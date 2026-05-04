@@ -1,17 +1,16 @@
 "use client";
 
-import { useEditorStore } from "@/store/editorStore";
+import { memo } from "react";
+import { useUiStore } from "@/store/uiStore";
 import { MenuDropdown, MenuItem } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
-interface ViewMenuProps extends EditorMenuProps {
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
-}
-
-export function ViewMenu({ isFullscreen, onToggleFullscreen }: ViewMenuProps) {
-  const sourceOpen = useEditorStore((s) => s.sourceOpen);
-  const toggleSource = useEditorStore((s) => s.toggleSource);
+function ViewMenuInner(_props: EditorMenuProps) {
+  void _props;
+  const sourceOpen = useUiStore((s) => s.sourceOpen);
+  const toggleSource = useUiStore((s) => s.toggleSource);
+  const isFullscreen = useUiStore((s) => s.fullscreen);
+  const toggleFullscreen = useUiStore((s) => s.toggleFullscreen);
 
   return (
     <MenuDropdown label="มุมมอง (View)">
@@ -24,8 +23,10 @@ export function ViewMenu({ isFullscreen, onToggleFullscreen }: ViewMenuProps) {
         label="เต็มหน้าจอ (Fullscreen)"
         shortcut="F11"
         checked={isFullscreen}
-        onClick={onToggleFullscreen}
+        onClick={toggleFullscreen}
       />
     </MenuDropdown>
   );
 }
+
+export const ViewMenu = memo(ViewMenuInner);

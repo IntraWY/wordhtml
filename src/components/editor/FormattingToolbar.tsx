@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useCallback, useRef } from "react";
 import { useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import {
@@ -37,12 +37,13 @@ import {
 import { TemplateModeToggle } from "./TemplateModeToggle";
 
 import { cn } from "@/lib/utils";
+import { useToastStore } from "@/store/toastStore";
 
 interface FormattingToolbarProps {
   editor: Editor;
 }
 
-export function FormattingToolbar({ editor }: FormattingToolbarProps) {
+function FormattingToolbarInner({ editor }: FormattingToolbarProps) {
   const textColorRef = useRef<HTMLInputElement>(null);
   const highlightColorRef = useRef<HTMLInputElement>(null);
 
@@ -61,13 +62,90 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
   const isImage = state?.isImage ?? false;
   const imageAttrs = { align: state?.imageAlign };
 
-  const setImageAlign = (align: "left" | "center" | "right") => {
+  const setImageAlign = useCallback((align: "left" | "center" | "right") => {
     editor.chain().focus().updateAttributes("image", { align }).run();
-  };
+  }, [editor]);
 
-  const isImageAlign = (align: "left" | "center" | "right"): boolean => {
+  const isImageAlign = useCallback((align: "left" | "center" | "right") => {
     return imageAttrs.align === align;
-  };
+  }, [imageAttrs.align]);
+
+  const handleUndo = useCallback(() => editor.chain().focus().undo().run(), [editor]);
+  const handleRedo = useCallback(() => editor.chain().focus().redo().run(), [editor]);
+  const handleH1 = useCallback(() => editor.chain().focus().toggleHeading({ level: 1 }).run(), [editor]);
+  const handleH2 = useCallback(() => editor.chain().focus().toggleHeading({ level: 2 }).run(), [editor]);
+  const handleH3 = useCallback(() => editor.chain().focus().toggleHeading({ level: 3 }).run(), [editor]);
+  const handleBold = useCallback(() => editor.chain().focus().toggleBold().run(), [editor]);
+  const handleItalic = useCallback(() => editor.chain().focus().toggleItalic().run(), [editor]);
+  const handleUnderline = useCallback(() => editor.chain().focus().toggleUnderline().run(), [editor]);
+  const handleStrike = useCallback(() => editor.chain().focus().toggleStrike().run(), [editor]);
+  const handleSubscript = useCallback(() => editor.chain().focus().toggleSubscript().run(), [editor]);
+  const handleSuperscript = useCallback(() => editor.chain().focus().toggleSuperscript().run(), [editor]);
+  const handleAlignLeft = useCallback(() => {
+    if (isImage) setImageAlign("left");
+    else editor.chain().focus().setTextAlign("left").run();
+  }, [editor, isImage, setImageAlign]);
+  const handleAlignCenter = useCallback(() => {
+    if (isImage) setImageAlign("center");
+    else editor.chain().focus().setTextAlign("center").run();
+  }, [editor, isImage, setImageAlign]);
+  const handleAlignRight = useCallback(() => {
+    if (isImage) setImageAlign("right");
+    else editor.chain().focus().setTextAlign("right").run();
+  }, [editor, isImage, setImageAlign]);
+  const handleAlignJustify = useCallback(() => editor.chain().focus().setTextAlign("justify").run(), [editor]);
+  const handleBulletList = useCallback(() => editor.chain().focus().toggleBulletList().run(), [editor]);
+  const handleOrderedList = useCallback(() => editor.chain().focus().toggleOrderedList().run(), [editor]);
+  const handleBlockquote = useCallback(() => editor.chain().focus().toggleBlockquote().run(), [editor]);
+  const handleOutdent = useCallback(() => {
+    if (editor.isActive("listItem")) {
+      editor.chain().focus().liftListItem("listItem").run();
+    }
+  }, [editor]);
+  const handleIndentList = useCallback(() => {
+    if (editor.isActive("listItem")) {
+      editor.chain().focus().sinkListItem("listItem").run();
+    }
+  }, [editor]);
+  const handleLink = useCallback(() => {
+    const previous = editor.getAttributes("link").href as string | undefined;
+    const { openPrompt } = require("@/store/dialogStore").useDialogStore.getState();
+    openPrompt(
+      "แทรกลิงก์ (Insert Link)",
+      "ใส่ URL ของลิงก์:",
+      previous ?? "https://",
+      (url: string) => {
+        if (url === null) return;
+        if (url === "") {
+          editor.chain().focus().extendMarkRange("link").unsetLink().run();
+          return;
+        }
+        // Validate URL and block javascript: scheme
+        let validatedUrl = url;
+        try {
+          const parsed = new URL(url, window.location.href);
+          if (parsed.protocol === "javascript:") {
+            useToastStore.getState().show("ไม่รองรับ URL ประเภท javascript:", "error");
+            return;
+          }
+          validatedUrl = parsed.href;
+        } catch {
+          if (/^javascript:/i.test(url)) {
+            useToastStore.getState().show("ไม่รองรับ URL ประเภท javascript:", "error");
+            return;
+          }
+        }
+        editor.chain().focus().extendMarkRange("link").setLink({ href: validatedUrl }).run();
+      }
+    );
+  }, [editor]);
+  const handleHorizontalRule = useCallback(() => editor.chain().focus().setHorizontalRule().run(), [editor]);
+  const handleCodeBlock = useCallback(() => editor.chain().focus().toggleCodeBlock().run(), [editor]);
+  const handleCode = useCallback(() => editor.chain().focus().toggleCode().run(), [editor]);
+  const handleClearFormatting = useCallback(() => editor.chain().focus().clearNodes().unsetAllMarks().run(), [editor]);
+  const handlePageBreak = useCallback(() => editor.chain().focus().insertPageBreak().run(), [editor]);
+  const handleSetColor = useCallback((color: string) => editor.chain().focus().setColor(color).run(), [editor]);
+  const handleSetHighlight = useCallback((color: string) => editor.chain().focus().setHighlight({ color }).run(), [editor]);
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5">
@@ -75,14 +153,14 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="เลิกทำ"
-          onClick={() => editor.chain().focus().undo().run()}
+          onClick={handleUndo}
           disabled={!editor.can().undo()}
         >
           <Undo2 />
         </ToolButton>
         <ToolButton
           label="ทำซ้ำ"
-          onClick={() => editor.chain().focus().redo().run()}
+          onClick={handleRedo}
           disabled={!editor.can().redo()}
         >
           <Redo2 />
@@ -95,21 +173,21 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="หัวเรื่อง 1"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          onClick={handleH1}
           active={editor.isActive("heading", { level: 1 })}
         >
           <Heading1 />
         </ToolButton>
         <ToolButton
           label="หัวเรื่อง 2"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={handleH2}
           active={editor.isActive("heading", { level: 2 })}
         >
           <Heading2 />
         </ToolButton>
         <ToolButton
           label="หัวเรื่อง 3"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          onClick={handleH3}
           active={editor.isActive("heading", { level: 3 })}
         >
           <Heading3 />
@@ -122,42 +200,42 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="ตัวหนา"
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          onClick={handleBold}
           active={editor.isActive("bold")}
         >
           <Bold />
         </ToolButton>
         <ToolButton
           label="ตัวเอียง"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
+          onClick={handleItalic}
           active={editor.isActive("italic")}
         >
           <Italic />
         </ToolButton>
         <ToolButton
           label="ขีดเส้นใต้"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          onClick={handleUnderline}
           active={editor.isActive("underline")}
         >
           <UnderlineIcon />
         </ToolButton>
         <ToolButton
           label="ขีดทับ"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
+          onClick={handleStrike}
           active={editor.isActive("strike")}
         >
           <Strikethrough />
         </ToolButton>
         <ToolButton
           label="ตัวห้อย"
-          onClick={() => editor.chain().focus().toggleSubscript().run()}
+          onClick={handleSubscript}
           active={editor.isActive("subscript")}
         >
           <SubscriptIcon />
         </ToolButton>
         <ToolButton
           label="ตัวยก"
-          onClick={() => editor.chain().focus().toggleSuperscript().run()}
+          onClick={handleSuperscript}
           active={editor.isActive("superscript")}
         >
           <SuperscriptIcon />
@@ -170,13 +248,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label={isImage ? "จัดรูปชิดซ้าย" : "ชิดซ้าย"}
-          onClick={() => {
-            if (isImage) {
-              setImageAlign("left");
-            } else {
-              editor.chain().focus().setTextAlign("left").run();
-            }
-          }}
+          onClick={handleAlignLeft}
           active={
             isImage
               ? isImageAlign("left")
@@ -187,13 +259,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         </ToolButton>
         <ToolButton
           label={isImage ? "จัดรูปกึ่งกลาง" : "กึ่งกลาง"}
-          onClick={() => {
-            if (isImage) {
-              setImageAlign("center");
-            } else {
-              editor.chain().focus().setTextAlign("center").run();
-            }
-          }}
+          onClick={handleAlignCenter}
           active={
             isImage
               ? isImageAlign("center")
@@ -204,13 +270,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         </ToolButton>
         <ToolButton
           label={isImage ? "จัดรูปชิดขวา" : "ชิดขวา"}
-          onClick={() => {
-            if (isImage) {
-              setImageAlign("right");
-            } else {
-              editor.chain().focus().setTextAlign("right").run();
-            }
-          }}
+          onClick={handleAlignRight}
           active={
             isImage
               ? isImageAlign("right")
@@ -221,7 +281,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         </ToolButton>
         <ToolButton
           label="เต็มบรรทัด"
-          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+          onClick={handleAlignJustify}
           active={editor.isActive({ textAlign: "justify" })}
           disabled={isImage}
         >
@@ -235,21 +295,21 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="รายการจุด"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          onClick={handleBulletList}
           active={editor.isActive("bulletList")}
         >
           <List />
         </ToolButton>
         <ToolButton
           label="รายการตัวเลข"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          onClick={handleOrderedList}
           active={editor.isActive("orderedList")}
         >
           <ListOrdered />
         </ToolButton>
         <ToolButton
           label="อ้างอิง"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          onClick={handleBlockquote}
           active={editor.isActive("blockquote")}
         >
           <Quote />
@@ -262,22 +322,14 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="ลดเยื้อง"
-          onClick={() => {
-            if (editor.isActive("listItem")) {
-              editor.chain().focus().liftListItem("listItem").run();
-            }
-          }}
+          onClick={handleOutdent}
           disabled={!editor.isActive("listItem")}
         >
           <Outdent />
         </ToolButton>
         <ToolButton
           label="เพิ่มเยื้อง"
-          onClick={() => {
-            if (editor.isActive("listItem")) {
-              editor.chain().focus().sinkListItem("listItem").run();
-            }
-          }}
+          onClick={handleIndentList}
           disabled={!editor.isActive("listItem")}
         >
           <Indent />
@@ -290,21 +342,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="แทรกลิงก์"
-          onClick={() => {
-            const previous = editor.getAttributes("link").href as string | undefined;
-            const url = window.prompt("URL ของลิงก์", previous ?? "https://");
-            if (url === null) return;
-            if (url === "") {
-              editor.chain().focus().extendMarkRange("link").unsetLink().run();
-              return;
-            }
-            editor
-              .chain()
-              .focus()
-              .extendMarkRange("link")
-              .setLink({ href: url })
-              .run();
-          }}
+          onClick={handleLink}
           active={editor.isActive("link")}
         >
           <LinkIcon />
@@ -317,29 +355,27 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
       <ToolGroup>
         <ToolButton
           label="เส้นคั่น"
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          onClick={handleHorizontalRule}
         >
           <Minus />
         </ToolButton>
         <ToolButton
           label="บล็อกโค้ด"
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          onClick={handleCodeBlock}
           active={editor.isActive("codeBlock")}
         >
           <Code2 />
         </ToolButton>
         <ToolButton
           label="โค้ดบรรทัด (Ctrl+E)"
-          onClick={() => editor.chain().focus().toggleCode().run()}
+          onClick={handleCode}
           active={editor.isActive("code")}
         >
           <Code />
         </ToolButton>
         <ToolButton
           label="ล้างการจัดรูปแบบ"
-          onClick={() =>
-            editor.chain().focus().clearNodes().unsetAllMarks().run()
-          }
+          onClick={handleClearFormatting}
         >
           <Eraser />
         </ToolButton>
@@ -367,9 +403,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             type="color"
             className="absolute opacity-0 h-0 w-0 pointer-events-none"
             defaultValue={currentTextColor ?? "#000000"}
-            onChange={(e) =>
-              editor.chain().focus().setColor(e.target.value).run()
-            }
+            onChange={(e) => handleSetColor(e.target.value)}
           />
         </div>
         <div className="relative">
@@ -390,13 +424,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             type="color"
             className="absolute opacity-0 h-0 w-0 pointer-events-none"
             defaultValue={currentHighlight ?? "#ffff00"}
-            onChange={(e) =>
-              editor
-                .chain()
-                .focus()
-                .setHighlight({ color: e.target.value })
-                .run()
-            }
+            onChange={(e) => handleSetHighlight(e.target.value)}
           />
         </div>
       </ToolGroup>
@@ -408,7 +436,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         <ToolButton
           label="แทรกตัวแบ่งหน้า (Page Break)"
           disabled={!editor.can().insertPageBreak()}
-          onClick={() => editor.chain().focus().insertPageBreak().run()}
+          onClick={handlePageBreak}
         >
           <Split />
         </ToolButton>
@@ -421,18 +449,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
   );
 }
 
-function ToolGroup({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-center gap-0.5">{children}</div>;
-}
-
-function Divider() {
-  return (
-    <span
-      aria-hidden
-      className="mx-1 h-5 w-px bg-[color:var(--color-border)]"
-    />
-  );
-}
+export const FormattingToolbar = memo(FormattingToolbarInner);
 
 interface ToolButtonProps {
   label: string;
@@ -458,10 +475,18 @@ function ToolButton({ label, onClick, disabled, active, children }: ToolButtonPr
         "disabled:pointer-events-none disabled:opacity-40",
         "[&_svg]:size-3.5",
         active &&
-          "bg-[color:var(--color-foreground)] text-[color:var(--color-accent-foreground)] hover:bg-[color:var(--color-foreground)] hover:text-[color:var(--color-accent-foreground)]"
+          "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)] ring-2 ring-[color:var(--color-ring)] ring-offset-1"
       )}
     >
       {children}
     </button>
   );
+}
+
+function ToolGroup({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center gap-0.5">{children}</div>;
+}
+
+function Divider() {
+  return <div className="mx-1 h-5 w-px bg-[color:var(--color-border)]" />;
 }

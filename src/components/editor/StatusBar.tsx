@@ -1,22 +1,29 @@
 "use client";
 
+import { useMemo, type ElementType } from "react";
 import { useEditorStore } from "@/store/editorStore";
+import { usePaginationStore } from "@/store/paginationStore";
 import { countWords, plainTextFromHtml } from "@/lib/text";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
 import { FileText, Type, Sparkles, AlignLeft } from "lucide-react";
 
-interface StatusBarProps {
-  pageCount: number;
-}
-
-export function StatusBar({ pageCount }: StatusBarProps) {
+export function StatusBar() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
 
-  const words = countWords(documentHtml);
-  const chars = plainTextFromHtml(documentHtml).length;
+  const words = useMemo(() => countWords(documentHtml), [documentHtml]);
+  const chars = useMemo(() => plainTextFromHtml(documentHtml).length, [documentHtml]);
+
+  // Use pagination store when available; fall back to manual page-break counting.
+  const storeTotalPages = usePaginationStore((s) => s.totalPages);
+  const manualBreaks = useMemo(() => {
+    if (!documentHtml) return 0;
+    return (documentHtml.match(/<div[^>]*\sclass=["'][^"']*\bpage-break\b[^"']*["'][^>]*>/gi) || []).length;
+  }, [documentHtml]);
+  const manualPageCount = manualBreaks + 1;
+  const pageCount = storeTotalPages > 1 ? storeTotalPages : manualPageCount;
   const sizeLabel = pageSetup.size === "Letter" ? "Letter" : "A4";
   const orientationLabel =
     pageSetup.orientation === "landscape" ? "แนวนอน" : "แนวตั้ง";
@@ -29,7 +36,7 @@ export function StatusBar({ pageCount }: StatusBarProps) {
     value,
     className,
   }: {
-    icon: React.ElementType;
+    icon: ElementType;
     label: string;
     value: string | number;
     className?: string;

@@ -1,51 +1,57 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Monitor } from "lucide-react";
-
-import { Button } from "@/components/ui/Button";
+import { Monitor, X } from "lucide-react";
 
 const BREAKPOINT_PX = 768;
 
 /**
- * Full-viewport overlay shown on screens narrower than 768px.
+ * Dismissible warning banner shown on screens narrower than 768px.
  *
- * The editor needs both panes side-by-side to be useful, so on mobile we
- * direct users back to the marketing pages and ask them to come back on a
- * desktop browser.
+ * The editor works best on desktop; on mobile we warn users but still
+ * allow read-only access and basic interaction.
  */
 export function MobileBlock() {
-  const [blocked, setBlocked] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${BREAKPOINT_PX - 1}px)`);
-    const update = () => setBlocked(mq.matches);
+    const update = () => setVisible(mq.matches);
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  if (!blocked) return null;
+  if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-6 bg-[color:var(--color-background)] px-8 text-center">
-      <Monitor className="size-12 text-[color:var(--color-muted-foreground)]" />
-      <div className="max-w-sm">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          wordhtml works best on desktop
-        </h2>
-        <p className="mt-3 text-[color:var(--color-muted-foreground)]">
-          The visual editor and A4 preview need a wider screen than your phone has. Open this page on a desktop or laptop browser to use the editor.
-        </p>
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed inset-x-0 top-0 z-[200] flex items-start justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900"
+    >
+      <div className="flex items-center gap-2">
+        <Monitor className="size-4 shrink-0 text-amber-700" />
+        <span>
+          wordhtml ทำงานได้ดีที่สุดบนเดสก์ท็อป (Desktop) — การแก้ไขบนมือถืออาจไม่สะดวก
+        </span>
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button asChild variant="secondary">
-          <Link href="/">Back to home</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/help">Read the docs</Link>
-        </Button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => setVisible(false)}
+          className="rounded-md px-2 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100"
+        >
+          เข้าใช้งานต่อ (Continue)
+        </button>
+        <button
+          type="button"
+          onClick={() => setVisible(false)}
+          aria-label="ปิดคำเตือน"
+          className="shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
+        >
+          <X className="size-3.5" />
+        </button>
       </div>
     </div>
   );

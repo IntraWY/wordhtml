@@ -21,9 +21,16 @@ export async function batchConvert(files: File[]): Promise<Blob> {
 
   for (let i = 0; i < docxFiles.length; i++) {
     const file = docxFiles[i];
-    const result = await docxToHtml(file);
-    const html = wrapAsDocument(result.html, file.name.replace(/\.docx$/i, ""));
-    zip.file(deriveSafeFileName(file.name), html);
+    try {
+      const result = await docxToHtml(file);
+      const html = wrapAsDocument(result.html, file.name.replace(/\.docx$/i, ""));
+      zip.file(deriveSafeFileName(file.name), html);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "ไม่สามารถแปลงไฟล์ได้";
+      console.error(`[batchConvert] Failed to convert ${file.name}:`, error);
+      // Store error as a text file in the ZIP so the user knows which files failed
+      zip.file(`${deriveSafeFileName(file.name)}.error.txt`, `เกิดข้อผิดพลาดขณะแปลง ${file.name}:\n${message}`);
+    }
   }
 
   return zip.generateAsync({ type: "blob", compression: "DEFLATE" });

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import { useEditorStore, type PageSetup } from "@/store/editorStore";
+import { useEditorStore } from "@/store/editorStore";
+import type { PageSetup } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface PageSetupDialogProps {
@@ -17,10 +18,14 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
 
-  // Local form state — initialized from store, applied on Save.
-  // We do not reset when the dialog re-opens so the user keeps their
-  // last edits; the initial mount always picks up the current store value.
+  // Local form state — sync from store whenever dialog opens
   const [draft, setDraft] = useState<PageSetup>(pageSetup);
+
+  useEffect(() => {
+    if (open) {
+      setDraft(pageSetup);
+    }
+  }, [open, pageSetup]);
 
   const handleSave = () => {
     setPageSetup(draft);

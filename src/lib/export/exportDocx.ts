@@ -17,9 +17,13 @@ export async function downloadDocx(
 ): Promise<void> {
   const { sourceName = null, title = "Document" } = options;
 
-  const { asBlob } = await import("html-docx-js/dist/html-docx");
-  const document = wrapAsDocument(html, title);
-  const blob = asBlob(document);
-
-  triggerDownload(blob, deriveFileName(sourceName, "docx"));
+  try {
+    const { asBlob } = await import("html-docx-js/dist/html-docx");
+    const document = wrapAsDocument(html, title);
+    const blob = asBlob(document);
+    triggerDownload(blob, deriveFileName(sourceName, "docx"));
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "ไม่สามารถสร้างไฟล์ .docx ได้";
+    throw new Error(`DOCX export failed: ${message}`);
+  }
 }

@@ -14,9 +14,13 @@ function applyTheme(theme: "light" | "dark") {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as "light" | "dark" | null;
-    if (stored) {
-      applyTheme(stored);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY) as "light" | "dark" | null;
+      if (stored) {
+        applyTheme(stored);
+      }
+    } catch {
+      // ignore localStorage errors
     }
 
     const onStorage = (e: StorageEvent) => {
@@ -41,6 +45,10 @@ export function getStoredTheme(): "light" | "dark" | null {
 }
 
 export function setStoredTheme(theme: "light" | "dark") {
-  localStorage.setItem(STORAGE_KEY, theme);
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // ignore localStorage errors
+  }
   applyTheme(theme);
 }

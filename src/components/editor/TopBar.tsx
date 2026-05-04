@@ -5,14 +5,16 @@ import { Download, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
 
 export function TopBar() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
-  const openExportDialog = useEditorStore((s) => s.openExportDialog);
-  const openHistoryPanel = useEditorStore((s) => s.openHistoryPanel);
+  const prepareExport = useEditorStore((s) => s.prepareExport);
+  const openHistoryPanel = useUiStore((s) => s.openHistoryPanel);
+  const openExportDialog = useUiStore((s) => s.openExportDialog);
   const fileName = useEditorStore((s) => s.fileName);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const historyCount = useEditorStore((s) => s.history.length);
@@ -48,7 +50,10 @@ export function TopBar() {
           >
             <Clock className="size-4" />
             {historyCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[9px] font-bold text-[color:var(--color-accent-foreground)]">
+              <span
+                className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[9px] font-bold text-[color:var(--color-accent-foreground)]"
+                aria-label={`จำนวนเอกสาร (Document count) ${historyCount}`}
+              >
                 {historyCount > 9 ? "9+" : historyCount}
               </span>
             )}
@@ -56,14 +61,20 @@ export function TopBar() {
           <UploadButton />
           <Button
             size="sm"
-            onClick={() => openExportDialog()}
+            onClick={() => {
+              prepareExport();
+              openExportDialog();
+            }}
             disabled={!hasDoc}
             aria-label={`ส่งออก HTML พร้อมตัวทำความสะอาด ${enabledCleaners.length} รายการ`}
           >
             <Download />
             ส่งออก HTML
             {enabledCleaners.length > 0 && (
-              <span className="ml-1 rounded-full bg-[color:var(--color-accent-foreground)]/20 px-1.5 py-0.5 text-[10px] font-semibold leading-none">
+              <span
+                className="ml-1 rounded-full bg-[color:var(--color-accent-foreground)]/20 px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                aria-label={`ตัวทำความสะอาดที่เปิดใช้งาน (Active cleaners) ${enabledCleaners.length}`}
+              >
                 {enabledCleaners.length}
               </span>
             )}

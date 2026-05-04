@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { PageSetup } from "./editorStore";
+import type { PageSetup } from "@/types";
 import { templateStorage } from "@/lib/storage";
 
 const MAX_TEMPLATES = 50;

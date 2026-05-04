@@ -7,9 +7,12 @@ import { X, FileUp, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { batchConvert } from "@/lib/batchConvert";
 import { triggerDownload } from "@/lib/export/wrap";
+import { useUiStore } from "@/store/uiStore";
+import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 
 export function BatchUploadDialog() {
-  const [open, setOpen] = useState(false);
+  const open = useUiStore((s) => s.batchConvertOpen);
+  const close = useUiStore((s) => s.closeBatchConvert);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
@@ -17,13 +20,13 @@ export function BatchUploadDialog() {
 
   useEffect(() => {
     const handler = () => {
-      setOpen(true);
+      useUiStore.getState().openBatchConvert();
       setFiles([]);
       setProgress("");
     };
-    window.addEventListener("wordhtml:open-batch-convert", handler);
+    addEventListener(EVENT_NAMES.openBatchConvert, handler);
     return () => {
-      window.removeEventListener("wordhtml:open-batch-convert", handler);
+      removeEventListener(EVENT_NAMES.openBatchConvert, handler);
     };
   }, []);
 
@@ -55,7 +58,7 @@ export function BatchUploadDialog() {
   }, [files, busy]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => (o ? null : setOpen(false))}>
+    <Dialog.Root open={open} onOpenChange={(o) => (o ? null : close())}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(520px,92vw)] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]">
@@ -143,7 +146,7 @@ export function BatchUploadDialog() {
           </div>
 
           <footer className="flex items-center justify-end gap-2 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-            <Button variant="secondary" size="sm" onClick={() => setOpen(false)} disabled={busy}>
+            <Button variant="secondary" size="sm" onClick={() => close()} disabled={busy}>
               ยกเลิก (Cancel)
             </Button>
             <Button

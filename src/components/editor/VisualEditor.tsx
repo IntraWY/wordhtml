@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import Gapcursor from "@tiptap/extension-gapcursor";
 // NOTE: dynamic-import for Table extensions deferred — adds complexity
@@ -9,6 +9,7 @@ import { Table, TableCell, TableHeader } from "@tiptap/extension-table";
 import { RepeatingRow } from "@/lib/tiptap/repeatingRow";
 import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
+import { PaginationAware } from "@/lib/tiptap/paginationAware";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -27,10 +28,11 @@ import { useEditorStore } from "@/store/editorStore";
 import { Upload, FileText, Keyboard } from "lucide-react";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { IndentExtension } from "@/lib/tiptap/indentExtension";
-import { ImageWithAlign } from "@/lib/tiptap/imageWithAlign";
+import { createImageWithAlign } from "@/lib/tiptap/imageWithAlign";
 import { HeadingWithId } from "@/lib/tiptap/headingWithId";
 import { BulletListWithClass } from "@/lib/tiptap/bulletListWithClass";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
+import { ImageResizeView } from "./ImageResizeView";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -48,9 +50,8 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const lastWrittenHtml = useRef<string>("");
   const editorRef = useRef<Editor | null>(null);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         heading: false,
         bulletList: false,
@@ -64,7 +65,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         openOnClick: false,
         HTMLAttributes: { rel: "noopener noreferrer" },
       }),
-      ImageWithAlign,
+      createImageWithAlign(ImageResizeView),
       Placeholder.configure({
         placeholder: "พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…",
       }),
@@ -90,20 +91,34 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TaskItem.configure({ nested: true }),
       FontFamily,
       Gapcursor,
+      PaginationAware,
     ],
-    content: documentHtml,
-    editorProps: {
+    []
+  );
+
+  const onUpdate = useCallback(
+    ({ editor }: { editor: Editor }) => {
+      const html = editor.getHTML();
+      lastWrittenHtml.current = html;
+      setHtml(html);
+    },
+    [setHtml]
+  );
+
+  const editorProps = useMemo(
+    () => ({
       attributes: {
         class:
           "prose-editor max-w-none outline-none min-h-full text-base leading-relaxed",
         role: "textbox",
         "aria-label": "โปรแกรมแก้ไขเอกสาร",
+        "aria-describedby": "editor-placeholder",
         "aria-multiline": "true",
       },
-      transformPastedHTML(html) {
+      transformPastedHTML(html: string) {
         return cleanPastedHtml(html);
       },
-      handleKeyDown(_view, event) {
+      handleKeyDown(_view: unknown, event: KeyboardEvent) {
         // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
           event.preventDefault();
@@ -116,7 +131,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         }
         return false;
       },
-      handleDrop(view, event) {
+      handleDrop(view: any, event: DragEvent) {
         event.preventDefault();
         const text = event.dataTransfer?.getData("text/plain");
         if (!text) return false;
@@ -131,7 +146,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         view.dispatch(view.state.tr.insert(pos, node));
         return true;
       },
-      handlePaste(_view, event) {
+      handlePaste(_view: unknown, event: ClipboardEvent) {
         const files = event.clipboardData?.files;
         if (!files || files.length === 0) return false;
         const imageFiles = Array.from(files).filter((f) =>
@@ -148,7 +163,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
             .then((src) => {
               const ed = editorRef.current;
               if (ed) {
-                ed.chain().focus().setImage({ src, alt: file.name }).run();
+                ed.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
               }
             })
             .catch(() => {
@@ -156,19 +171,23 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
               readFileAsDataURL(file).then((src) => {
                 const ed = editorRef.current;
                 if (ed) {
-                  ed.chain().focus().setImage({ src, alt: file.name }).run();
+                  ed.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
                 }
               });
             });
         }
         return true;
       },
-    },
-    onUpdate({ editor }) {
-      const html = editor.getHTML();
-      lastWrittenHtml.current = html;
-      setHtml(html);
-    },
+    }),
+    []
+  );
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions,
+    content: documentHtml,
+    editorProps,
+    onUpdate,
   });
 
   useEffect(() => {
@@ -201,7 +220,10 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   }
   return (
     <>
-      <EditorContent editor={editor} className="h-full" />
+      <span id="editor-placeholder" className="sr-only">
+        พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…
+      </span>
+      <EditorContent editor={editor} className="h-full" aria-label="เนื้อหาเอกสาร (Document content)" />
       {isEmpty && <EmptyHint />}
     </>
   );

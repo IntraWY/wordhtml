@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import type { TemplateVariable } from "@/types";
 import { PasteDataDialog } from "./PasteDataDialog";
 import { DataTable } from "./DataTable";
+import { dispatchInsertVariable } from "@/lib/events";
 
 const DELIMITER_OPTIONS: { label: string; value: string }[] = [
   { label: ", (comma)", value: "," },
@@ -51,60 +52,51 @@ export function VariablePanel() {
   useEffect(() => {
     if (!templateMode) return;
     const detected = extractVariables(documentHtml);
-    const currentVars = useEditorStore.getState().variables;
-    const currentNames = new Set(currentVars.map((v) => v.name));
+    const currentNames = new Set(variables.map((v) => v.name));
 
     const newVars = detected
       .filter((name) => !currentNames.has(name))
       .map((name) => ({ name, value: "", isList: false } as TemplateVariable));
 
     if (newVars.length > 0) {
-      setVariables([...currentVars, ...newVars]);
+      setVariables([...variables, ...newVars]);
     }
-  }, [documentHtml, templateMode, setVariables]);
+  }, [documentHtml, templateMode, variables, setVariables]);
 
   const handleUpdateVariable = useCallback(
     (name: string, patch: Partial<TemplateVariable>) => {
-      const currentVars = useEditorStore.getState().variables;
       setVariables(
-        currentVars.map((v) =>
+        variables.map((v) =>
           v.name === name ? { ...v, ...patch } : v
         )
       );
     },
-    [setVariables]
+    [variables, setVariables]
   );
 
   const handleClear = useCallback(() => {
-    const currentVars = useEditorStore.getState().variables;
-    setVariables(currentVars.map((v) => ({ ...v, value: "", listValues: undefined })));
+    setVariables(variables.map((v) => ({ ...v, value: "", listValues: undefined })));
     setDataSet(null);
-  }, [setVariables, setDataSet]);
+  }, [variables, setVariables, setDataSet]);
 
   const handleSelectRow = useCallback(
     (index: number) => {
-      const ds = useEditorStore.getState().dataSet;
-      if (!ds) return;
-      const updated: typeof ds = { ...ds, currentRowIndex: index };
+      if (!dataSet) return;
+      const updated: typeof dataSet = { ...dataSet, currentRowIndex: index };
       setDataSet(updated);
     },
-    [setDataSet]
+    [dataSet, setDataSet]
   );
 
   const handleInsertVariable = useCallback((name: string) => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("wordhtml:insert-variable", { detail: name })
-      );
-    }
+    dispatchInsertVariable(name);
   }, []);
 
   const validateVarName = (raw: string): string | null => {
     const sanitized = raw.trim().replace(/\s+/g, "_").replace(/[^\w\u0E00-\u0E7F_]/g, "");
     if (!sanitized) return "ชื่อตัวแปรต้องไม่ว่างเปล่า";
     if (/^\d/.test(sanitized)) return "ห้ามขึ้นต้นด้วยตัวเลข";
-    const existing = useEditorStore.getState().variables;
-    if (existing.some((v) => v.name === sanitized)) return "มีตัวแปรนี้อยู่แล้ว";
+    if (variables.some((v) => v.name === sanitized)) return "มีตัวแปรนี้อยู่แล้ว";
     return null;
   };
 
@@ -115,12 +107,11 @@ export function VariablePanel() {
       return;
     }
     const sanitized = newVarName.trim().replace(/\s+/g, "_").replace(/[^\w\u0E00-\u0E7F_]/g, "");
-    const currentVars = useEditorStore.getState().variables;
-    setVariables([...currentVars, { name: sanitized, value: "", isList: false }]);
+    setVariables([...variables, { name: sanitized, value: "", isList: false }]);
     setNewVarName("");
     setIsAdding(false);
     setAddError("");
-  }, [newVarName, setVariables]);
+  }, [newVarName, variables, setVariables]);
 
   const handleDragStart = useCallback((e: React.DragEvent, name: string) => {
     e.dataTransfer.setData("text/plain", `{{${name}}}`);

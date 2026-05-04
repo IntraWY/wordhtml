@@ -1,6 +1,6 @@
 import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
 
-const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/g;
+const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/;
 
 /**
  * Extract all {{variableName}} patterns from HTML.
@@ -9,16 +9,15 @@ const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/g;
 export function extractVariables(html: string): string[] {
   const seen = new Set<string>();
   const results: string[] = [];
+  const regex = new RegExp(VAR_REGEX.source, "g");
   let match;
-  while ((match = VAR_REGEX.exec(html)) !== null) {
+  while ((match = regex.exec(html)) !== null) {
     const name = match[1];
     if (!seen.has(name)) {
       seen.add(name);
       results.push(name);
     }
   }
-  // Reset regex state for next call
-  VAR_REGEX.lastIndex = 0;
   return results;
 }
 
@@ -31,7 +30,8 @@ export function replaceVariables(
   variables: TemplateVariable[],
   dataRow: Record<string, string>
 ): string {
-  return html.replace(VAR_REGEX, (match, name) => {
+  const regex = new RegExp(VAR_REGEX.source, "g");
+  return html.replace(regex, (match, name) => {
     const value = dataRow[name] ?? variables.find((v) => v.name === name)?.value;
     if (value === undefined || value === null) {
       return `<span style="color:#dc2626;background:#fee2e2;padding:0 4px;border-radius:2px;font-size:12px;">[${name}]</span>`;
@@ -83,7 +83,7 @@ export function expandRepeatingRows(
         clone.removeAttribute("data-repeat");
         // Replace variables in the clone's HTML
         clone.innerHTML = clone.innerHTML.replace(
-          VAR_REGEX,
+          new RegExp(VAR_REGEX.source, "g"),
           (_match: string, name: string) => {
             const variable = usedVars.find((v) => v.name === name);
             if (!variable || !variable.listValues) return `{{${name}}}`;
@@ -115,7 +115,7 @@ export function expandRepeatingRows(
     for (let i = 0; i < maxCount; i++) {
       const newRow = fullRowMatch
         .replace(/\s*data-repeat=["']true["']/i, "")
-        .replace(VAR_REGEX, (match: string, name: string) => {
+        .replace(new RegExp(VAR_REGEX.source, "g"), (match: string, name: string) => {
           const variable = usedVars.find((v) => v.name === name);
           if (!variable || !variable.listValues) return match;
           return escapeHtml(variable.listValues[i] ?? "");

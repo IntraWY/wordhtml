@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, X, Loader2, FileUp, Image as ImageIcon, FileText } from "lucide-react";
 import { StatusBar } from "./StatusBar";
-import { ShortcutsPanel } from "./ShortcutsPanel";
-import { TableOfContentsPanel } from "./TableOfContentsPanel";
 import type { Editor } from "@tiptap/react";
 
 import { TopBar } from "./TopBar";
@@ -12,23 +10,120 @@ import { MenuBar } from "./MenuBar";
 import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
 import { FormattingToolbar } from "./FormattingToolbar";
-import { ExportDialog } from "./ExportDialog";
-import { BatchUploadDialog } from "./BatchUploadDialog";
-import { SearchPanel } from "./SearchPanel";
-import { PageSetupDialog } from "./PageSetupDialog";
-import { TemplatePanel } from "./TemplatePanel";
-import { VariablePanel } from "./VariablePanel";
 import { PreviewToggle } from "./PreviewToggle";
 import { MultiPagePreview } from "./MultiPagePreview";
-import { Toast } from "./Toast";
-import { processTemplate } from "@/lib/templateEngine";
-import { MobileBlock } from "@/components/MobileBlock";
+import { VariablePanel } from "./VariablePanel";
+import { usePaginationStore } from "@/store/paginationStore";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
 import { useToastStore } from "@/store/toastStore";
+import { useUiStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 import { A4, LETTER, mmToPx } from "@/lib/page";
-import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
+import { processTemplate } from "@/lib/templateEngine";
+
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useDragAndDrop } from "@/hooks/useDragAndDrop";
+import { useBeforeUnload } from "@/hooks/useBeforeUnload";
+import { useEditorResize } from "@/hooks/useEditorResize";
+import { useAutoPagination } from "@/hooks/useAutoPagination";
+import { DialogManager } from "./DialogManager";
+import { MobileBlock } from "@/components/MobileBlock";
+import { addEventListener, removeEventListener } from "@/lib/events";
+import { PaginationManager } from "./PaginationManager";
+import { PageBreakIndicator } from "./PageBreakIndicator";
+
+function IndentRuler({
+  editor,
+  cm,
+  marginStart,
+  marginEnd,
+  marginLeftMm,
+  marginRightMm,
+  onMarginChange,
+}: {
+  editor: Editor | null;
+  cm: number;
+  marginStart: number;
+  marginEnd: number;
+  marginLeftMm: number;
+  marginRightMm: number;
+  onMarginChange: (leftMm: number, rightMm: number) => void;
+}) {
+  const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      const attrs = editor.getAttributes("paragraph");
+      setCurrentIndent({
+        marginLeft: (attrs.marginLeft as number) ?? 0,
+        textIndent: (attrs.textIndent as number) ?? 0,
+      });
+    };
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
+  const handleIndentChange = useCallback(
+    (marginLeft: number, textIndent: number) => {
+      editor?.commands.setIndent(marginLeft, textIndent);
+    },
+    [editor]
+  );
+
+  return (
+    <Ruler
+      orientation="horizontal"
+      cm={cm}
+      marginStart={marginStart}
+      marginEnd={marginEnd}
+      indentLeft={currentIndent.marginLeft}
+      indentFirst={currentIndent.textIndent}
+      onIndentChange={handleIndentChange}
+      marginLeftMm={marginLeftMm}
+      marginRightMm={marginRightMm}
+      onMarginChange={onMarginChange}
+    />
+  );
+}
+
+function TemplatePreview({ widthPx }: { widthPx: number }) {
+  const documentHtml = useEditorStore((s) => s.documentHtml);
+  const pageSetup = useEditorStore((s) => s.pageSetup);
+  const templateMode = useEditorStore((s) => s.templateMode);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const variables = useEditorStore((s) => s.variables);
+  const dataSet = useEditorStore((s) => s.dataSet);
+
+  const processedHtml = useMemo(() => {
+    if (previewMode !== "preview" || !templateMode) return "";
+    try {
+      const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
+      const variableFallback = Object.fromEntries(
+        variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
+      );
+      const mergedRow = { ...variableFallback, ...dataRow };
+      return processTemplate(documentHtml, variables, mergedRow).html;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Template processing failed";
+      // Error already surfaced via toast below
+      useToastStore.getState().show(`ตัวอย่าง Template ล้มเหลว: ${message}`, "error");
+      return documentHtml;
+    }
+  }, [previewMode, templateMode, documentHtml, variables, dataSet]);
+
+  if (previewMode !== "preview" || !templateMode) return null;
+  return (
+    <div className="mx-auto" style={{ width: widthPx }}>
+      <MultiPagePreview html={processedHtml} pageSetup={pageSetup} />
+    </div>
+  );
+}
 
 function SourcePane() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
@@ -55,71 +150,93 @@ function SourcePane() {
 }
 
 export function EditorShell() {
-  const [editor, setEditor] = useState<Editor | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [pageSetupOpen, setPageSetupOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [tocOpen, setTocOpen] = useState(false);
+  const editorRef = useRef<Editor | null>(null);
+  const [editorReadyTick, setEditorReadyTick] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
-  const [contentHeight, setContentHeight] = useState<number>(0);
-  const articleRef = useRef<HTMLElement>(null);
+
+  const editor = editorRef.current;
+
+  const onEditorReady = useCallback((ed: Editor | null) => {
+    if (editorRef.current === ed) return;
+    editorRef.current = ed;
+    if (ed) setEditorReadyTick((t) => t + 1);
+  }, []);
 
   const loadError = useEditorStore((s) => s.loadError);
   const clearError = useEditorStore((s) => s.clearError);
   const lastLoadWarnings = useEditorStore((s) => s.lastLoadWarnings);
   const clearLoadWarnings = useEditorStore((s) => s.clearLoadWarnings);
-  const openExportDialog = useEditorStore((s) => s.openExportDialog);
-  const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);
-  const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
-  const reset = useEditorStore((s) => s.reset);
-  const loadFile = useEditorStore((s) => s.loadFile);
-  const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
-  const sourceOpen = useEditorStore((s) => s.sourceOpen);
+  const sourceOpen = useUiStore((s) => s.sourceOpen);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const templateMode = useEditorStore((s) => s.templateMode);
   const previewMode = useEditorStore((s) => s.previewMode);
-  const variables = useEditorStore((s) => s.variables);
-  const dataSet = useEditorStore((s) => s.dataSet);
-  const documentHtml = useEditorStore((s) => s.documentHtml);
   const isLoadingFile = useEditorStore((s) => s.isLoadingFile);
+  const documentHtml = useEditorStore((s) => s.documentHtml);
 
-  // Custom-event bridge between menu components and shell
+  const isFullscreen = useUiStore((s) => s.fullscreen);
+  const openSearch = useUiStore((s) => s.openSearch);
+  const openPageSetup = useUiStore((s) => s.openPageSetup);
+  const openShortcuts = useUiStore((s) => s.openShortcuts);
+  const openToc = useUiStore((s) => s.openToc);
+  const openHeaderFooter = useUiStore((s) => s.openHeaderFooter);
+
+  /* consolidated hooks */
+  useKeyboardShortcuts(editor);
+  useBeforeUnload();
+  const { articleRef, contentHeight } = useEditorResize();
+  const { totalPages, currentPage, setCurrentPage, pageBreaks } = useAutoPagination(
+    articleRef,
+    pageSetup,
+    undefined,
+    [documentHtml, pageSetup]
+  );
+  const { onDragOver, onDragLeave, onDrop } = useDragAndDrop(editor, setIsDragging);
+
+  /* custom-event bridge between menu components and shell */
   useEffect(() => {
-    const onSearch = () => setSearchOpen(true);
-    const onPageSetup = () => setPageSetupOpen(true);
-    const onShortcuts = () => setShortcutsOpen(true);
-    const onToc = () => setTocOpen(true);
-    const onTemplates = () => useTemplateStore.getState().openPanel();
-    const onInsertVariable = (e: Event) => {
-      const name = (e as CustomEvent).detail as string;
-      if (!editor || !name) return;
-      const { state } = editor;
+    const onSearch = (_e: CustomEvent) => openSearch();
+    const onPageSetup = (_e: CustomEvent) => openPageSetup();
+    const onShortcuts = (_e: CustomEvent) => openShortcuts();
+    const onToc = (_e: CustomEvent) => openToc();
+    const onHeaderFooter = (_e: CustomEvent) => openHeaderFooter();
+    const onTemplates = (_e: CustomEvent) => useTemplateStore.getState().openPanel();
+    const onPageNext = (_e: CustomEvent) => usePaginationStore.getState().nextPage();
+    const onPagePrev = (_e: CustomEvent) => usePaginationStore.getState().prevPage();
+    const onInsertVariable = (e: CustomEvent) => {
+      const name = e.detail as string;
+      const ed = editorRef.current;
+      if (!ed || !name) return;
+      const { state } = ed;
       const pos = state.selection.from;
       const mark = state.schema.marks.variable.create({ name });
       const text = state.schema.text(`{{${name}}}`, [mark]);
-      editor.view.dispatch(state.tr.insert(pos, text));
-      editor.commands.focus();
+      ed.view.dispatch(state.tr.insert(pos, text));
+      ed.commands.focus();
     };
-    window.addEventListener("wordhtml:open-search", onSearch);
-    window.addEventListener("wordhtml:open-page-setup", onPageSetup);
-    window.addEventListener("wordhtml:open-shortcuts", onShortcuts);
-    window.addEventListener("wordhtml:open-toc", onToc);
-    window.addEventListener("wordhtml:open-templates", onTemplates);
-    window.addEventListener("wordhtml:insert-variable", onInsertVariable);
+    addEventListener("wordhtml:open-search", onSearch);
+    addEventListener("wordhtml:open-page-setup", onPageSetup);
+    addEventListener("wordhtml:open-shortcuts", onShortcuts);
+    addEventListener("wordhtml:open-toc", onToc);
+    addEventListener("wordhtml:open-header-footer", onHeaderFooter);
+    addEventListener("wordhtml:open-templates", onTemplates);
+    addEventListener("wordhtml:page-next", onPageNext);
+    addEventListener("wordhtml:page-prev", onPagePrev);
+    addEventListener("wordhtml:insert-variable", onInsertVariable);
     return () => {
-      window.removeEventListener("wordhtml:open-search", onSearch);
-      window.removeEventListener("wordhtml:open-page-setup", onPageSetup);
-      window.removeEventListener("wordhtml:open-shortcuts", onShortcuts);
-      window.removeEventListener("wordhtml:open-toc", onToc);
-      window.removeEventListener("wordhtml:open-templates", onTemplates);
-      window.removeEventListener("wordhtml:insert-variable", onInsertVariable);
+      removeEventListener("wordhtml:open-search", onSearch);
+      removeEventListener("wordhtml:open-page-setup", onPageSetup);
+      removeEventListener("wordhtml:open-shortcuts", onShortcuts);
+      removeEventListener("wordhtml:open-toc", onToc);
+      removeEventListener("wordhtml:open-header-footer", onHeaderFooter);
+      removeEventListener("wordhtml:open-templates", onTemplates);
+      removeEventListener("wordhtml:page-next", onPageNext);
+      removeEventListener("wordhtml:page-prev", onPagePrev);
+      removeEventListener("wordhtml:insert-variable", onInsertVariable);
     };
-  }, [editor]);
+  }, [openSearch, openPageSetup, openShortcuts, openToc, openHeaderFooter]);
 
-  // Cross-tab sync: rehydrate stores when localStorage changes in another tab
+  /* cross-tab sync: rehydrate stores when localStorage changes in another tab */
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "wordhtml-editor") {
@@ -132,118 +249,6 @@ export function EditorShell() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      // Skip shortcuts when user is typing in an input, textarea, or contenteditable
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      if (event.key === "F11") {
-        event.preventDefault();
-        setIsFullscreen((f) => !f);
-        return;
-      }
-      if (event.key === "F1") {
-        event.preventDefault();
-        setShortcutsOpen(true);
-        return;
-      }
-      const meta = event.metaKey || event.ctrlKey;
-      if (!meta) return;
-      const key = event.key.toLowerCase();
-
-      // Ctrl+Shift+S → Save snapshot (no dialog). Must be checked BEFORE
-      // the plain Ctrl+S branch so it doesn't double-trigger.
-      if (key === "s" && event.shiftKey) {
-        event.preventDefault();
-        saveSnapshot();
-        return;
-      }
-
-      // Ctrl+Shift+N → New document (reset)
-      if (key === "n" && event.shiftKey) {
-        event.preventDefault();
-        reset();
-        return;
-      }
-
-      // Ctrl+S → Save snapshot + open export dialog (existing behavior)
-      if (key === "s" && !event.shiftKey) {
-        event.preventDefault();
-        if (hasDoc) {
-          saveSnapshot();
-          openExportDialog();
-        }
-        return;
-      }
-
-      // Ctrl+O → Open file
-      if (key === "o") {
-        event.preventDefault();
-        triggerFileOpen();
-        return;
-      }
-
-      // Ctrl+F → Toggle search panel
-      if (key === "f" && !event.shiftKey) {
-        event.preventDefault();
-        setSearchOpen((s) => !s);
-        return;
-      }
-
-      // Ctrl+K → Insert link
-      if (key === "k") {
-        event.preventDefault();
-        const url = window.prompt("ใส่ URL ของลิงก์:");
-        if (url && editor) {
-          editor.chain().focus().setLink({ href: url }).run();
-        }
-        return;
-      }
-
-      // Ctrl+P → Print
-      if (key === "p") {
-        event.preventDefault();
-        window.print();
-        return;
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [openExportDialog, saveSnapshot, hasDoc, triggerFileOpen, reset, editor]);
-
-  // Track current paragraph indent for ruler triangles
-  useEffect(() => {
-    if (!editor) return;
-    const update = () => {
-      const attrs = editor.getAttributes("paragraph");
-      setCurrentIndent({
-        marginLeft: (attrs.marginLeft as number) ?? 0,
-        textIndent: (attrs.textIndent as number) ?? 0,
-      });
-    };
-    editor.on("selectionUpdate", update);
-    editor.on("transaction", update);
-    return () => {
-      editor.off("selectionUpdate", update);
-      editor.off("transaction", update);
-    };
-  }, [editor]);
-
-  const handleIndentChange = useCallback(
-    (marginLeft: number, textIndent: number) => {
-      editor?.commands.setIndent(marginLeft, textIndent);
-    },
-    [editor]
-  );
 
   const handleMarginChange = useCallback(
     (leftMm: number, rightMm: number) => {
@@ -259,56 +264,6 @@ export function EditorShell() {
     [pageSetup, setPageSetup]
   );
 
-  // Observe article height so vertical ruler can extend beyond one page
-  useEffect(() => {
-    const el = articleRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        // Use borderBoxSize to include padding (matches visual height)
-        const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.clientHeight;
-        setContentHeight(h);
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [documentHtml]);
-
-  const processedHtml = useMemo(() => {
-    if (previewMode !== "preview" || !templateMode) return "";
-    const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
-    const variableFallback = Object.fromEntries(
-      variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
-    );
-    const mergedRow = { ...variableFallback, ...dataRow };
-    return processTemplate(documentHtml, variables, mergedRow).html;
-  }, [previewMode, templateMode, documentHtml, variables, dataSet]);
-
-  // Count pages from page breaks in the document
-  const pageCount = useMemo(() => {
-    if (!documentHtml) return 1;
-    // Match only divs with class="page-break" (avoid false positives like no-page-break)
-    const breaks = (documentHtml.match(/<div[^>]*\sclass=["'][^"']*\bpage-break\b[^"']*["'][^>]*>/gi) || []).length;
-    return breaks + 1;
-  }, [documentHtml]);
-
-  // beforeunload warning when document has unsaved changes (current HTML
-  // differs from the most-recent snapshot in history).
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      const state = useEditorStore.getState();
-      const html = state.documentHtml.trim();
-      if (!html) return;
-      const lastHistory = state.history[0];
-      if (lastHistory && lastHistory.html === state.documentHtml) return;
-      e.preventDefault();
-      // legacy browsers need a returnValue
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, []);
-
   const base = pageSetup.size === "Letter" ? LETTER : A4;
   const isLandscape = pageSetup.orientation === "landscape";
   const widthMm = isLandscape ? base.hMm : base.wMm;
@@ -322,66 +277,23 @@ export function EditorShell() {
 
   return (
     <>
+      <a
+        href="#editor-content"
+        className="sr-only absolute left-2 top-2 z-[100] rounded-md bg-[color:var(--color-foreground)] px-3 py-2 text-sm font-medium text-[color:var(--color-background)] shadow-lg focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-[color:var(--color-ring)]"
+      >
+        ข้ามไปยังเนื้อหา (Skip to content)
+      </a>
       <div
         className={cn(
           "relative flex h-screen flex-col",
           isFullscreen && "fixed inset-0 z-50 overflow-auto bg-[color:var(--color-background)]"
         )}
-        onDragOver={(e) => {
-          if (e.dataTransfer.types.includes("Files")) {
-            e.preventDefault();
-            setIsDragging(true);
-          }
-        }}
-        onDragLeave={(e) => {
-          // Only set false if we leave the actual element (not children)
-          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-          setIsDragging(false);
-        }}
-        onDrop={async (e) => {
-          e.preventDefault();
-          setIsDragging(false);
-          const files = Array.from(e.dataTransfer.files ?? []);
-          const images = files.filter((f) => f.type.startsWith("image/"));
-          const others = files.filter((f) => !f.type.startsWith("image/"));
-
-          if (images.length > 0 && editor) {
-            const autoCompress = useEditorStore.getState().autoCompressImages;
-            let inserted = 0;
-            for (const file of images) {
-              try {
-                const finalFile = await compressImageIfEnabled(file, autoCompress);
-                const src = await readFileAsDataURL(finalFile);
-                editor.chain().focus().setImage({ src, alt: finalFile.name }).run();
-                inserted++;
-              } catch {
-                try {
-                  const src = await readFileAsDataURL(file);
-                  editor.chain().focus().setImage({ src, alt: file.name }).run();
-                  inserted++;
-                } catch {
-                  useToastStore.getState().show(`ไม่สามารถแทรกรูป ${file.name}`, "error");
-                }
-              }
-            }
-            if (inserted > 0) {
-              useToastStore.getState().show(`แทรกรูปภาพ ${inserted} รายการแล้ว`, "success");
-            }
-          }
-
-          if (others.length > 0) {
-            const file = others[0];
-            await loadFile(file);
-            useToastStore.getState().show(`โหลดไฟล์ ${file.name} แล้ว`, "success");
-          }
-        }}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
       >
         <TopBar />
-        <MenuBar
-          editor={editor}
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={() => setIsFullscreen((f) => !f)}
-        />
+        <MenuBar editor={editor} />
         {loadError && (
           <div
             role="alert"
@@ -440,9 +352,7 @@ export function EditorShell() {
               )}
               <div className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
                 {previewMode === "preview" && templateMode ? (
-                  <div className="mx-auto" style={{ width: widthPx }}>
-                    <MultiPagePreview html={processedHtml} pageSetup={pageSetup} />
-                  </div>
+                  <TemplatePreview widthPx={widthPx} />
                 ) : (
                   <div className="mx-auto" style={{ width: widthPx + 18 }}>
                     <div
@@ -453,14 +363,11 @@ export function EditorShell() {
                       }}
                     >
                       <div className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-muted)]" />
-                      <Ruler
-                        orientation="horizontal"
+                      <IndentRuler
+                        editor={editor}
                         cm={widthMm / 10}
                         marginStart={marginLeftPx}
                         marginEnd={marginRightPx}
-                        indentLeft={currentIndent.marginLeft}
-                        indentFirst={currentIndent.textIndent}
-                        onIndentChange={handleIndentChange}
                         marginLeftMm={pageSetup.marginMm.left}
                         marginRightMm={pageSetup.marginMm.right}
                         onMarginChange={handleMarginChange}
@@ -472,25 +379,32 @@ export function EditorShell() {
                         marginEnd={marginBottomPx}
                         contentHeight={contentHeight > 0 ? contentHeight : undefined}
                       />
-                      <article
-                        ref={articleRef}
-                        className="paper printable-paper bg-white shadow-sm"
-                        style={{
-                          minHeight: heightPx,
-                          width: widthPx,
-                          paddingTop: marginTopPx,
-                          paddingRight: marginRightPx,
-                          paddingBottom: marginBottomPx,
-                          paddingLeft: marginLeftPx,
-                        }}
-                      >
-                        <VisualEditor onEditorReady={setEditor} />
-                      </article>
+                      <div className="relative">
+                        <PageBreakIndicator pageBreaks={pageBreaks} />
+                        <article
+                          id="editor-content"
+                          ref={articleRef}
+                          className="paper printable-paper bg-white shadow-sm"
+                          style={{
+                            minHeight: heightPx,
+                            width: widthPx,
+                            paddingTop: marginTopPx,
+                            paddingRight: marginRightPx,
+                            paddingBottom: marginBottomPx,
+                            paddingLeft: marginLeftPx,
+                          }}
+                        >
+                          <VisualEditor onEditorReady={onEditorReady} />
+                        </article>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
-              <StatusBar pageCount={pageCount} />
+              <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
+                <StatusBar />
+                <PaginationManager totalPages={totalPages} currentPage={currentPage} onPageChange={setCurrentPage} />
+              </div>
             </div>
             {sourceOpen && <SourcePane />}
           </div>
@@ -498,7 +412,7 @@ export function EditorShell() {
         </div>
 
         {isDragging && (
-          <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[color:var(--color-background)]/70 backdrop-blur-[2px]">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[color:var(--color-background)]/70 backdrop-blur-[2px]">
             <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[color:var(--color-accent)] bg-[color:var(--color-background)] px-10 py-8 shadow-xl">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color:var(--color-muted)]">
@@ -523,35 +437,19 @@ export function EditorShell() {
 
         {isLoadingFile && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[color:var(--color-background)]/60 backdrop-blur-[1px]">
-            <div className="flex items-center gap-3 rounded-xl bg-[color:var(--color-background)] px-6 py-4 shadow-xl border border-[color:var(--color-border)]">
+            <div
+              role="status"
+              aria-live="polite"
+              aria-label="กำลังโหลด (Loading)"
+              className="flex items-center gap-3 rounded-xl bg-[color:var(--color-background)] px-6 py-4 shadow-xl border border-[color:var(--color-border)]"
+            >
               <Loader2 className="size-5 animate-spin text-[color:var(--color-accent)]" />
               <span className="text-sm font-medium text-[color:var(--color-foreground)]">กำลังโหลดไฟล์…</span>
             </div>
           </div>
         )}
 
-        <ExportDialog />
-        <BatchUploadDialog />
-        <TemplatePanel />
-        <Toast />
-        <SearchPanel
-          editor={editor}
-          open={searchOpen}
-          onClose={() => setSearchOpen(false)}
-        />
-        <PageSetupDialog
-          open={pageSetupOpen}
-          onClose={() => setPageSetupOpen(false)}
-        />
-        <ShortcutsPanel
-          open={shortcutsOpen}
-          onClose={() => setShortcutsOpen(false)}
-        />
-        <TableOfContentsPanel
-          editor={editor}
-          open={tocOpen}
-          onClose={() => setTocOpen(false)}
-        />
+        <DialogManager editor={editor} />
         <MobileBlock />
       </div>
     </>

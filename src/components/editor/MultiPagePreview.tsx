@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { splitHtmlIntoPages } from "@/lib/paginationEngine";
 import { cn } from "@/lib/utils";
 import { ProcessedContent } from "./ProcessedContent";
-import type { PageSetup } from "@/store/editorStore";
+import { resolveHeaderFooter } from "./PageHeaderFooter";
+import type { PageSetup } from "@/types";
 
 interface MultiPagePreviewProps {
   html: string;
@@ -11,32 +13,46 @@ interface MultiPagePreviewProps {
   className?: string;
 }
 
-const PAGE_BREAK_REGEX = /<div[^>]*\bpage-break\b[^>]*>\s*<\/div>/gi;
-
 export function MultiPagePreview({ html, pageSetup, className }: MultiPagePreviewProps) {
   const pages = useMemo(() => {
-    const segments = html.split(PAGE_BREAK_REGEX);
-    const filtered = segments.filter(
-      (segment, _index, arr) => segment.trim().length > 0 || arr.length === 1
-    );
-    return filtered.length > 0 ? filtered : [""];
-  }, [html]);
+    return splitHtmlIntoPages(html, pageSetup);
+  }, [html, pageSetup]);
+
+  const hf = pageSetup.headerFooter;
+  const showHF = hf?.enabled ?? false;
 
   return (
-    <div className={cn("flex flex-col items-center gap-8 py-8", className)}>
-      {pages.map((pageHtml, index) => (
-        <div key={index} className="relative">
-          <ProcessedContent
-            html={pageHtml}
-            pageSetup={pageSetup}
-            className="overflow-hidden"
-            exactHeight
-          />
-          <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[11px] text-[color:var(--color-muted-foreground)]">
-            {index + 1}
+    <div className={cn("multi-page-preview flex flex-col items-center gap-8 py-8", className)}>
+      {pages.map((pageHtml, index) => {
+        const pageNumber = index + 1;
+        const { header, footer } = resolveHeaderFooter(
+          pageNumber,
+          hf?.headerHtml ?? "",
+          hf?.footerHtml ?? "",
+          hf?.differentFirstPage ?? false,
+          hf?.differentOddEven ?? false,
+          hf?.firstPageHeaderHtml,
+          hf?.firstPageFooterHtml,
+          hf?.evenHeaderHtml,
+          hf?.evenFooterHtml
+        );
+
+        return (
+          <div key={index} className="relative page-virtual">
+            <ProcessedContent
+              html={pageHtml}
+              pageSetup={pageSetup}
+              className="overflow-hidden"
+              exactHeight
+              pageNumber={pageNumber}
+              totalPages={pages.length}
+              headerHtml={header}
+              footerHtml={footer}
+              showHeaderFooter={showHF}
+            />
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

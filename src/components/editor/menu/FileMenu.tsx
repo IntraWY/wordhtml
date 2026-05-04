@@ -1,65 +1,86 @@
 "use client";
 
+import { memo } from "react";
 import type { Editor } from "@tiptap/react";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
+import {
+  dispatchOpenBatchConvert,
+  dispatchOpenTemplates,
+} from "@/lib/events";
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 
 export interface EditorMenuProps {
   editor: Editor | null;
 }
 
-export function FileMenu(_props: EditorMenuProps) {
+function FileMenuInner(_props: EditorMenuProps) {
   void _props;
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const reset = useEditorStore((s) => s.reset);
   const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);
-  const openExportDialog = useEditorStore((s) => s.openExportDialog);
+  const prepareExport = useEditorStore((s) => s.prepareExport);
   const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
+  const openExportDialog = useUiStore((s) => s.openExportDialog);
 
   const hasDoc = documentHtml.trim().length > 0;
+
+  const handleExport = (format: "html" | "zip" | "docx" | "md") => {
+    prepareExport(format);
+    openExportDialog();
+  };
+
+  const handleNewDocument = () => {
+    if (hasDoc) {
+      const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+      openConfirm(
+        "เอกสารใหม่ (New Document)",
+        "ล้างเนื้อหาปัจจุบันและเริ่มเอกสารใหม่?",
+        () => reset()
+      );
+    } else {
+      reset();
+    }
+  };
 
   return (
     <MenuDropdown label="ไฟล์ (File)">
       <MenuItem
         label="เอกสารใหม่ (New)"
         shortcut="Ctrl+Shift+N"
-        onClick={reset}
+        onClick={handleNewDocument}
       />
       <MenuItem label="เปิดไฟล์… (Open .docx, .html, .md)" onClick={triggerFileOpen} />
       <MenuItem
         label="แปลงเป็นกลุ่ม (Batch Convert)…"
-        onClick={() =>
-          window.dispatchEvent(new CustomEvent("wordhtml:open-batch-convert"))
-        }
+        onClick={dispatchOpenBatchConvert}
       />
       <MenuItem
         label="เปิดจาก Template…"
-        onClick={() =>
-          window.dispatchEvent(new CustomEvent("wordhtml:open-templates"))
-        }
+        onClick={dispatchOpenTemplates}
       />
       <Sep />
       <MenuItem
         label="ส่งออก HTML"
         shortcut="Ctrl+S"
         disabled={!hasDoc}
-        onClick={() => openExportDialog("html")}
+        onClick={() => handleExport("html")}
       />
       <MenuItem
         label="ส่งออก ZIP"
         disabled={!hasDoc}
-        onClick={() => openExportDialog("zip")}
+        onClick={() => handleExport("zip")}
       />
       <MenuItem
         label="ส่งออก DOCX"
         disabled={!hasDoc}
-        onClick={() => openExportDialog("docx")}
+        onClick={() => handleExport("docx")}
       />
       <MenuItem
         label="ส่งออก Markdown"
         disabled={!hasDoc}
-        onClick={() => openExportDialog("md")}
+        onClick={() => handleExport("md")}
       />
       <Sep />
       <MenuItem
@@ -71,3 +92,5 @@ export function FileMenu(_props: EditorMenuProps) {
     </MenuDropdown>
   );
 }
+
+export const FileMenu = memo(FileMenuInner);

@@ -1,11 +1,12 @@
 "use client";
 
+import { memo } from "react";
 import { useEditorState } from "@tiptap/react";
 
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
-export function TableMenu({ editor }: EditorMenuProps) {
+function TableMenuInner({ editor }: EditorMenuProps) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -72,3 +73,5 @@ export function TableMenu({ editor }: EditorMenuProps) {
     </MenuDropdown>
   );
 }
+
+export const TableMenu = memo(TableMenuInner);

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Editor } from "@tiptap/react";
 
 import { FileMenu } from "./menu/FileMenu";
@@ -12,28 +13,20 @@ import { ToolsMenu } from "./menu/ToolsMenu";
 
 interface MenuBarProps {
   editor: Editor | null;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
 }
 
-export function MenuBar({
-  editor,
-  isFullscreen,
-  onToggleFullscreen,
-}: MenuBarProps) {
+function MenuBarInner({ editor }: MenuBarProps) {
   return (
-    <nav className="flex h-8 shrink-0 items-center gap-0.5 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-2">
+    <nav aria-label="เมนู (Menu)" className="flex h-8 shrink-0 items-center gap-0.5 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-2">
       <FileMenu editor={editor} />
       <EditMenu editor={editor} />
       <InsertMenu editor={editor} />
-      <ViewMenu
-        editor={editor}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={onToggleFullscreen}
-      />
+      <ViewMenu editor={editor} />
       <FormatMenu editor={editor} />
       <TableMenu editor={editor} />
       <ToolsMenu editor={editor} />
     </nav>
   );
 }
+
+export const MenuBar = memo(MenuBarInner);

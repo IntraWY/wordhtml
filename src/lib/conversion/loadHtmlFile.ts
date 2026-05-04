@@ -13,9 +13,21 @@ export async function loadHtmlFile(file: File): Promise<string> {
 }
 
 function extractBody(input: string): string {
-  // Try to find the contents of <body>…</body>; fall back to the whole input.
+  // Use DOMParser for robust extraction without regex backtracking risk.
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(input, "text/html");
+    if (doc.body) {
+      return doc.body.innerHTML.trim();
+    }
+  } catch {
+    // Fall through to regex-based fallback
+  }
+
+  // Fallback: try to find the contents of <body>…</body>
   const match = input.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   if (match) return match[1].trim();
+
   // No <body>? Strip <!doctype> and <html>/<head> if present.
   return input
     .replace(/<!doctype[^>]*>/gi, "")

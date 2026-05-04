@@ -1,28 +1,33 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useRef } from "react";
 
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 import { assignHeadingIds, buildTocHtml, generateToc } from "@/lib/toc";
 import { useEditorStore } from "@/store/editorStore";
+import { useDialogStore } from "@/store/dialogStore";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export function InsertMenu({ editor }: EditorMenuProps) {
+function InsertMenuInner({ editor }: EditorMenuProps) {
   const hasEditor = editor !== null;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const promptFor = (msg: string): string => window.prompt(msg) ?? "";
-
   const insertImageFromFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      window.alert("กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, GIF, WebP, SVG)");
+      useDialogStore.getState().openAlert(
+        "รูปภาพ (Image)",
+        "กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, GIF, WebP, SVG)"
+      );
       return;
     }
     if (file.size > MAX_IMAGE_SIZE) {
-      window.alert("ไฟล์รูปภาพใหญ่เกิน 10MB");
+      useDialogStore.getState().openAlert(
+        "รูปภาพ (Image)",
+        "ไฟล์รูปภาพใหญ่เกิน 10MB"
+      );
       return;
     }
     try {
@@ -30,10 +35,20 @@ export function InsertMenu({ editor }: EditorMenuProps) {
       const finalFile = await compressImageIfEnabled(file, autoCompress);
       const src = await readFileAsDataURL(finalFile);
       if (editor) {
-        editor.chain().focus().setImage({ src, alt: finalFile.name }).run();
+        useDialogStore.getState().openPrompt(
+          "คำอธิบายรูปภาพ (Alt text)",
+          "ใส่คำอธิบายสำหรับรูปภาพ:",
+          "รูปภาพ (Image)",
+          (alt) => {
+            editor.chain().focus().setImage({ src, alt }).run();
+          }
+        );
       }
     } catch {
-      window.alert("ไม่สามารถอ่านไฟล์ได้");
+      useDialogStore.getState().openAlert(
+        "รูปภาพ (Image)",
+        "ไม่สามารถอ่านไฟล์ได้"
+      );
     }
   };
 
@@ -55,9 +70,15 @@ export function InsertMenu({ editor }: EditorMenuProps) {
           label="ลิงก์… (Link)"
           disabled={!hasEditor}
           onClick={() => {
-            const url = promptFor("ใส่ URL ของลิงก์:");
-            if (!url) return;
-            editor?.chain().focus().setLink({ href: url }).run();
+            useDialogStore.getState().openPrompt(
+              "ลิงก์ (Link)",
+              "ใส่ URL ของลิงก์:",
+              "https://",
+              (url) => {
+                if (!url) return;
+                editor?.chain().focus().setLink({ href: url }).run();
+              }
+            );
           }}
         />
         <Sep />
@@ -70,9 +91,22 @@ export function InsertMenu({ editor }: EditorMenuProps) {
           label="รูปภาพจาก URL… (Image URL)"
           disabled={!hasEditor}
           onClick={() => {
-            const src = promptFor("ใส่ URL ของรูปภาพ:");
-            if (!src) return;
-            editor?.chain().focus().setImage({ src }).run();
+            useDialogStore.getState().openPrompt(
+              "รูปภาพจาก URL (Image URL)",
+              "ใส่ URL ของรูปภาพ:",
+              "",
+              (src) => {
+                if (!src) return;
+                useDialogStore.getState().openPrompt(
+                  "คำอธิบายรูปภาพ (Alt text)",
+                  "ใส่คำอธิบายสำหรับรูปภาพ:",
+                  "รูปภาพ (Image)",
+                  (alt) => {
+                    editor?.chain().focus().setImage({ src, alt }).run();
+                  }
+                );
+              }
+            );
           }}
         />
         <Sep />
@@ -113,7 +147,10 @@ export function InsertMenu({ editor }: EditorMenuProps) {
             assignHeadingIds(editor);
             const tocItems = generateToc(editor.getHTML());
             if (tocItems.length === 0) {
-              window.alert("ไม่พบหัวข้อในเอกสาร");
+              useDialogStore.getState().openAlert(
+                "สารบัญ (Table of Contents)",
+                "ไม่พบหัวข้อในเอกสาร"
+              );
               return;
             }
             const tocHtml = buildTocHtml(tocItems);
@@ -149,3 +186,5 @@ export function InsertMenu({ editor }: EditorMenuProps) {
     </>
   );
 }
+
+export const InsertMenu = memo(InsertMenuInner);

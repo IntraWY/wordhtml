@@ -67,6 +67,25 @@ export type ImageMode = "inline" | "separate";
 
 export type ExportFormat = "html" | "zip" | "docx" | "md";
 
+export interface HeaderFooterConfig {
+  enabled: boolean;
+  headerHtml: string;
+  footerHtml: string;
+  differentFirstPage: boolean;
+  differentOddEven: boolean;
+  firstPageHeaderHtml?: string;
+  firstPageFooterHtml?: string;
+  evenHeaderHtml?: string;
+  evenFooterHtml?: string;
+}
+
+export interface PageSetup {
+  size: "A4" | "Letter";
+  orientation: "portrait" | "landscape";
+  marginMm: { top: number; right: number; bottom: number; left: number };
+  headerFooter?: HeaderFooterConfig;
+}
+
 // Template Studio types
 export type {
   TemplateVariable,
