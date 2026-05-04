@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, X, Loader2, FileUp, Image as ImageIcon, FileText } from "lucide-react";
 import { StatusBar } from "./StatusBar";
 import { ShortcutsPanel } from "./ShortcutsPanel";
 import { TableOfContentsPanel } from "./TableOfContentsPanel";
@@ -25,12 +25,14 @@ import { processTemplate } from "@/lib/templateEngine";
 import { MobileBlock } from "@/components/MobileBlock";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
+import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/lib/utils";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 
 function SourcePane() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
+  const isLoadingFile = useEditorStore((s) => s.isLoadingFile);
   const setHtml = useEditorStore((s) => s.setHtml);
   return (
     <div className="flex flex-col overflow-hidden bg-[color:var(--color-background)]">
@@ -61,6 +63,8 @@ export function EditorShell() {
   const [tocOpen, setTocOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
+  const [contentHeight, setContentHeight] = useState<number>(0);
+  const articleRef = useRef<HTMLElement>(null);
 
   const loadError = useEditorStore((s) => s.loadError);
   const clearError = useEditorStore((s) => s.clearError);
@@ -74,11 +78,13 @@ export function EditorShell() {
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const sourceOpen = useEditorStore((s) => s.sourceOpen);
   const pageSetup = useEditorStore((s) => s.pageSetup);
+  const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const templateMode = useEditorStore((s) => s.templateMode);
   const previewMode = useEditorStore((s) => s.previewMode);
   const variables = useEditorStore((s) => s.variables);
   const dataSet = useEditorStore((s) => s.dataSet);
   const documentHtml = useEditorStore((s) => s.documentHtml);
+  const isLoadingFile = useEditorStore((s) => s.isLoadingFile);
 
   // Custom-event bridge between menu components and shell
   useEffect(() => {
@@ -239,6 +245,35 @@ export function EditorShell() {
     [editor]
   );
 
+  const handleMarginChange = useCallback(
+    (leftMm: number, rightMm: number) => {
+      setPageSetup({
+        marginMm: {
+          top: pageSetup.marginMm.top,
+          right: rightMm,
+          bottom: pageSetup.marginMm.bottom,
+          left: leftMm,
+        },
+      });
+    },
+    [pageSetup, setPageSetup]
+  );
+
+  // Observe article height so vertical ruler can extend beyond one page
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Use borderBoxSize to include padding (matches visual height)
+        const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.clientHeight;
+        setContentHeight(h);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [documentHtml]);
+
   const processedHtml = useMemo(() => {
     if (previewMode !== "preview" || !templateMode) return "";
     const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
@@ -312,25 +347,32 @@ export function EditorShell() {
 
           if (images.length > 0 && editor) {
             const autoCompress = useEditorStore.getState().autoCompressImages;
+            let inserted = 0;
             for (const file of images) {
               try {
                 const finalFile = await compressImageIfEnabled(file, autoCompress);
                 const src = await readFileAsDataURL(finalFile);
                 editor.chain().focus().setImage({ src, alt: finalFile.name }).run();
+                inserted++;
               } catch {
-                // fallback: insert original without compression
                 try {
                   const src = await readFileAsDataURL(file);
                   editor.chain().focus().setImage({ src, alt: file.name }).run();
+                  inserted++;
                 } catch {
-                  /* ignore */
+                  useToastStore.getState().show(`ไม่สามารถแทรกรูป ${file.name}`, "error");
                 }
               }
+            }
+            if (inserted > 0) {
+              useToastStore.getState().show(`แทรกรูปภาพ ${inserted} รายการแล้ว`, "success");
             }
           }
 
           if (others.length > 0) {
-            loadFile(others[0]);
+            const file = others[0];
+            await loadFile(file);
+            useToastStore.getState().show(`โหลดไฟล์ ${file.name} แล้ว`, "success");
           }
         }}
       >
@@ -419,14 +461,19 @@ export function EditorShell() {
                         indentLeft={currentIndent.marginLeft}
                         indentFirst={currentIndent.textIndent}
                         onIndentChange={handleIndentChange}
+                        marginLeftMm={pageSetup.marginMm.left}
+                        marginRightMm={pageSetup.marginMm.right}
+                        onMarginChange={handleMarginChange}
                       />
                       <Ruler
                         orientation="vertical"
                         cm={heightMm / 10}
                         marginStart={marginTopPx}
                         marginEnd={marginBottomPx}
+                        contentHeight={contentHeight > 0 ? contentHeight : undefined}
                       />
                       <article
+                        ref={articleRef}
                         className="paper printable-paper bg-white shadow-sm"
                         style={{
                           minHeight: heightPx,
@@ -451,8 +498,35 @@ export function EditorShell() {
         </div>
 
         {isDragging && (
-          <div className="pointer-events-none absolute inset-4 z-40 flex items-center justify-center rounded-xl border-2 border-dashed border-[color:var(--color-accent)] bg-[color:var(--color-background)]/80 text-lg font-semibold text-[color:var(--color-accent)]">
-            วางไฟล์ที่นี่เพื่ออัปโหลด
+          <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[color:var(--color-background)]/70 backdrop-blur-[2px]">
+            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[color:var(--color-accent)] bg-[color:var(--color-background)] px-10 py-8 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color:var(--color-muted)]">
+                  <FileUp className="size-6 text-[color:var(--color-accent)]" />
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color:var(--color-muted)]">
+                  <ImageIcon className="size-6 text-[color:var(--color-accent)]" />
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color:var(--color-muted)]">
+                  <FileText className="size-6 text-[color:var(--color-accent)]" />
+                </div>
+              </div>
+              <p className="text-lg font-semibold text-[color:var(--color-accent)]">
+                วางไฟล์ที่นี่เพื่ออัปโหลด
+              </p>
+              <p className="text-xs text-[color:var(--color-muted-foreground)]">
+                รองรับ .docx, .html, .md และรูปภาพ
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isLoadingFile && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[color:var(--color-background)]/60 backdrop-blur-[1px]">
+            <div className="flex items-center gap-3 rounded-xl bg-[color:var(--color-background)] px-6 py-4 shadow-xl border border-[color:var(--color-border)]">
+              <Loader2 className="size-5 animate-spin text-[color:var(--color-accent)]" />
+              <span className="text-sm font-medium text-[color:var(--color-foreground)]">กำลังโหลดไฟล์…</span>
+            </div>
           </div>
         )}
 

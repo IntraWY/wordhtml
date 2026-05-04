@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { BookmarkPlus, FileText, Pencil, Trash2, X } from "lucide-react";
+import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload } from "lucide-react";
 
 import { useEditorStore, type PageSetup } from "@/store/editorStore";
-import { useTemplateStore } from "@/store/templateStore";
+import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/store/templateStore";
 import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ export function TemplatePanel() {
   const saveTemplate = useTemplateStore((s) => s.saveTemplate);
   const renameTemplate = useTemplateStore((s) => s.renameTemplate);
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
+  const importTemplates = useTemplateStore((s) => s.importTemplates);
 
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
@@ -37,6 +38,7 @@ export function TemplatePanel() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   // Single renameValue shared across rows — only one row renames at a time via renamingId.
   const [renameValue, setRenameValue] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasDoc = documentHtml.trim().length > 0;
 
@@ -83,6 +85,39 @@ export function TemplatePanel() {
     setRenamingId(null);
   }
 
+  function handleExport() {
+    if (templates.length === 0) {
+      useToastStore.getState().show("ไม่มี template ให้ส่งออก", "error");
+      return;
+    }
+    exportAllTemplates(templates);
+    useToastStore.getState().show(`ส่งออก template ${templates.length} รายการแล้ว`);
+  }
+
+  function handleImportClick() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const items = parseTemplateExport(text);
+      if (!items || items.length === 0) {
+        useToastStore.getState().show("ไฟล์ไม่ถูกต้องหรือไม่มี template", "error");
+        return;
+      }
+      const imported = importTemplates(items);
+      useToastStore.getState().show(`นำเข้า template ${imported} รายการแล้ว`);
+    } catch {
+      useToastStore.getState().show("อ่านไฟล์ไม่สำเร็จ", "error");
+    } finally {
+      // reset input so same file can be selected again
+      e.target.value = "";
+    }
+  }
+
   return (
     <Dialog.Root
       open={open}
@@ -109,12 +144,37 @@ export function TemplatePanel() {
                 จัดการ template เอกสารที่บันทึกไว้
               </Dialog.Description>
             </div>
-            <Dialog.Close
-              aria-label="ปิด"
-              className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-            >
-              <X className="size-4" />
-            </Dialog.Close>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleExport}
+                title="ส่งออกทั้งหมดเป็นไฟล์ JSON"
+                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+              >
+                <Download className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleImportClick}
+                title="นำเข้าจากไฟล์ JSON"
+                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+              >
+                <Upload className="size-4" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+              <Dialog.Close
+                aria-label="ปิด"
+                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+              >
+                <X className="size-4" />
+              </Dialog.Close>
+            </div>
           </header>
 
           <div className="flex-1 overflow-y-auto">
@@ -301,3 +361,4 @@ function RowBtn({ label, onClick, danger, children }: RowBtnProps) {
     </button>
   );
 }
+// force rebuild 2026-05-04T16:56:07.9769045+07:00

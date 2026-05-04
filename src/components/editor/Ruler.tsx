@@ -14,6 +14,13 @@ interface RulerProps {
   indentLeft?: number;  // cm
   indentFirst?: number; // cm offset from indentLeft (can be negative)
   onIndentChange?: (marginLeft: number, textIndent: number) => void;
+  // Margin handles (horizontal only)
+  marginLeftMm?: number;
+  marginRightMm?: number;
+  onMarginChange?: (leftMm: number, rightMm: number) => void;
+  // Actual content height in px (vertical only). When provided the ruler
+  // extends to cover the full scrollable content, not just one page.
+  contentHeight?: number;
 }
 
 interface Tick {
@@ -23,10 +30,12 @@ interface Tick {
 }
 
 interface DragState {
-  type: "left" | "first";
+  type: "left" | "first" | "marginLeft" | "marginRight";
   startX: number;
   startLeft: number;
   startFirst: number;
+  startMarginLeftMm: number;
+  startMarginRightMm: number;
 }
 
 export function Ruler({
@@ -37,16 +46,23 @@ export function Ruler({
   indentLeft = 0,
   indentFirst = 0,
   onIndentChange,
+  marginLeftMm = 0,
+  marginRightMm = 0,
+  onMarginChange,
+  contentHeight,
 }: RulerProps) {
   const isH = orientation === "horizontal";
   const totalPx = cm * PX_PER_CM;
-  const interactive = isH && !!onIndentChange;
+  const rulerHeightPx = !isH && contentHeight ? contentHeight : totalPx;
+  const indentInteractive = isH && !!onIndentChange;
+  const marginInteractive = isH && !!onMarginChange;
+  const anyInteractive = indentInteractive || marginInteractive;
 
   const dragRef = useRef<DragState | null>(null);
 
   // Generate tick positions
   const ticks: Tick[] = [];
-  const totalCm = Math.floor(cm);
+  const totalCm = Math.floor(isH ? cm : rulerHeightPx / PX_PER_CM);
   for (let i = 0; i <= totalCm; i++) {
     ticks.push({ pos: i * PX_PER_CM, major: true, label: i });
     if (i < totalCm) {
@@ -62,25 +78,50 @@ export function Ruler({
   const firstPx = marginStart + (indentLeft + indentFirst) * PX_PER_CM;
 
   const maxIndentCm = (totalPx - marginEnd - marginStart) / PX_PER_CM;
+  const pageWidthMm = cm * 10;
+  const minContentMm = 20; // minimum 2cm content width
 
   useEffect(() => {
-    if (!interactive) return;
+    if (!anyInteractive) return;
 
     const snap = (v: number) => Math.round(v * 10) / 10;
-    const clamp = (v: number) => Math.max(0, Math.min(v, maxIndentCm));
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(v, max));
+    const pxToMm = (px: number) => (px / PX_PER_CM) * 10;
 
     const onMouseMove = (e: MouseEvent) => {
       const drag = dragRef.current;
-      if (!drag || !onIndentChange) return;
+      if (!drag) return;
       const dx = e.clientX - drag.startX;
-      const dCm = dx / PX_PER_CM;
+      const dMm = pxToMm(dx);
 
       if (drag.type === "left") {
-        const newLeft = clamp(snap(drag.startLeft + dCm));
+        if (!onIndentChange) return;
+        const newLeft = clamp(
+          snap(drag.startLeft + dMm / 10),
+          0,
+          maxIndentCm
+        );
         onIndentChange(newLeft, drag.startFirst);
-      } else {
-        const newFirst = snap(drag.startFirst + dCm);
+      } else if (drag.type === "first") {
+        if (!onIndentChange) return;
+        const newFirst = snap(drag.startFirst + dMm / 10);
         onIndentChange(drag.startLeft, newFirst);
+      } else if (drag.type === "marginLeft") {
+        if (!onMarginChange) return;
+        const newLeft = clamp(
+          drag.startMarginLeftMm + dMm,
+          0,
+          pageWidthMm - drag.startMarginRightMm - minContentMm
+        );
+        onMarginChange(newLeft, drag.startMarginRightMm);
+      } else if (drag.type === "marginRight") {
+        if (!onMarginChange) return;
+        const newRight = clamp(
+          drag.startMarginRightMm - dMm,
+          0,
+          pageWidthMm - drag.startMarginLeftMm - minContentMm
+        );
+        onMarginChange(drag.startMarginLeftMm, newRight);
       }
     };
 
@@ -94,9 +135,9 @@ export function Ruler({
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
     };
-  }, [interactive, onIndentChange, maxIndentCm]);
+  }, [anyInteractive, onIndentChange, onMarginChange, maxIndentCm, pageWidthMm]);
 
-  const startDrag =
+  const startIndentDrag =
     (type: "left" | "first") => (e: React.MouseEvent) => {
       e.preventDefault();
       // eslint-disable-next-line react-hooks/refs
@@ -105,6 +146,22 @@ export function Ruler({
         startX: e.clientX,
         startLeft: indentLeft,
         startFirst: indentFirst,
+        startMarginLeftMm: marginLeftMm,
+        startMarginRightMm: marginRightMm,
+      };
+    };
+
+  const startMarginDrag =
+    (type: "marginLeft" | "marginRight") => (e: React.MouseEvent) => {
+      e.preventDefault();
+      // eslint-disable-next-line react-hooks/refs
+      dragRef.current = {
+        type,
+        startX: e.clientX,
+        startLeft: indentLeft,
+        startFirst: indentFirst,
+        startMarginLeftMm: marginLeftMm,
+        startMarginRightMm: marginRightMm,
       };
     };
 
@@ -117,7 +174,7 @@ export function Ruler({
         "border-[color:var(--color-border)]",
         isH ? "h-[18px] border-b" : "w-[18px] border-r"
       )}
-      style={{ [isH ? "width" : "height"]: `${totalPx}px` }}
+      style={{ [isH ? "width" : "height"]: `${rulerHeightPx}px` }}
     >
       {ticks.map((t, i) => (
         <div
@@ -172,14 +229,56 @@ export function Ruler({
         }}
       />
 
+      {/* Margin handles (horizontal only) */}
+      {marginInteractive && (
+        <>
+          {/* Left margin handle */}
+          <div
+            aria-label={`left margin ${marginLeftMm.toFixed(1)}mm`}
+            title={`ขอบซ้าย: ${marginLeftMm.toFixed(1)}mm — ลากเพื่อปรับ`}
+            onMouseDown={startMarginDrag("marginLeft")}
+            style={{
+              position: "absolute",
+              left: `${marginGuideStart}px`,
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "6px",
+              height: "6px",
+              background: "#6b7280",
+              borderRadius: "1px",
+              cursor: "ew-resize",
+              zIndex: 11,
+            }}
+          />
+          {/* Right margin handle */}
+          <div
+            aria-label={`right margin ${marginRightMm.toFixed(1)}mm`}
+            title={`ขอบขวา: ${marginRightMm.toFixed(1)}mm — ลากเพื่อปรับ`}
+            onMouseDown={startMarginDrag("marginRight")}
+            style={{
+              position: "absolute",
+              left: `${marginGuideEnd}px`,
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "6px",
+              height: "6px",
+              background: "#6b7280",
+              borderRadius: "1px",
+              cursor: "ew-resize",
+              zIndex: 11,
+            }}
+          />
+        </>
+      )}
+
       {/* Indent triangles (horizontal interactive ruler only) */}
-      {interactive && (
+      {indentInteractive && (
         <>
           {/* ▽ Left indent — bottom triangle, blue */}
           <div
             aria-label={`left indent ${indentLeft.toFixed(1)}cm`}
             title={`indent ซ้าย: ${indentLeft.toFixed(1)}cm — ลากเพื่อปรับ`}
-            onMouseDown={startDrag("left")}
+            onMouseDown={startIndentDrag("left")}
             style={{
               position: "absolute",
               left: `${leftPx}px`,
@@ -198,7 +297,7 @@ export function Ruler({
           <div
             aria-label={`first-line indent ${indentFirst.toFixed(1)}cm`}
             title={`indent บรรทัดแรก: ${indentFirst.toFixed(1)}cm — ลากเพื่อปรับ`}
-            onMouseDown={startDrag("first")}
+            onMouseDown={startIndentDrag("first")}
             style={{
               position: "absolute",
               left: `${firstPx}px`,
