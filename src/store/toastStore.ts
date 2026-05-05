@@ -2,7 +2,8 @@ import { create } from "zustand";
 
 interface ToastState {
   message: string | null;
-  show: (message: string, _type?: string) => void;
+  type: "success" | "error" | "warning" | null;
+  show: (message: string, type?: "success" | "error" | "warning") => void;
   hide: () => void;
 }
 
@@ -10,15 +11,16 @@ let _timer: ReturnType<typeof setTimeout> | null = null;
 
 export const useToastStore = create<ToastState>((set) => ({
   message: null,
+  type: null,
 
-  show: (message, _type) => {
+  show: (message, type = "success") => {
     if (_timer) clearTimeout(_timer);
-    set({ message });
-    _timer = setTimeout(() => set({ message: null }), 2500);
+    set({ message, type });
+    _timer = setTimeout(() => set({ message: null, type: null }), 2500);
   },
 
   hide: () => {
     if (_timer) clearTimeout(_timer);
-    set({ message: null });
+    set({ message: null, type: null });
   },
 }));

@@ -6,6 +6,7 @@ import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash } from "lucide-react
 
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
+import { useDialogStore } from "@/store/dialogStore";
 import { cn } from "@/lib/utils";
 import type { DocumentSnapshot } from "@/types";
 
@@ -52,7 +53,7 @@ export function HistoryPanel() {
                 <button
                   type="button"
                   onClick={() => {
-                    const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+                    const { openConfirm } = useDialogStore.getState();
                     openConfirm(
                       "ล้างประวัติ (Clear History)",
                       "ต้องการล้างประวัติทั้งหมดหรือไม่?",

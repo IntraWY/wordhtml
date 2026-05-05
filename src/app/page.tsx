@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { EditorShell } from "@/components/editor/EditorShell";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "โปรแกรมแก้ไข",
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <EditorShell />;
+  return (
+    <ErrorBoundary>
+      <EditorShell />
+    </ErrorBoundary>
+  );
 }

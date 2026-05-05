@@ -2,7 +2,8 @@
 
 import { memo } from "react";
 import { useUiStore } from "@/store/uiStore";
-import { MenuDropdown, MenuItem } from "./primitives";
+import { useEditorStore } from "@/store/editorStore";
+import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
 function ViewMenuInner(_props: EditorMenuProps) {
@@ -11,6 +12,9 @@ function ViewMenuInner(_props: EditorMenuProps) {
   const toggleSource = useUiStore((s) => s.toggleSource);
   const isFullscreen = useUiStore((s) => s.fullscreen);
   const toggleFullscreen = useUiStore((s) => s.toggleFullscreen);
+
+  const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
+  const toggleSpellcheck = useEditorStore((s) => s.toggleSpellcheck);
 
   return (
     <MenuDropdown label="มุมมอง (View)">
@@ -24,6 +28,12 @@ function ViewMenuInner(_props: EditorMenuProps) {
         shortcut="F11"
         checked={isFullscreen}
         onClick={toggleFullscreen}
+      />
+      <Sep />
+      <MenuItem
+        label="ตรวจสอบการสะกด (Spellcheck)"
+        checked={spellcheckEnabled}
+        onClick={toggleSpellcheck}
       />
     </MenuDropdown>
   );

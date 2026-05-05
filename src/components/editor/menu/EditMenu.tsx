@@ -6,6 +6,7 @@ import { useEditorState } from "@tiptap/react";
 import { MenuDropdown, MenuItem, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 import { useToastStore } from "@/store/toastStore";
+import { useDialogStore } from "@/store/dialogStore";
 
 function EditMenuInner({ editor }: EditorMenuProps) {
   const state = useEditorState({
@@ -28,7 +29,7 @@ function EditMenuInner({ editor }: EditorMenuProps) {
       await navigator.clipboard.writeText(editor.getHTML());
       useToastStore.getState().show("คัดลอก HTML แล้ว");
     } catch {
-      const { openAlert } = require("@/store/dialogStore").useDialogStore.getState();
+      const { openAlert } = useDialogStore.getState();
       openAlert("คัดลอก (Copy)", "ไม่สามารถคัดลอกได้ — เบราว์เซอร์ไม่อนุญาต");
     }
   };

@@ -28,6 +28,7 @@ import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { useEditorResize } from "@/hooks/useEditorResize";
 import { useAutoPagination } from "@/hooks/useAutoPagination";
 import { DialogManager } from "./DialogManager";
+import { ParagraphDialog } from "./ParagraphDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
@@ -100,20 +101,24 @@ function TemplatePreview({ widthPx }: { widthPx: number }) {
   const variables = useEditorStore((s) => s.variables);
   const dataSet = useEditorStore((s) => s.dataSet);
 
-  const processedHtml = useMemo(() => {
-    if (previewMode !== "preview" || !templateMode) return "";
+  const [processedHtml, setProcessedHtml] = useState("");
+
+  useEffect(() => {
+    if (previewMode !== "preview" || !templateMode) {
+      setProcessedHtml("");
+      return;
+    }
     try {
       const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
       const variableFallback = Object.fromEntries(
         variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
       );
       const mergedRow = { ...variableFallback, ...dataRow };
-      return processTemplate(documentHtml, variables, mergedRow).html;
+      setProcessedHtml(processTemplate(documentHtml, variables, mergedRow).html);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Template processing failed";
-      // Error already surfaced via toast below
       useToastStore.getState().show(`ตัวอย่าง Template ล้มเหลว: ${message}`, "error");
-      return documentHtml;
+      setProcessedHtml(documentHtml);
     }
   }, [previewMode, templateMode, documentHtml, variables, dataSet]);
 
@@ -180,6 +185,8 @@ export function EditorShell() {
   const openShortcuts = useUiStore((s) => s.openShortcuts);
   const openToc = useUiStore((s) => s.openToc);
   const openHeaderFooter = useUiStore((s) => s.openHeaderFooter);
+  const paragraphOpen = useUiStore((s) => s.paragraphOpen);
+  const closeParagraph = useUiStore((s) => s.closeParagraph);
 
   /* consolidated hooks */
   useKeyboardShortcuts(editor);
@@ -450,6 +457,7 @@ export function EditorShell() {
         )}
 
         <DialogManager editor={editor} />
+        <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
         <MobileBlock />
       </div>
     </>

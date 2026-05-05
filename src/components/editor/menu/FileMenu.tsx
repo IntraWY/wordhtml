@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
+import { useDialogStore } from "@/store/dialogStore";
 import {
   dispatchOpenBatchConvert,
   dispatchOpenTemplates,
@@ -33,7 +34,7 @@ function FileMenuInner(_props: EditorMenuProps) {
 
   const handleNewDocument = () => {
     if (hasDoc) {
-      const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+      const { openConfirm } = useDialogStore.getState();
       openConfirm(
         "เอกสารใหม่ (New Document)",
         "ล้างเนื้อหาปัจจุบันและเริ่มเอกสารใหม่?",

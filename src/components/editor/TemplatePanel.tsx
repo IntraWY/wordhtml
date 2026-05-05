@@ -8,6 +8,7 @@ import { useEditorStore } from "@/store/editorStore";
 import type { PageSetup } from "@/types";
 import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/store/templateStore";
 import { useToastStore } from "@/store/toastStore";
+import { useDialogStore } from "@/store/dialogStore";
 import { cn } from "@/lib/utils";
 
 function formatDate(iso: string): string {
@@ -47,7 +48,7 @@ export function TemplatePanel() {
     const template = templates.find((t) => t.id === id);
     if (!template) return;
     if (hasDoc) {
-      const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+      const { openConfirm } = useDialogStore.getState();
       openConfirm(
         "โหลด Template (Load Template)",
         "โหลด template จะแทนที่เอกสารปัจจุบัน — ดำเนินการต่อไหม?",
@@ -212,7 +213,7 @@ export function TemplatePanel() {
                     onRenameCommit={() => handleRenameCommit(t.id)}
                     onRenameAbort={handleRenameAbort}
                     onDelete={() => {
-                      const { openConfirm } = require("@/store/dialogStore").useDialogStore.getState();
+                      const { openConfirm } = useDialogStore.getState();
                       openConfirm(
                         "ลบ Template (Delete Template)",
                         `ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`,

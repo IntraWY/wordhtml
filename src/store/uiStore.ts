@@ -13,6 +13,7 @@ interface UiState {
   tocOpen: boolean;
   batchConvertOpen: boolean;
   headerFooterOpen: boolean;
+  paragraphOpen: boolean;
 
   openExportDialog: () => void;
   closeExportDialog: () => void;
@@ -32,6 +33,8 @@ interface UiState {
   closeBatchConvert: () => void;
   openHeaderFooter: () => void;
   closeHeaderFooter: () => void;
+  openParagraph: () => void;
+  closeParagraph: () => void;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -45,6 +48,7 @@ export const useUiStore = create<UiState>()((set) => ({
   tocOpen: false,
   batchConvertOpen: false,
   headerFooterOpen: false,
+  paragraphOpen: false,
 
   openExportDialog: () => set({ exportDialogOpen: true }),
   closeExportDialog: () => set({ exportDialogOpen: false }),
@@ -64,4 +68,6 @@ export const useUiStore = create<UiState>()((set) => ({
   closeBatchConvert: () => set({ batchConvertOpen: false }),
   openHeaderFooter: () => set({ headerFooterOpen: true }),
   closeHeaderFooter: () => set({ headerFooterOpen: false }),
+  openParagraph: () => set({ paragraphOpen: true }),
+  closeParagraph: () => set({ paragraphOpen: false }),
 }));

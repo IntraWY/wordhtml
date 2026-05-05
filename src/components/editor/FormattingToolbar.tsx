@@ -32,12 +32,16 @@ import {
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
   Split,
+  Type,
 } from "lucide-react";
 
 import { TemplateModeToggle } from "./TemplateModeToggle";
+import { FontSizeSelector } from "./FontSizeSelector";
 
 import { cn } from "@/lib/utils";
 import { useToastStore } from "@/store/toastStore";
+import { useDialogStore } from "@/store/dialogStore";
+import { useUiStore } from "@/store/uiStore";
 
 interface FormattingToolbarProps {
   editor: Editor;
@@ -107,9 +111,12 @@ function FormattingToolbarInner({ editor }: FormattingToolbarProps) {
       editor.chain().focus().sinkListItem("listItem").run();
     }
   }, [editor]);
+  const handleParagraph = useCallback(() => {
+    useUiStore.getState().openParagraph();
+  }, []);
   const handleLink = useCallback(() => {
     const previous = editor.getAttributes("link").href as string | undefined;
-    const { openPrompt } = require("@/store/dialogStore").useDialogStore.getState();
+    const { openPrompt } = useDialogStore.getState();
     openPrompt(
       "แทรกลิงก์ (Insert Link)",
       "ใส่ URL ของลิงก์:",
@@ -244,6 +251,13 @@ function FormattingToolbarInner({ editor }: FormattingToolbarProps) {
 
       <Divider />
 
+      {/* ขนาดตัวอักษร */}
+      <ToolGroup>
+        <FontSizeSelector editor={editor} />
+      </ToolGroup>
+
+      <Divider />
+
       {/* การจัดตำแหน่ง (รองรับรูปภาพ) */}
       <ToolGroup>
         <ToolButton
@@ -333,6 +347,18 @@ function FormattingToolbarInner({ editor }: FormattingToolbarProps) {
           disabled={!editor.isActive("listItem")}
         >
           <Indent />
+        </ToolButton>
+      </ToolGroup>
+
+      <Divider />
+
+      {/* ย่อหน้า */}
+      <ToolGroup>
+        <ToolButton
+          label="ย่อหน้า… (Paragraph…)"
+          onClick={handleParagraph}
+        >
+          <Type />
         </ToolButton>
       </ToolGroup>
 

@@ -2,8 +2,17 @@
 
 import { useToastStore } from "@/store/toastStore";
 
+const TYPE_COLORS: Record<string, string> = {
+  success: "bg-[color:var(--color-success)]",
+  error: "bg-[color:var(--color-destructive)]",
+  warning: "bg-amber-400",
+};
+
 export function Toast() {
   const message = useToastStore((s) => s.message);
+  const type = useToastStore((s) => s.type);
+
+  const dotColor = TYPE_COLORS[type ?? "success"];
 
   return (
     <div
@@ -20,7 +29,7 @@ export function Toast() {
           : "translate-y-2 opacity-0 pointer-events-none",
       ].join(" ")}
     >
-      <span className="size-1.5 rounded-full bg-[color:var(--color-success)] shrink-0" />
+      <span className={["size-1.5 rounded-full shrink-0", dotColor].join(" ")} />
       {message}
     </div>
   );

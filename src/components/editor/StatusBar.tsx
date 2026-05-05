@@ -12,6 +12,7 @@ export function StatusBar() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
+  const history = useEditorStore((s) => s.history);
 
   const words = useMemo(() => countWords(documentHtml), [documentHtml]);
   const chars = useMemo(() => plainTextFromHtml(documentHtml).length, [documentHtml]);
@@ -29,6 +30,9 @@ export function StatusBar() {
     pageSetup.orientation === "landscape" ? "แนวนอน" : "แนวตั้ง";
 
   const cleanersLabel = `${enabledCleaners.length}/${CLEANERS.length} ตัวทำความสะอาด`;
+
+  const lastSnapshotHtml = history[0]?.html ?? "";
+  const isModified = documentHtml.trim().length > 0 && documentHtml !== lastSnapshotHtml;
 
   const Item = ({
     icon: Icon,
@@ -60,15 +64,15 @@ export function StatusBar() {
       aria-atomic="true"
     >
       <div className="flex items-center gap-4">
-        <Item icon={FileText} label="จำนวนหน้า" value={`${pageCount} หน้า`} />
+        <Item icon={FileText} label="จำนวนหน้า (Pages)" value={`${pageCount} หน้า`} />
         <Item
           icon={Type}
-          label="จำนวนคำ"
+          label="จำนวนคำ (Words)"
           value={`${words.toLocaleString()} คำ`}
         />
         <Item
           icon={AlignLeft}
-          label="จำนวนตัวอักษร"
+          label="จำนวนตัวอักษร (Characters)"
           value={`${chars.toLocaleString()} ตัวอักษร`}
         />
       </div>
@@ -79,6 +83,12 @@ export function StatusBar() {
           value={cleanersLabel}
           className={enabledCleaners.length > 0 ? "text-[color:var(--color-accent)]" : ""}
         />
+        {isModified && (
+          <span className="inline-flex items-center gap-1 text-amber-600" title="มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก (Unsaved changes)">
+            <span className="size-1.5 rounded-full bg-amber-500" />
+            ยังไม่บันทึก (Unsaved)
+          </span>
+        )}
         <span className="text-[color:var(--color-border-strong)]">
           {sizeLabel} · {orientationLabel}
         </span>

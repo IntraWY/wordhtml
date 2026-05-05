@@ -27,7 +27,8 @@ import FontFamily from "@tiptap/extension-font-family";
 import { useEditorStore } from "@/store/editorStore";
 import { Upload, FileText, Keyboard } from "lucide-react";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
-import { IndentExtension } from "@/lib/tiptap/indentExtension";
+import { ParagraphFormatExtension } from "@/lib/tiptap/paragraphFormat";
+import { FontSize } from "@/lib/tiptap/fontSize";
 import { createImageWithAlign } from "@/lib/tiptap/imageWithAlign";
 import { HeadingWithId } from "@/lib/tiptap/headingWithId";
 import { BulletListWithClass } from "@/lib/tiptap/bulletListWithClass";
@@ -41,6 +42,7 @@ interface VisualEditorProps {
 export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const setHtml = useEditorStore((s) => s.setHtml);
+  const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
 
   const isEmpty = documentHtml.trim().length === 0;
 
@@ -74,7 +76,8 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       }),
       Color,
       Highlight.configure({ multicolor: true }),
-      IndentExtension,
+      FontSize,
+      ParagraphFormatExtension,
       Table.configure({ resizable: true }),
       RepeatingRow,
       TableHeader,
@@ -111,6 +114,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         class:
           "prose-editor max-w-none outline-none min-h-full text-base leading-relaxed",
         role: "textbox",
+        spellcheck: spellcheckEnabled ? ("true" as const) : ("false" as const),
         "aria-label": "โปรแกรมแก้ไขเอกสาร",
         "aria-describedby": "editor-placeholder",
         "aria-multiline": "true",
@@ -179,7 +183,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         return true;
       },
     }),
-    []
+    [spellcheckEnabled]
   );
 
   const editor = useEditor({

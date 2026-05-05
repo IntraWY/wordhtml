@@ -69,6 +69,8 @@ interface EditorState {
   previewMode: "edit" | "preview";
   // image compression
   autoCompressImages: boolean;
+  // spellcheck
+  spellcheckEnabled: boolean;
   // actions
   setHtml: (html: string) => void;
   setFileName: (name: string | null) => void;
@@ -76,6 +78,7 @@ interface EditorState {
   setImageMode: (mode: ImageMode) => void;
   setPageSetup: (partial: Partial<PageSetup>) => void;
   toggleAutoCompressImages: () => void;
+  toggleSpellcheck: () => void;
   prepareExport: (format?: ExportFormat) => void;
   setPendingExportFormat: (format: ExportFormat | null) => void;
   loadFile: (file: File) => Promise<void>;
@@ -118,6 +121,7 @@ export const useEditorStore = create<EditorState>()(
       dataSet: null,
       previewMode: "edit",
       autoCompressImages: true,
+      spellcheckEnabled: true,
 
       setHtml: (html) => {
         set({ documentHtml: html, lastEditAt: Date.now() });
@@ -140,6 +144,8 @@ export const useEditorStore = create<EditorState>()(
       setImageMode: (imageMode) => set({ imageMode }),
       toggleAutoCompressImages: () =>
         set((state) => ({ autoCompressImages: !state.autoCompressImages })),
+      toggleSpellcheck: () =>
+        set((state) => ({ spellcheckEnabled: !state.spellcheckEnabled })),
       setPageSetup: (partial) =>
         set((s) => ({
           pageSetup: {
@@ -291,6 +297,7 @@ export const useEditorStore = create<EditorState>()(
         variables: state.variables,
         dataSet: state.dataSet,
         autoCompressImages: state.autoCompressImages,
+        spellcheckEnabled: state.spellcheckEnabled,
       }),
     }
   )

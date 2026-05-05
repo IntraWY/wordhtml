@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Monitor, X } from "lucide-react";
+import { Monitor } from "lucide-react";
 
 const BREAKPOINT_PX = 768;
 
 /**
- * Dismissible warning banner shown on screens narrower than 768px.
+ * True blocker overlay shown on screens narrower than 768px.
  *
- * The editor works best on desktop; on mobile we warn users but still
- * allow read-only access and basic interaction.
+ * The editor requires desktop-sized viewport for a usable experience.
+ * This overlay prevents interaction with the editor on mobile devices.
  */
 export function MobileBlock() {
   const [visible, setVisible] = useState(false);
@@ -26,33 +26,25 @@ export function MobileBlock() {
 
   return (
     <div
-      role="status"
-      aria-live="polite"
-      className="fixed inset-x-0 top-0 z-[200] flex items-start justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="mobile-block-title"
+      aria-describedby="mobile-block-desc"
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-[color:var(--color-background)] p-6 text-center"
     >
-      <div className="flex items-center gap-2">
-        <Monitor className="size-4 shrink-0 text-amber-700" />
-        <span>
-          wordhtml ทำงานได้ดีที่สุดบนเดสก์ท็อป (Desktop) — การแก้ไขบนมือถืออาจไม่สะดวก
-        </span>
+      <div className="grid h-12 w-12 place-items-center rounded-xl bg-[color:var(--color-muted)]">
+        <Monitor className="size-6 text-[color:var(--color-muted-foreground)]" />
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={() => setVisible(false)}
-          className="rounded-md px-2 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100"
-        >
-          เข้าใช้งานต่อ (Continue)
-        </button>
-        <button
-          type="button"
-          onClick={() => setVisible(false)}
-          aria-label="ปิดคำเตือน"
-          className="shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
-        >
-          <X className="size-3.5" />
-        </button>
-      </div>
+      <h2 id="mobile-block-title" className="text-lg font-semibold">
+        ต้องใช้งานบนเดสก์ท็อป (Desktop Only)
+      </h2>
+      <p
+        id="mobile-block-desc"
+        className="max-w-xs text-sm text-[color:var(--color-muted-foreground)]"
+      >
+        โปรแกรมแก้ไขเอกสารนี้ออกแบบสำหรับหน้าจอขนาดใหญ่
+        กรุณาใช้งานบนคอมพิวเตอร์หรือแท็บเล็ตในแนวนอน
+      </p>
     </div>
   );
 }

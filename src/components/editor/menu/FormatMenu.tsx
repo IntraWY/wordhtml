@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { useEditorState } from "@tiptap/react";
 
+import { useUiStore } from "@/store/uiStore";
 import { MenuDropdown, MenuItem, MenuSub, Sep } from "./primitives";
 import type { EditorMenuProps } from "./FileMenu";
 
@@ -21,6 +22,7 @@ function FormatMenuInner({ editor }: EditorMenuProps) {
       isSuperscript: e?.isActive("superscript") ?? false,
       isSubscript: e?.isActive("subscript") ?? false,
       isCode: e?.isActive("code") ?? false,
+      fontSize: (e?.getAttributes("fontSize").size as number | undefined) ?? undefined,
       alignLeft: e?.isActive({ textAlign: "left" }) ?? false,
       alignCenter: e?.isActive({ textAlign: "center" }) ?? false,
       alignRight: e?.isActive({ textAlign: "right" }) ?? false,
@@ -41,6 +43,7 @@ function FormatMenuInner({ editor }: EditorMenuProps) {
     isSuperscript: false,
     isSubscript: false,
     isCode: false,
+    fontSize: undefined,
     alignLeft: false,
     alignCenter: false,
     alignRight: false,
@@ -171,6 +174,43 @@ function FormatMenuInner({ editor }: EditorMenuProps) {
           />
         ))}
       </MenuSub>
+      <MenuSub label="ขนาดตัวอักษร (Font Size)">
+        {[
+          { label: "ค่าเริ่มต้น (Default)", value: null },
+          { label: "10 px", value: 10 },
+          { label: "11 px", value: 11 },
+          { label: "12 px", value: 12 },
+          { label: "14 px", value: 14 },
+          { label: "16 px", value: 16 },
+          { label: "18 px", value: 18 },
+          { label: "20 px", value: 20 },
+          { label: "22 px", value: 22 },
+          { label: "24 px", value: 24 },
+          { label: "28 px", value: 28 },
+          { label: "32 px", value: 32 },
+          { label: "36 px", value: 36 },
+        ].map(({ label, value }) => (
+          <MenuItem
+            key={label}
+            label={label}
+            checked={value === s.fontSize}
+            onClick={() => {
+              if (!editor) return;
+              if (value === null) {
+                editor.chain().focus().unsetFontSize().run();
+              } else {
+                editor.chain().focus().setFontSize(value).run();
+              }
+            }}
+          />
+        ))}
+      </MenuSub>
+      <Sep />
+      <MenuItem
+        label="ย่อหน้า… (Paragraph…)"
+        disabled={!hasEditor}
+        onClick={() => useUiStore.getState().openParagraph()}
+      />
       <Sep />
       <MenuItem
         label="ล้างรูปแบบ (Clear Formatting)"
