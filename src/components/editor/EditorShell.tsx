@@ -273,6 +273,20 @@ export function EditorShell() {
     [pageSetup, setPageSetup]
   );
 
+  const handleVerticalMarginChange = useCallback(
+    (topMm: number, bottomMm: number) => {
+      setPageSetup({
+        marginMm: {
+          top: topMm,
+          right: pageSetup.marginMm.right,
+          bottom: bottomMm,
+          left: pageSetup.marginMm.left,
+        },
+      });
+    },
+    [pageSetup, setPageSetup]
+  );
+
   const handleRulerActive = useCallback(
     (info: { label: string } | null) => {
       setRulerInfo(info);
@@ -394,6 +408,10 @@ export function EditorShell() {
                         cm={heightMm / 10}
                         marginStart={marginTopPx}
                         marginEnd={marginBottomPx}
+                        marginTopMm={pageSetup.marginMm.top}
+                        marginBottomMm={pageSetup.marginMm.bottom}
+                        onMarginChange={handleVerticalMarginChange}
+                        onRulerActive={handleRulerActive}
                         contentHeight={contentHeight > 0 ? contentHeight : undefined}
                       />
                       <div className="relative">
