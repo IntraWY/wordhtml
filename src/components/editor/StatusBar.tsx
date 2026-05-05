@@ -6,9 +6,9 @@ import { usePaginationStore } from "@/store/paginationStore";
 import { countWords, plainTextFromHtml } from "@/lib/text";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
-import { FileText, Type, Sparkles, AlignLeft } from "lucide-react";
+import { FileText, Type, Sparkles, AlignLeft, Ruler } from "lucide-react";
 
-export function StatusBar() {
+export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null }) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
@@ -77,6 +77,12 @@ export function StatusBar() {
         />
       </div>
       <div className="flex items-center gap-4">
+        {rulerInfo && (
+          <span className="inline-flex items-center gap-1.5 text-[color:var(--color-accent)]">
+            <Ruler className="size-3 opacity-60" />
+            <span>{rulerInfo.label}</span>
+          </span>
+        )}
         <Item
           icon={Sparkles}
           label="ตัวทำความสะอาด"

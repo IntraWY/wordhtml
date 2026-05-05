@@ -42,6 +42,7 @@ function IndentRuler({
   marginLeftMm,
   marginRightMm,
   onMarginChange,
+  onRulerActive,
 }: {
   editor: Editor | null;
   cm: number;
@@ -50,6 +51,7 @@ function IndentRuler({
   marginLeftMm: number;
   marginRightMm: number;
   onMarginChange: (leftMm: number, rightMm: number) => void;
+  onRulerActive?: (info: { label: string } | null) => void;
 }) {
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
@@ -63,10 +65,8 @@ function IndentRuler({
       });
     };
     editor.on("selectionUpdate", update);
-    editor.on("transaction", update);
     return () => {
       editor.off("selectionUpdate", update);
-      editor.off("transaction", update);
     };
   }, [editor]);
 
@@ -89,6 +89,7 @@ function IndentRuler({
       marginLeftMm={marginLeftMm}
       marginRightMm={marginRightMm}
       onMarginChange={onMarginChange}
+      onRulerActive={onRulerActive}
     />
   );
 }
@@ -158,6 +159,7 @@ export function EditorShell() {
   const editorRef = useRef<Editor | null>(null);
   const [editorReadyTick, setEditorReadyTick] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [rulerInfo, setRulerInfo] = useState<{ label: string } | null>(null);
 
   const editor = editorRef.current;
 
@@ -271,6 +273,13 @@ export function EditorShell() {
     [pageSetup, setPageSetup]
   );
 
+  const handleRulerActive = useCallback(
+    (info: { label: string } | null) => {
+      setRulerInfo(info);
+    },
+    []
+  );
+
   const base = pageSetup.size === "Letter" ? LETTER : A4;
   const isLandscape = pageSetup.orientation === "landscape";
   const widthMm = isLandscape ? base.hMm : base.wMm;
@@ -378,6 +387,7 @@ export function EditorShell() {
                         marginLeftMm={pageSetup.marginMm.left}
                         marginRightMm={pageSetup.marginMm.right}
                         onMarginChange={handleMarginChange}
+                        onRulerActive={handleRulerActive}
                       />
                       <Ruler
                         orientation="vertical"
@@ -409,7 +419,7 @@ export function EditorShell() {
                 )}
               </div>
               <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-                <StatusBar />
+                <StatusBar rulerInfo={rulerInfo} />
                 <PaginationManager totalPages={totalPages} currentPage={currentPage} onPageChange={setCurrentPage} />
               </div>
             </div>
