@@ -42,6 +42,7 @@ export function ExportDialog() {
   );
   const templateMode = useEditorStore((s) => s.templateMode);
   const documentHtml = useEditorStore((s) => s.documentHtml);
+  const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
@@ -49,34 +50,15 @@ export function ExportDialog() {
   const [activeTab, setActiveTab] = useState<ExportTab>("file");
   const [gasFunctionName, setGasFunctionName] = useState("generateDocument");
   const [includeSheetIntegration, setIncludeSheetIntegration] = useState(true);
-  const [cleanedHtml, setCleanedHtml] = useState("");
 
   const selectedFormat = pendingFormat ?? "html";
 
   const primaryBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Conditional computation: only subscribe to documentHtml when dialog is open
-  useEffect(() => {
-    if (!open) {
-      setCleanedHtml("");
-      return;
-    }
-    const compute = () => {
-      const s = useEditorStore.getState();
-      setCleanedHtml(applyCleaners(s.documentHtml, s.enabledCleaners));
-    };
-    compute();
-    return useEditorStore.subscribe(compute);
-  }, [open]);
-
-  // Reset tab to "file" when dialog opens — deferred to avoid sync setState in effect
-  const prevOpenRef = useRef(open);
-  useEffect(() => {
-    if (open && !prevOpenRef.current) {
-      queueMicrotask(() => setActiveTab("file"));
-    }
-    prevOpenRef.current = open;
-  }, [open]);
+  const cleanedHtml = useMemo(() => {
+    if (!open) return "";
+    return applyCleaners(documentHtml, enabledCleaners);
+  }, [open, documentHtml, enabledCleaners]);
 
   useEffect(() => {
     if (!copied) return;

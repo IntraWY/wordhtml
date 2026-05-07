@@ -245,7 +245,7 @@ function RulerInner({
     };
   }, [anyInteractive, onIndentChange, onMarginChange, maxIndentCm, pageWidthMm, pageHeightMm, snapIndent, snapMargin, makeTooltipText, onRulerActive]);
 
-  const startIndentDrag =
+  const startIndentDrag = useCallback(
     (type: "left" | "first") => (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
@@ -261,9 +261,11 @@ function RulerInner({
         startMarginTopMm: marginTopMm,
         startMarginBottomMm: marginBottomMm,
       };
-    };
+    },
+    [indentLeft, indentFirst, marginLeftMm, marginRightMm, marginTopMm, marginBottomMm]
+  );
 
-  const startMarginDrag =
+  const startMarginDrag = useCallback(
     (type: "marginLeft" | "marginRight" | "marginTop" | "marginBottom") => (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
@@ -279,7 +281,9 @@ function RulerInner({
         startMarginTopMm: marginTopMm,
         startMarginBottomMm: marginBottomMm,
       };
-    };
+    },
+    [indentLeft, indentFirst, marginLeftMm, marginRightMm, marginTopMm, marginBottomMm]
+  );
 
   const handleMarginKeyDown =
     (type: "marginLeft" | "marginRight" | "marginTop" | "marginBottom") => (e: React.KeyboardEvent) => {
