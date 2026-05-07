@@ -53,7 +53,8 @@ export function createImageWithAlign(
     },
 
     addNodeView() {
-      return ReactNodeViewRenderer(NodeViewComponent);
+      // Cast needed for React 19 compat (ReactNodeViewRenderer expects ref prop)
+      return ReactNodeViewRenderer(NodeViewComponent as ComponentType<any>);
     },
   }).configure({
     inline: false,

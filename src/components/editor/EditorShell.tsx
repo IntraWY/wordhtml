@@ -165,6 +165,7 @@ export function EditorShell() {
   const clearError = useEditorStore((s) => s.clearError);
   const lastLoadWarnings = useEditorStore((s) => s.lastLoadWarnings);
   const clearLoadWarnings = useEditorStore((s) => s.clearLoadWarnings);
+  const isLoadingFile = useEditorStore((s) => s.isLoadingFile);
   const sourceOpen = useUiStore((s) => s.sourceOpen);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
