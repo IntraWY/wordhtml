@@ -102,24 +102,19 @@ function TemplatePreview({ widthPx }: { widthPx: number }) {
   const variables = useEditorStore((s) => s.variables);
   const dataSet = useEditorStore((s) => s.dataSet);
 
-  const [processedHtml, setProcessedHtml] = useState("");
-
-  useEffect(() => {
-    if (previewMode !== "preview" || !templateMode) {
-      setProcessedHtml("");
-      return;
-    }
+  const processedHtml = useMemo(() => {
+    if (previewMode !== "preview" || !templateMode) return "";
     try {
       const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
       const variableFallback = Object.fromEntries(
         variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
       );
       const mergedRow = { ...variableFallback, ...dataRow };
-      setProcessedHtml(processTemplate(documentHtml, variables, mergedRow).html);
+      return processTemplate(documentHtml, variables, mergedRow).html;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Template processing failed";
       useToastStore.getState().show(`ตัวอย่าง Template ล้มเหลว: ${message}`, "error");
-      setProcessedHtml(documentHtml);
+      return documentHtml;
     }
   }, [previewMode, templateMode, documentHtml, variables, dataSet]);
 
@@ -133,7 +128,6 @@ function TemplatePreview({ widthPx }: { widthPx: number }) {
 
 function SourcePane() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
-  const isLoadingFile = useEditorStore((s) => s.isLoadingFile);
   const setHtml = useEditorStore((s) => s.setHtml);
   return (
     <div className="flex flex-col overflow-hidden bg-[color:var(--color-background)]">
@@ -157,16 +151,14 @@ function SourcePane() {
 
 export function EditorShell() {
   const editorRef = useRef<Editor | null>(null);
-  const [editorReadyTick, setEditorReadyTick] = useState(0);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [rulerInfo, setRulerInfo] = useState<{ label: string } | null>(null);
-
-  const editor = editorRef.current;
 
   const onEditorReady = useCallback((ed: Editor | null) => {
     if (editorRef.current === ed) return;
     editorRef.current = ed;
-    if (ed) setEditorReadyTick((t) => t + 1);
+    setEditor(ed);
   }, []);
 
   const loadError = useEditorStore((s) => s.loadError);
@@ -178,7 +170,6 @@ export function EditorShell() {
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const templateMode = useEditorStore((s) => s.templateMode);
   const previewMode = useEditorStore((s) => s.previewMode);
-  const isLoadingFile = useEditorStore((s) => s.isLoadingFile);
   const documentHtml = useEditorStore((s) => s.documentHtml);
 
   const isFullscreen = useUiStore((s) => s.fullscreen);
@@ -204,14 +195,14 @@ export function EditorShell() {
 
   /* custom-event bridge between menu components and shell */
   useEffect(() => {
-    const onSearch = (_e: CustomEvent) => openSearch();
-    const onPageSetup = (_e: CustomEvent) => openPageSetup();
-    const onShortcuts = (_e: CustomEvent) => openShortcuts();
-    const onToc = (_e: CustomEvent) => openToc();
-    const onHeaderFooter = (_e: CustomEvent) => openHeaderFooter();
-    const onTemplates = (_e: CustomEvent) => useTemplateStore.getState().openPanel();
-    const onPageNext = (_e: CustomEvent) => usePaginationStore.getState().nextPage();
-    const onPagePrev = (_e: CustomEvent) => usePaginationStore.getState().prevPage();
+    const onSearch = () => openSearch();
+    const onPageSetup = () => openPageSetup();
+    const onShortcuts = () => openShortcuts();
+    const onToc = () => openToc();
+    const onHeaderFooter = () => openHeaderFooter();
+    const onTemplates = () => useTemplateStore.getState().openPanel();
+    const onPageNext = () => usePaginationStore.getState().nextPage();
+    const onPagePrev = () => usePaginationStore.getState().prevPage();
     const onInsertVariable = (e: CustomEvent) => {
       const name = e.detail as string;
       const ed = editorRef.current;
