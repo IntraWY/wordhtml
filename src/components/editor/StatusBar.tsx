@@ -8,6 +8,25 @@ import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
 import { FileText, Type, Sparkles, AlignLeft, Ruler } from "lucide-react";
 
+interface StatusItemProps {
+  icon: ElementType;
+  label: string;
+  value: string | number;
+  className?: string;
+}
+
+function StatusItem({ icon: Icon, label, value, className }: StatusItemProps) {
+  return (
+    <span
+      className={cn("inline-flex items-center gap-1.5", className)}
+      title={label}
+    >
+      <Icon className="size-3 opacity-60" />
+      <span>{value}</span>
+    </span>
+  );
+}
+
 export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null }) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
@@ -34,29 +53,6 @@ export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null 
   const lastSnapshotHtml = history[0]?.html ?? "";
   const isModified = documentHtml.trim().length > 0 && documentHtml !== lastSnapshotHtml;
 
-  const Item = ({
-    icon: Icon,
-    label,
-    value,
-    className,
-  }: {
-    icon: ElementType;
-    label: string;
-    value: string | number;
-    className?: string;
-  }) => (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5",
-        className
-      )}
-      title={label}
-    >
-      <Icon className="size-3 opacity-60" />
-      <span>{value}</span>
-    </span>
-  );
-
   return (
     <div
       className="flex h-7 shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-4 text-[11px] text-[color:var(--color-muted-foreground)]"
@@ -64,13 +60,13 @@ export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null 
       aria-atomic="true"
     >
       <div className="flex items-center gap-4">
-        <Item icon={FileText} label="จำนวนหน้า (Pages)" value={`${pageCount} หน้า`} />
-        <Item
+        <StatusItem icon={FileText} label="จำนวนหน้า (Pages)" value={`${pageCount} หน้า`} />
+        <StatusItem
           icon={Type}
           label="จำนวนคำ (Words)"
           value={`${words.toLocaleString()} คำ`}
         />
-        <Item
+        <StatusItem
           icon={AlignLeft}
           label="จำนวนตัวอักษร (Characters)"
           value={`${chars.toLocaleString()} ตัวอักษร`}
@@ -83,7 +79,7 @@ export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null 
             <span>{rulerInfo.label}</span>
           </span>
         )}
-        <Item
+        <StatusItem
           icon={Sparkles}
           label="ตัวทำความสะอาด"
           value={cleanersLabel}
