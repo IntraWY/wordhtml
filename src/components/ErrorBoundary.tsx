@@ -33,6 +33,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
   };
 
+  handleRetry = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -62,8 +66,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
-                onClick={this.handleReload}
+                onClick={this.handleRetry}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-[color:var(--color-foreground)] px-4 py-2 text-sm font-medium text-[color:var(--color-background)] transition-colors hover:opacity-90"
+              >
+                ลองอีกครั้ง (Try Again)
+              </button>
+              <button
+                type="button"
+                onClick={this.handleReload}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-4 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
               >
                 <RotateCcw className="size-3.5" />
                 โหลดใหม่ (Reload)
