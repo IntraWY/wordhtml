@@ -1,9 +1,10 @@
 import Image from "@tiptap/extension-image";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentType } from "react";
 
 export function createImageWithAlign(
-  NodeViewComponent: ComponentType<any>
+  NodeViewComponent: ComponentType<NodeViewProps>
 ) {
   return Image.extend({
     addAttributes() {
