@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,16 +17,12 @@ export function DialogSystem() {
   const onSubmit = useDialogStore((s) => s.onSubmit);
   const close = useDialogStore((s) => s.close);
 
-  const [inputValue, setInputValue] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) setInputValue(defaultValue);
-  }, [open, defaultValue]);
-
-  useEffect(() => {
     if (open && type === "prompt") {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const id = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(id);
     }
   }, [open, type]);
 
@@ -41,7 +37,7 @@ export function DialogSystem() {
   };
 
   const handleSubmit = () => {
-    onSubmit?.(inputValue);
+    onSubmit?.(inputRef.current?.value ?? defaultValue);
     close();
   };
 
@@ -76,10 +72,10 @@ export function DialogSystem() {
 
           {type === "prompt" && (
             <input
+              key={String(open)}
               ref={inputRef}
               type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              defaultValue={defaultValue}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmit();
                 if (e.key === "Escape") handleCancel();
