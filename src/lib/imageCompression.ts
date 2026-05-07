@@ -29,7 +29,6 @@ export async function compressImageIfEnabled(
   try {
     return await compressImage(file, options);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error("Image compression failed, using original:", e);
     return file;
   }

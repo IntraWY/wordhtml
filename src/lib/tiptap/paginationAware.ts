@@ -28,7 +28,7 @@ export const PaginationAware = Extension.create({
     return {
       goToNextPage:
         () =>
-        ({ editor }): boolean => {
+        (): boolean => {
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("wordhtml:page-next"));
           }
@@ -36,7 +36,7 @@ export const PaginationAware = Extension.create({
         },
       goToPreviousPage:
         () =>
-        ({ editor }): boolean => {
+        (): boolean => {
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("wordhtml:page-prev"));
           }

@@ -2,7 +2,6 @@
 
 import { memo, useRef } from "react";
 import { useEditorStore } from "@/store/editorStore";
-import { useUiStore } from "@/store/uiStore";
 import { countWords } from "@/lib/text";
 import { useDialogStore } from "@/store/dialogStore";
 import { clearAllAppData } from "@/lib/storage";
