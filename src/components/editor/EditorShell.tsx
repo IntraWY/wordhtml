@@ -33,6 +33,7 @@ import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
 import { PageBreakIndicator } from "./PageBreakIndicator";
+import { ParagraphContextMenu } from "./ParagraphContextMenu";
 
 function IndentRuler({
   editor,
@@ -480,6 +481,7 @@ export function EditorShell() {
 
         <DialogManager editor={editor} />
         <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
+        <ParagraphContextMenu editor={editor} containerRef={articleRef} />
         <MobileBlock />
       </div>
     </>

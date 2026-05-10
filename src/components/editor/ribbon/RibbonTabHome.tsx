@@ -35,6 +35,8 @@ import {
   Highlighter,
   Type,
   Minus,
+  ArrowLeftToLine,
+  ArrowRightToLine,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -69,6 +71,9 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
       fontFamily: (e?.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
       isImage: e?.isActive("image") ?? false,
       imageAlign: (e?.getAttributes("image").align as string | undefined) ?? undefined,
+      lineHeightMode: (e?.getAttributes("paragraph").lineHeightMode as string | undefined) ?? "single",
+      spaceBefore: (e?.getAttributes("paragraph").spaceBefore as number | undefined) ?? 0,
+      spaceAfter: (e?.getAttributes("paragraph").spaceAfter as number | undefined) ?? 0,
     }),
   });
 
@@ -77,6 +82,9 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
   const currentFont = state?.fontFamily ?? "";
   const isImage = state?.isImage ?? false;
   const imageAlign = state?.imageAlign;
+  const currentLineHeightMode = state?.lineHeightMode ?? "single";
+  const currentSpaceBefore = state?.spaceBefore ?? 0;
+  const currentSpaceAfter = state?.spaceAfter ?? 0;
 
   const setImageAlign = useCallback((align: "left" | "center" | "right") => {
     editor?.chain().focus().updateAttributes("image", { align }).run();
@@ -165,6 +173,40 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
       editor.chain().focus().unsetFontFamily().run();
     } else {
       editor.chain().focus().setFontFamily(value).run();
+    }
+  }, [editor]);
+
+  const handleLineSpacingChange = useCallback((value: string) => {
+    if (!editor) return;
+    const mode = value as import("@/lib/tiptap/paragraphFormat").LineHeightMode;
+    if (mode === "single" || mode === "oneHalf" || mode === "double") {
+      editor.chain().focus().setLineSpacing(mode).run();
+    } else {
+      // For atLeast/exactly/multiple, default to 12pt if not already set
+      const current = editor.getAttributes("paragraph").lineHeight as number | undefined;
+      editor.chain().focus().setLineSpacing(mode, current ?? 12).run();
+    }
+  }, [editor]);
+
+  const handleIncreaseBlockIndent = useCallback(() => {
+    editor?.chain().focus().increaseBlockIndent().run();
+  }, [editor]);
+
+  const handleDecreaseBlockIndent = useCallback(() => {
+    editor?.chain().focus().decreaseBlockIndent().run();
+  }, [editor]);
+
+  const handleSpaceBeforeChange = useCallback((value: string) => {
+    const num = parseFloat(value);
+    if (!Number.isNaN(num)) {
+      editor?.chain().focus().setParagraphFormat({ spaceBefore: num }).run();
+    }
+  }, [editor]);
+
+  const handleSpaceAfterChange = useCallback((value: string) => {
+    const num = parseFloat(value);
+    if (!Number.isNaN(num)) {
+      editor?.chain().focus().setParagraphFormat({ spaceAfter: num }).run();
     }
   }, [editor]);
 
@@ -284,6 +326,53 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         >
           <AlignJustify className="size-3.5" />
         </RibbonButton>
+        <RibbonSelect
+          label="ระยะบรรทัด (Spacing)"
+          value={currentLineHeightMode}
+          onChange={handleLineSpacingChange}
+          options={[
+            { label: "Single", value: "single" },
+            { label: "1.5 Lines", value: "oneHalf" },
+            { label: "Double", value: "double" },
+            { label: "At least", value: "atLeast" },
+            { label: "Exactly", value: "exactly" },
+            { label: "Multiple", value: "multiple" },
+          ]}
+        />
+        <RibbonButton label="ลดเยื้อง (Outdent)" onClick={handleDecreaseBlockIndent} disabled={!hasEditor}>
+          <ArrowLeftToLine className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="เพิ่มเยื้อง (Indent)" onClick={handleIncreaseBlockIndent} disabled={!hasEditor}>
+          <ArrowRightToLine className="size-3.5" />
+        </RibbonButton>
+        <div className="flex items-center gap-1">
+          <label className="text-[10px] text-[color:var(--color-muted-foreground)]">ก่อน</label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={currentSpaceBefore}
+            onChange={(e) => handleSpaceBeforeChange(e.target.value)}
+            disabled={!hasEditor}
+            className="h-6 w-12 rounded-md border border-[color:var(--color-border)] bg-transparent px-1 text-xs text-[color:var(--color-foreground)] outline-none focus:border-[color:var(--color-accent)] disabled:opacity-40"
+            aria-label="ก่อน (Before) pt"
+          />
+          <span className="text-[10px] text-[color:var(--color-muted-foreground)]">pt</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <label className="text-[10px] text-[color:var(--color-muted-foreground)]">หลัง</label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={currentSpaceAfter}
+            onChange={(e) => handleSpaceAfterChange(e.target.value)}
+            disabled={!hasEditor}
+            className="h-6 w-12 rounded-md border border-[color:var(--color-border)] bg-transparent px-1 text-xs text-[color:var(--color-foreground)] outline-none focus:border-[color:var(--color-accent)] disabled:opacity-40"
+            aria-label="หลัง (After) pt"
+          />
+          <span className="text-[10px] text-[color:var(--color-muted-foreground)]">pt</span>
+        </div>
         <RibbonButton label="ย่อหน้า…" onClick={handleParagraph} disabled={!hasEditor}>
           <Type className="size-3.5" />
         </RibbonButton>

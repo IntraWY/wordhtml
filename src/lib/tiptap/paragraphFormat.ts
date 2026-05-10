@@ -15,7 +15,7 @@ export interface ParagraphFormatValues {
   spaceBefore?: number;
   spaceAfter?: number;
   lineHeightMode?: LineHeightMode;
-  lineHeight?: number;
+  lineHeight?: number | null;
 }
 
 declare module "@tiptap/core" {
@@ -23,6 +23,9 @@ declare module "@tiptap/core" {
     paragraphFormat: {
       setParagraphFormat: (values: ParagraphFormatValues) => ReturnType;
       setIndent: (marginLeft: number, textIndent: number) => ReturnType;
+      setLineSpacing: (mode: LineHeightMode, value?: number) => ReturnType;
+      increaseBlockIndent: () => ReturnType;
+      decreaseBlockIndent: () => ReturnType;
     };
   }
 }
@@ -198,6 +201,73 @@ export const ParagraphFormatExtension = Extension.create({
                 ...node.attrs,
                 marginLeft,
                 textIndent,
+              });
+              handled = true;
+            }
+          });
+          return handled;
+        },
+      setLineSpacing:
+        (mode: LineHeightMode, value?: number) =>
+        ({ tr, state }) => {
+          const { from, to } = state.selection;
+          let handled = false;
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (
+              node.type.name === "paragraph" ||
+              node.type.name === "heading"
+            ) {
+              const update: ParagraphFormatValues = {
+                ...node.attrs,
+                lineHeightMode: mode,
+              };
+              if (mode === "single" || mode === "oneHalf" || mode === "double") {
+                update.lineHeight = null;
+              } else {
+                update.lineHeight = value ?? null;
+              }
+              tr.setNodeMarkup(pos, undefined, update);
+              handled = true;
+            }
+          });
+          return handled;
+        },
+      increaseBlockIndent:
+        () =>
+        ({ tr, state }) => {
+          const { from, to } = state.selection;
+          let handled = false;
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (
+              node.type.name === "paragraph" ||
+              node.type.name === "heading"
+            ) {
+              const current = (node.attrs.marginLeft as number) ?? 0;
+              const next = Math.round((current + 0.5) * 10) / 10;
+              tr.setNodeMarkup(pos, undefined, {
+                ...node.attrs,
+                marginLeft: next,
+              });
+              handled = true;
+            }
+          });
+          return handled;
+        },
+      decreaseBlockIndent:
+        () =>
+        ({ tr, state }) => {
+          const { from, to } = state.selection;
+          let handled = false;
+          state.doc.nodesBetween(from, to, (node, pos) => {
+            if (
+              node.type.name === "paragraph" ||
+              node.type.name === "heading"
+            ) {
+              const current = (node.attrs.marginLeft as number) ?? 0;
+              const next = Math.max(0, Math.round((current - 0.5) * 10) / 10);
+              tr.setNodeMarkup(pos, undefined, {
+                ...node.attrs,
+                marginLeft: next,
               });
               handled = true;
             }
