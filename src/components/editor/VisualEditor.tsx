@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
-import Gapcursor from "@tiptap/extension-gapcursor";
+import { EditorView } from "@tiptap/pm/view";
 // NOTE: dynamic-import for Table extensions deferred — adds complexity
 // not justified by current bundle size. Revisit if Lighthouse flags it.
 import { Table, TableCell, TableHeader } from "@tiptap/extension-table";
@@ -93,7 +93,6 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TaskList,
       TaskItem.configure({ nested: true }),
       FontFamily,
-      Gapcursor,
       PaginationAware,
     ],
     []
@@ -122,7 +121,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       transformPastedHTML(html: string) {
         return cleanPastedHtml(html);
       },
-      handleKeyDown(_view: unknown, event: KeyboardEvent) {
+      handleKeyDown(_view: EditorView, event: KeyboardEvent) {
         // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
           event.preventDefault();
@@ -135,7 +134,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         }
         return false;
       },
-      handleDrop(view: any, event: DragEvent) {
+      handleDrop(view: EditorView, event: DragEvent) {
         event.preventDefault();
         const text = event.dataTransfer?.getData("text/plain");
         if (!text) return false;

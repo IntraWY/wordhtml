@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
@@ -18,14 +18,8 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
 
-  // Local form state — sync from store whenever dialog opens
+  // Local form state — reset via key remount whenever dialog opens
   const [draft, setDraft] = useState<PageSetup>(pageSetup);
-
-  useEffect(() => {
-    if (open) {
-      setDraft(pageSetup);
-    }
-  }, [open, pageSetup]);
 
   const handleSave = () => {
     setPageSetup(draft);
@@ -55,7 +49,7 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
             </Dialog.Close>
           </header>
 
-          <div className="space-y-5 px-5 py-4">
+          <div key={String(open)} className="space-y-5 px-5 py-4">
             {/* Size */}
             <fieldset>
               <legend className="mb-2 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">

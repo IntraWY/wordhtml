@@ -15,7 +15,6 @@ export function useKeyboardShortcuts(editor: Editor | null) {
   const openSearch = useUiStore((s) => s.openSearch);
   const closeSearch = useUiStore((s) => s.closeSearch);
   const openShortcuts = useUiStore((s) => s.openShortcuts);
-  const openPageSetup = useUiStore((s) => s.openPageSetup);
   const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
   const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);
   const reset = useEditorStore((s) => s.reset);

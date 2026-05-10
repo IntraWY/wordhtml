@@ -79,8 +79,7 @@ function createSafeStorage<S>(
           return migrated;
         }
         return result;
-      } catch (e) {
-        console.error(`[storage] Failed to read "${name}":`, e);
+      } catch {
         try {
           localStorage.removeItem(name);
         } catch {
@@ -97,20 +96,17 @@ function createSafeStorage<S>(
         await base.setItem(name, value);
       } catch (e) {
         if (isQuotaError(e)) {
-          console.error(`[storage] Quota exceeded for "${name}"`);
           useToastStore
             .getState()
             .show("พื้นที่จัดเก็บเต็ม กรุณาลบ Snapshot หรือ Template เก่า");
-        } else {
-          console.error(`[storage] Failed to write "${name}":`, e);
         }
       }
     },
     removeItem: async (name) => {
       try {
         await base.removeItem(name);
-      } catch (e) {
-        console.error(`[storage] Failed to remove "${name}":`, e);
+      } catch {
+        // ignore
       }
     },
   };
@@ -121,8 +117,7 @@ export function clearAllAppData(): void {
     localStorage.removeItem("wordhtml-editor");
     localStorage.removeItem("wordhtml-templates");
     useToastStore.getState().show("ลบข้อมูลทั้งหมดแล้ว");
-  } catch (e) {
-    console.error("[storage] Failed to clear app data:", e);
+  } catch {
     useToastStore.getState().show("ไม่สามารถลบข้อมูลได้");
   }
 }

@@ -8,8 +8,11 @@ A redesigned clone of [wordhtml.com](https://wordhtml.com/) built with Next.js 1
 
 - **Visual editor ↔ A4 Preview** — edit on the left, see the printed page on the right.
 - **Eight HTML cleaners** — strip inline styles, empty tags, attributes, classes, comments, span wrappers, repeated whitespace, or convert to plain text. Toggle just what you need.
-- **Three export formats** — clean `.html` (with images inlined or extracted), a `.zip` bundle, or a fresh `.docx`.
+- **Five export formats** — clean `.html` (with images inlined or extracted), a `.zip` bundle, `.docx`, Markdown, or Google Apps Script code.
 - **Paste from Word** — Word/Google Docs paste artifacts (mso-* styles, MsoNormal classes, conditional comments) are stripped on the way in.
+- **WYSIWYG A4 editor** — interactive horizontal and vertical rulers with draggable margin guides, page setup (A4/Letter, portrait/landscape), and header/footer configuration.
+- **Template mode** — define `{{variables}}`, paste data from Google Sheets, and preview merged documents.
+- **Document history** — up to 20 local snapshots with auto-save after idle periods.
 - **100% client-side** — no document ever leaves your machine. Static-export ready.
 
 ## Quick start
@@ -48,7 +51,7 @@ No environment variables. No runtime config. No backend.
 - **Next.js 16** (App Router, static export)
 - **TypeScript** (strict)
 - **Tailwind CSS v4** with `@theme inline` design tokens
-- **Tiptap v2** (ProseMirror-based rich editor)
+- **Tiptap v3** (ProseMirror-based rich editor)
 - **Zustand** for editor state
 - **mammoth.js** for `.docx` → HTML
 - **html-docx-js** for HTML → `.docx`

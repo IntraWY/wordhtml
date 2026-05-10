@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 export interface PageHeaderFooterProps {
   pageNumber: number;
@@ -72,11 +73,11 @@ export function PageHeaderFooter({
   className,
 }: PageHeaderFooterProps) {
   const replacedHeader = useMemo(
-    () => (headerHtml ? replaceVariables(headerHtml, pageNumber, totalPages) : ""),
+    () => sanitizeHtml(headerHtml ? replaceVariables(headerHtml, pageNumber, totalPages) : ""),
     [headerHtml, pageNumber, totalPages]
   );
   const replacedFooter = useMemo(
-    () => (footerHtml ? replaceVariables(footerHtml, pageNumber, totalPages) : ""),
+    () => sanitizeHtml(footerHtml ? replaceVariables(footerHtml, pageNumber, totalPages) : ""),
     [footerHtml, pageNumber, totalPages]
   );
 

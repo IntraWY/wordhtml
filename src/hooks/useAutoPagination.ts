@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useCallback, type DependencyList } from "react";
+import { useEffect, useRef, useCallback, type DependencyList } from "react";
 import type { RefObject } from "react";
 import type { PageSetup } from "@/types";
 import {
-  calculatePageMetrics,
   calculatePageBreaks,
   type SplitOptions,
 } from "@/lib/paginationEngine";
@@ -50,19 +49,6 @@ export function useAutoPagination(
     setCurrentPage,
     setIsCalculating,
   } = usePaginationStore();
-
-  // Memoize metrics so heavy mm→px math is not repeated unnecessarily.
-  const metrics = useMemo(
-    () => calculatePageMetrics(pageSetup),
-    [
-      pageSetup.size,
-      pageSetup.orientation,
-      pageSetup.marginMm.top,
-      pageSetup.marginMm.right,
-      pageSetup.marginMm.bottom,
-      pageSetup.marginMm.left,
-    ]
-  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

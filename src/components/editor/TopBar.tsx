@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Clock, FileCode2 } from "lucide-react";
+import { Download, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
-import { useTemplateStore } from "@/store/templateStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";

@@ -30,7 +30,6 @@ function writeStorageItem(key: string, value: unknown): void {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "ไม่สามารถเขียนข้อมูลได้";
-    console.error(`[settingsExport] Failed to write ${key}:`, e);
     useToastStore.getState().show(`ไม่สามารถบันทึกข้อมูลได้: ${message}`, "error");
   }
 }

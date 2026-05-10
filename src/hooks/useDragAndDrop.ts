@@ -70,7 +70,6 @@ export function useDragAndDrop(
           useToastStore.getState().show(`โหลดไฟล์ ${file.name} แล้ว`, "success");
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : "ไม่สามารถโหลดไฟล์ได้";
-          console.error("[useDragAndDrop] Drop load error:", error);
           useToastStore.getState().show(`โหลดไฟล์ ${file.name} ล้มเหลว: ${message}`, "error");
         }
       }

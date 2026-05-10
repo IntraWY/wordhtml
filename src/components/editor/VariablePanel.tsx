@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -92,13 +92,13 @@ export function VariablePanel() {
     dispatchInsertVariable(name);
   }, []);
 
-  const validateVarName = (raw: string): string | null => {
+  const validateVarName = useCallback((raw: string): string | null => {
     const sanitized = raw.trim().replace(/\s+/g, "_").replace(/[^\w\u0E00-\u0E7F_]/g, "");
     if (!sanitized) return "ชื่อตัวแปรต้องไม่ว่างเปล่า";
     if (/^\d/.test(sanitized)) return "ห้ามขึ้นต้นด้วยตัวเลข";
     if (variables.some((v) => v.name === sanitized)) return "มีตัวแปรนี้อยู่แล้ว";
     return null;
-  };
+  }, [variables]);
 
   const handleAddVariable = useCallback(() => {
     const error = validateVarName(newVarName);
@@ -111,7 +111,7 @@ export function VariablePanel() {
     setNewVarName("");
     setIsAdding(false);
     setAddError("");
-  }, [newVarName, variables, setVariables]);
+  }, [newVarName, variables, setVariables, validateVarName]);
 
   const handleDragStart = useCallback((e: React.DragEvent, name: string) => {
     e.dataTransfer.setData("text/plain", `{{${name}}}`);

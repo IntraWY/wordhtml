@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, FileText } from "lucide-react";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
 import type { HeaderFooterConfig } from "@/types";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface HeaderFooterDialogProps {
   open: boolean;
@@ -31,15 +32,9 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const headerFooter = pageSetup.headerFooter ?? DEFAULT_CONFIG;
 
-  // Local form state — sync from store whenever dialog opens
+  // Local form state — reset via key remount whenever dialog opens
   const [draft, setDraft] = useState<HeaderFooterConfig>(headerFooter);
   const [activeTab, setActiveTab] = useState<"header" | "footer">("header");
-
-  useEffect(() => {
-    if (open) {
-      setDraft(pageSetup.headerFooter ?? DEFAULT_CONFIG);
-    }
-  }, [open, pageSetup.headerFooter]);
 
   const handleSave = () => {
     setPageSetup({ headerFooter: draft });
@@ -93,7 +88,7 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
             </Dialog.Close>
           </header>
 
-          <div className="space-y-5 px-5 py-4">
+          <div key={String(open)} className="space-y-5 px-5 py-4">
             {/* Enable toggle */}
             <label className="flex items-center gap-3">
               <input
@@ -267,10 +262,12 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       <span>หน้า 1 — </span>
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: replaceVariables(
-                            draft.headerHtml || "(ไม่มีส่วนหัว)",
-                            1,
-                            1
+                          __html: sanitizeHtml(
+                            replaceVariables(
+                              draft.headerHtml || "(ไม่มีส่วนหัว)",
+                              1,
+                              1
+                            )
                           ),
                         }}
                       />
@@ -281,10 +278,12 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       <span>หน้า 1 — </span>
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: replaceVariables(
-                            draft.footerHtml || "(ไม่มีส่วนท้าย)",
-                            1,
-                            1
+                          __html: sanitizeHtml(
+                            replaceVariables(
+                              draft.footerHtml || "(ไม่มีส่วนท้าย)",
+                              1,
+                              1
+                            )
                           ),
                         }}
                       />

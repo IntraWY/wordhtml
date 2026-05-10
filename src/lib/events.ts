@@ -23,55 +23,55 @@ export type WordhtmlEventName =
 
 /* dispatch helpers */
 
-export function dispatchOpenFile() {
+export function dispatchOpenFile(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openFile));
   }
 }
 
-export function dispatchOpenBatchConvert() {
+export function dispatchOpenBatchConvert(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openBatchConvert));
   }
 }
 
-export function dispatchOpenTemplates() {
+export function dispatchOpenTemplates(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openTemplates));
   }
 }
 
-export function dispatchOpenSearch() {
+export function dispatchOpenSearch(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openSearch));
   }
 }
 
-export function dispatchOpenPageSetup() {
+export function dispatchOpenPageSetup(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openPageSetup));
   }
 }
 
-export function dispatchOpenShortcuts() {
+export function dispatchOpenShortcuts(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openShortcuts));
   }
 }
 
-export function dispatchOpenToc() {
+export function dispatchOpenToc(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openToc));
   }
 }
 
-export function dispatchOpenHeaderFooter() {
+export function dispatchOpenHeaderFooter(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.openHeaderFooter));
   }
 }
 
-export function dispatchInsertVariable(name: string) {
+export function dispatchInsertVariable(name: string): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent(EVENT_NAMES.insertVariable, { detail: name })
@@ -79,13 +79,13 @@ export function dispatchInsertVariable(name: string) {
   }
 }
 
-export function dispatchPageNext() {
+export function dispatchPageNext(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.pageNext));
   }
 }
 
-export function dispatchPagePrev() {
+export function dispatchPagePrev(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.pagePrev));
   }
@@ -96,7 +96,7 @@ export function dispatchPagePrev() {
 export function addEventListener(
   name: WordhtmlEventName,
   handler: (e: CustomEvent) => void
-) {
+): void {
   if (typeof window !== "undefined") {
     window.addEventListener(name, handler as EventListener);
   }
@@ -105,7 +105,7 @@ export function addEventListener(
 export function removeEventListener(
   name: WordhtmlEventName,
   handler: (e: CustomEvent) => void
-) {
+): void {
   if (typeof window !== "undefined") {
     window.removeEventListener(name, handler as EventListener);
   }

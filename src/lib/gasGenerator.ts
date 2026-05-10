@@ -136,7 +136,7 @@ function generateFromSheet() {
     }
     var html = ${functionName}(data);
     results.push(html);
-    // TODO: send email, create PDF, or save to Drive
+    // Optional: send email, create PDF, or save to Drive
     // Example: MailApp.sendEmail({ to: data["email"], subject: "Document", htmlBody: html });
   }
 

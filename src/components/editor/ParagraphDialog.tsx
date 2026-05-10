@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
@@ -38,14 +38,7 @@ function readCurrentFormat(editor: Editor | null): ParagraphFormatValues {
 }
 
 export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps) {
-  const current = readCurrentFormat(editor);
-  const [draft, setDraft] = useState<ParagraphFormatValues>(current);
-
-  useEffect(() => {
-    if (open) {
-      setDraft(readCurrentFormat(editor));
-    }
-  }, [open, editor]);
+  const [draft, setDraft] = useState<ParagraphFormatValues>(() => readCurrentFormat(editor));
 
   const handleSave = () => {
     if (!editor) return;
@@ -78,7 +71,7 @@ export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps)
             </Dialog.Close>
           </header>
 
-          <div className="space-y-5 px-5 py-4">
+          <div key={String(open)} className="space-y-5 px-5 py-4">
             {/* Indents */}
             <fieldset>
               <legend className="mb-2 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">

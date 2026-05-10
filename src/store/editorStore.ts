@@ -6,6 +6,7 @@ import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import { markdownToHtml } from "@/lib/importMarkdown";
 import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
+import { useUiStore } from "./uiStore";
 import { editorStorage } from "@/lib/storage";
 import { dispatchOpenFile } from "@/lib/events";
 import type {
@@ -232,6 +233,7 @@ export const useEditorStore = create<EditorState>()(
 
         set({ history: updated });
         useToastStore.getState().show("บันทึก Snapshot แล้ว");
+        useUiStore.getState().setLastAction(`Snapshot บันทึก — ${new Date().toLocaleTimeString()}`);
       },
 
       loadSnapshot: (id) => {
@@ -286,7 +288,9 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name: "wordhtml-editor",
+      version: 1,
       storage: editorStorage,
+      migrate: (persistedState) => persistedState as EditorState,
       partialize: (state) => ({
         _v: 1,
         enabledCleaners: state.enabledCleaners,
