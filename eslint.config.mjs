@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Node scripts at project root
+    "check-deploy.js",
+    "ruler-test.js",
   ]),
 ]);
 

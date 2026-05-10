@@ -16,7 +16,7 @@ export const useToastStore = create<ToastState>((set) => ({
   show: (message, type = "success") => {
     if (_timer) clearTimeout(_timer);
     set({ message, type });
-    _timer = setTimeout(() => set({ message: null, type: null }), 2500);
+    _timer = setTimeout(() => set({ message: null, type: null }), 4000);
   },
 
   hide: () => {

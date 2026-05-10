@@ -6,10 +6,10 @@ import { StatusBar } from "./StatusBar";
 import type { Editor } from "@tiptap/react";
 
 import { TopBar } from "./TopBar";
-import { MenuBar } from "./MenuBar";
+import { Ribbon } from "./ribbon/Ribbon";
+import { MobileToolbar } from "./MobileToolbar";
 import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
-import { FormattingToolbar } from "./FormattingToolbar";
 import { PreviewToggle } from "./PreviewToggle";
 import { MultiPagePreview } from "./MultiPagePreview";
 import { VariablePanel } from "./VariablePanel";
@@ -315,7 +315,10 @@ export function EditorShell() {
         onDrop={onDrop}
       >
         <TopBar />
-        <MenuBar editor={editor} />
+        <div className="hidden md:block">
+          <Ribbon editor={editor} />
+        </div>
+        <MobileToolbar editor={editor} />
         {loadError && (
           <div
             role="alert"
@@ -366,7 +369,6 @@ export function EditorShell() {
             )}
           >
             <div className="flex min-h-0 flex-col overflow-hidden">
-              {editor && previewMode !== "preview" && <FormattingToolbar editor={editor} />}
               {templateMode && (
                 <div className="shrink-0 flex justify-center border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5">
                   <PreviewToggle />

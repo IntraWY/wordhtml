@@ -1,7 +1,7 @@
 import Image from "@tiptap/extension-image";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
-import type { ComponentType } from "react";
+import type { ComponentType, RefObject } from "react";
 
 export function createImageWithAlign(
   NodeViewComponent: ComponentType<NodeViewProps>
@@ -54,7 +54,9 @@ export function createImageWithAlign(
 
     addNodeView() {
       // Cast needed for React 19 compat (ReactNodeViewRenderer expects ref prop)
-      return ReactNodeViewRenderer(NodeViewComponent as ComponentType<any>);
+      return ReactNodeViewRenderer(
+        NodeViewComponent as ComponentType<NodeViewProps & { ref: RefObject<HTMLElement | null> }>
+      );
     },
   }).configure({
     inline: false,

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { EditorView } from "@tiptap/pm/view";
-import Gapcursor from "@tiptap/extension-gapcursor";
 // NOTE: dynamic-import for Table extensions deferred — adds complexity
 // not justified by current bundle size. Revisit if Lighthouse flags it.
 import { Table, TableCell, TableHeader } from "@tiptap/extension-table";
@@ -94,7 +93,6 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TaskList,
       TaskItem.configure({ nested: true }),
       FontFamily,
-      Gapcursor,
       PaginationAware,
     ],
     []

@@ -145,6 +145,7 @@ export function ImageResizeView({
     <NodeViewWrapper as="div" style={wrapperStyle}>
       {/* Image + handles */}
       <div style={{ position: "relative", display: "inline-block" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={imgRef}
           src={src}

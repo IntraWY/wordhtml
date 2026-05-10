@@ -28,8 +28,7 @@ export async function compressImageIfEnabled(
   if (!enabled) return file;
   try {
     return await compressImage(file, options);
-  } catch (e) {
-    console.error("Image compression failed, using original:", e);
+  } catch {
     return file;
   }
 }

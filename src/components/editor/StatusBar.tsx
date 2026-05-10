@@ -2,11 +2,12 @@
 
 import { useMemo, type ElementType } from "react";
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
 import { usePaginationStore } from "@/store/paginationStore";
 import { countWords, plainTextFromHtml } from "@/lib/text";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
-import { FileText, Type, Sparkles, AlignLeft, Ruler } from "lucide-react";
+import { FileText, Type, Sparkles, AlignLeft, Ruler, Save } from "lucide-react";
 
 interface StatusItemProps {
   icon: ElementType;
@@ -32,6 +33,7 @@ export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null 
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const history = useEditorStore((s) => s.history);
+  const lastAction = useUiStore((s) => s.lastAction);
 
   const words = useMemo(() => countWords(documentHtml), [documentHtml]);
   const chars = useMemo(() => plainTextFromHtml(documentHtml).length, [documentHtml]);
@@ -52,10 +54,11 @@ export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null 
 
   const lastSnapshotHtml = history[0]?.html ?? "";
   const isModified = documentHtml.trim().length > 0 && documentHtml !== lastSnapshotHtml;
+  const isSaved = documentHtml.trim().length > 0 && !isModified;
 
   return (
     <div
-      className="flex h-7 shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-4 text-[11px] text-[color:var(--color-muted-foreground)]"
+      className="flex h-7 shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-white/80 px-4 text-[11px] text-[color:var(--color-muted-foreground)] backdrop-blur"
       aria-live="polite"
       aria-atomic="true"
     >
@@ -85,6 +88,18 @@ export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null 
           value={cleanersLabel}
           className={enabledCleaners.length > 0 ? "text-[color:var(--color-accent)]" : ""}
         />
+        {lastAction && (
+          <span className="inline-flex items-center gap-1 text-[color:var(--color-muted-foreground)]">
+            <Save className="size-3 opacity-60" />
+            {lastAction}
+          </span>
+        )}
+        {isSaved && (
+          <span className="inline-flex items-center gap-1 text-emerald-600" title="บันทึกแล้ว (Saved)">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            บันทึกแล้ว (Saved)
+          </span>
+        )}
         {isModified && (
           <span className="inline-flex items-center gap-1 text-amber-600" title="มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก (Unsaved changes)">
             <span className="size-1.5 rounded-full bg-amber-500" />

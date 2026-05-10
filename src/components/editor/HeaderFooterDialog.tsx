@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
 import type { HeaderFooterConfig } from "@/types";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface HeaderFooterDialogProps {
   open: boolean;
@@ -261,10 +262,12 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       <span>หน้า 1 — </span>
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: replaceVariables(
-                            draft.headerHtml || "(ไม่มีส่วนหัว)",
-                            1,
-                            1
+                          __html: sanitizeHtml(
+                            replaceVariables(
+                              draft.headerHtml || "(ไม่มีส่วนหัว)",
+                              1,
+                              1
+                            )
                           ),
                         }}
                       />
@@ -275,10 +278,12 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       <span>หน้า 1 — </span>
                       <span
                         dangerouslySetInnerHTML={{
-                          __html: replaceVariables(
-                            draft.footerHtml || "(ไม่มีส่วนท้าย)",
-                            1,
-                            1
+                          __html: sanitizeHtml(
+                            replaceVariables(
+                              draft.footerHtml || "(ไม่มีส่วนท้าย)",
+                              1,
+                              1
+                            )
                           ),
                         }}
                       />

@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import { CleaningToolbar } from "./CleaningToolbar";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
 import { applyCleaners } from "@/lib/cleaning/pipeline";
@@ -200,8 +199,6 @@ export function ExportDialog() {
 
           {activeTab === "file" || !templateMode ? (
             <>
-              <CleaningToolbar />
-
               <div className="flex min-h-0 flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">

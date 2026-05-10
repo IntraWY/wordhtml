@@ -71,7 +71,6 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
     }
     return new Blob([bytes], { type: mimeType });
   } catch {
-    console.error("[images] Invalid base64 data, returning empty blob");
     return new Blob([], { type: mimeType });
   }
 }
