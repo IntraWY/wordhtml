@@ -139,12 +139,20 @@ function measureHtml(
   sourceNodes.forEach((node) => fragment.appendChild(node));
   measureHost.appendChild(fragment);
 
-  const children = Array.from(measureHost.children);
+  // The editor wraps all content in a single .ProseMirror div (or similar
+  // wrapper). For pagination we need the individual block-level nodes, not
+  // the wrapper itself. Descend into the first meaningful container.
+  let targetChildren: Element[] = Array.from(measureHost.children);
+  const proseMirror = measureHost.querySelector(".ProseMirror");
+  if (proseMirror && proseMirror.children.length > targetChildren.length) {
+    targetChildren = Array.from(proseMirror.children);
+  }
+
   const hostRect = measureHost.getBoundingClientRect();
   const hostTop = hostRect.top;
   const contentTopOffset = metrics.marginTopPx;
 
-  return { children, host: measureHost, hostTop, contentTopOffset };
+  return { children: targetChildren, host: measureHost, hostTop, contentTopOffset };
 }
 
 /* ------------------------------------------------------------------ */

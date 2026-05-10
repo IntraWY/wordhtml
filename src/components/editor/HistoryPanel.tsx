@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { useState, useEffect, useRef } from "react";
-import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash } from "lucide-react";
+import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash, Pencil } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
@@ -173,20 +173,21 @@ function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: Snapshot
         ) : (
           <button
             type="button"
-            onClick={startEdit}
-            title="คลิกเพื่อแก้ไขชื่อ"
-            className="block w-full text-left"
+            onClick={onLoad}
+            title="โหลดเอกสารนี้"
+            className="block w-full truncate text-left text-sm font-medium hover:underline"
           >
-            <p className="truncate text-sm font-medium">
-              {displayName}
-            </p>
+            {displayName}
           </button>
         )}
         <p className="mt-0.5 text-xs text-[color:var(--color-muted-foreground)]">
           {formatDate(snap.savedAt)} · {snap.wordCount.toLocaleString()} คำ
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="flex shrink-0 items-center gap-1">
+        <ActionBtn label="เปลี่ยนชื่อ" onClick={startEdit}>
+          <Pencil className="size-3.5" />
+        </ActionBtn>
         <ActionBtn label="โหลดเอกสาร" onClick={onLoad}>
           <RotateCcw className="size-3.5" />
         </ActionBtn>

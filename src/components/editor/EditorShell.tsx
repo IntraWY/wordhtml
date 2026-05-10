@@ -414,7 +414,7 @@ export function EditorShell() {
                         <article
                           id="editor-content"
                           ref={articleRef}
-                          className="paper printable-paper bg-white shadow-sm"
+                          className="paper printable-paper"
                           style={{
                             minHeight: heightPx,
                             width: widthPx,

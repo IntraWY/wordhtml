@@ -26,6 +26,7 @@ import FontFamily from "@tiptap/extension-font-family";
 
 import { useEditorStore } from "@/store/editorStore";
 import { Upload, FileText, Keyboard } from "lucide-react";
+import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { ParagraphFormatExtension } from "@/lib/tiptap/paragraphFormat";
 import { FontSize } from "@/lib/tiptap/fontSize";
@@ -122,16 +123,56 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         return cleanPastedHtml(html);
       },
       handleKeyDown(_view: EditorView, event: KeyboardEvent) {
+        const ed = editorRef.current;
+        if (!ed) return false;
+
         // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
           event.preventDefault();
-          // Use the editor instance from closure (set below)
-          const ed = editorRef.current;
-          if (ed) {
-            ed.chain().focus().insertPageBreak().run();
-          }
+          ed.chain().focus().insertPageBreak().run();
           return true;
         }
+
+        // Backspace: outdent at start of indented paragraph, or delete 4-space tab block
+        if (event.key === "Backspace") {
+          const { selection } = ed.state;
+          if (!selection.empty) return false;
+
+          const { $from } = selection;
+
+          // Case 1: At start of indented paragraph → remove indent
+          if ($from.parentOffset === 0) {
+            const marginLeft = ($from.parent.attrs.marginLeft as number) ?? 0;
+            if (marginLeft > 0) {
+              const next = Math.max(
+                0,
+                Math.round((marginLeft - 0.5) * 10) / 10
+              );
+              event.preventDefault();
+              ed.chain().focus().setParagraphFormat({ marginLeft: next }).run();
+              return true;
+            }
+          }
+
+          // Case 2: Isolated 4-space tab block before cursor → delete all 4
+          if ($from.parentOffset >= 4) {
+            const text = $from.parent.textContent;
+            const offset = $from.parentOffset;
+            const prev4 = text.slice(offset - 4, offset);
+            const charBefore = offset > 4 ? text[offset - 5] : "";
+            if (prev4 === "    " && charBefore !== " ") {
+              const startPos = $from.pos - 4;
+              const slice = ed.state.doc.textBetween(startPos, $from.pos);
+              if (slice === "    ") {
+                event.preventDefault();
+                const tr = ed.state.tr.delete(startPos, $from.pos);
+                ed.view.dispatch(tr);
+                return true;
+              }
+            }
+          }
+        }
+
         return false;
       },
       handleDrop(view: EditorView, event: DragEvent) {
@@ -208,6 +249,19 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   useEffect(() => {
     onEditorReady?.(editor);
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    const handler = () => {
+      const ed = editorRef.current;
+      if (ed) {
+        ed.chain().focus().insertPageBreak().run();
+      }
+    };
+    addEventListener(EVENT_NAMES.insertPageBreak, handler);
+    return () => {
+      removeEventListener(EVENT_NAMES.insertPageBreak, handler);
+    };
+  }, []);
 
   if (!editor) {
     return (

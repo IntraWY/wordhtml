@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Clock, Bookmark } from "lucide-react";
+import { Download, Clock, Bookmark, Save, Split } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
@@ -9,11 +9,12 @@ import { useUiStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
-import { dispatchOpenTemplates } from "@/lib/events";
+import { dispatchOpenTemplates, dispatchInsertPageBreak } from "@/lib/events";
 
 export function TopBar() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const prepareExport = useEditorStore((s) => s.prepareExport);
+  const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
   const openHistoryPanel = useUiStore((s) => s.openHistoryPanel);
   const openExportDialog = useUiStore((s) => s.openExportDialog);
   const fileName = useEditorStore((s) => s.fileName);
@@ -47,9 +48,10 @@ export function TopBar() {
             onClick={openHistoryPanel}
             title="ประวัติเอกสาร"
             aria-label="ประวัติเอกสาร"
-            className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+            className="relative inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
           >
             <Clock className="size-4" />
+            <span className="hidden md:inline text-sm">ประวัติ</span>
             {historyCount > 0 && (
               <span
                 className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[9px] font-bold text-[color:var(--color-accent-foreground)]"
@@ -64,9 +66,32 @@ export function TopBar() {
             onClick={dispatchOpenTemplates}
             title="Template ของฉัน"
             aria-label="Template ของฉัน"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+            className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
           >
             <Bookmark className="size-4" />
+            <span className="hidden md:inline text-sm">Template</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => saveSnapshot()}
+            disabled={!hasDoc}
+            title="บันทึก Snapshot"
+            aria-label="บันทึก Snapshot"
+            className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-40"
+          >
+            <Save className="size-4" />
+            <span className="hidden md:inline text-sm">บันทึก</span>
+          </button>
+          <button
+            type="button"
+            onClick={dispatchInsertPageBreak}
+            disabled={!hasDoc}
+            title="แบ่งหน้า (Page Break)"
+            aria-label="แบ่งหน้า (Page Break)"
+            className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-40"
+          >
+            <Split className="size-4" />
+            <span className="hidden md:inline text-sm">แบ่งหน้า</span>
           </button>
           <UploadButton />
           <Button

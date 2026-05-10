@@ -318,46 +318,6 @@ export const ParagraphFormatExtension = Extension.create({
         return blockIndent(-0.5);
       },
 
-      Backspace: () => {
-        const { selection } = this.editor.state;
-        if (!selection.empty) return false;
-
-        const { $from } = selection;
-
-        // Case 1: At start of indented paragraph → remove indent
-        if ($from.parentOffset === 0) {
-          const marginLeft = ($from.parent.attrs.marginLeft as number) ?? 0;
-          if (marginLeft > 0) {
-            const next = Math.max(
-              0,
-              Math.round((marginLeft - 0.5) * 10) / 10
-            );
-            return this.editor.commands.setParagraphFormat({ marginLeft: next });
-          }
-        }
-
-        // Case 2: Isolated 4-space tab block before cursor → delete all 4
-        if ($from.parentOffset >= 4) {
-          const text = $from.parent.textContent;
-          const offset = $from.parentOffset;
-          const prev4 = text.slice(offset - 4, offset);
-          const charBefore = offset > 4 ? text[offset - 5] : "";
-          if (prev4 === "    " && charBefore !== " ") {
-            const startPos = $from.pos - 4;
-            const slice = this.editor.state.doc.textBetween(
-              startPos,
-              $from.pos
-            );
-            if (slice === "    ") {
-              const tr = this.editor.state.tr.delete(startPos, $from.pos);
-              this.editor.view.dispatch(tr);
-              return true;
-            }
-          }
-        }
-
-        return false;
-      },
     };
   },
 });

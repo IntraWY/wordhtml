@@ -57,7 +57,7 @@ export function ProcessedContent({
 
   return (
     <article
-      className={cn("paper printable-paper bg-white shadow-sm flex flex-col", className)}
+      className={cn("paper printable-paper flex flex-col", className)}
       style={{
         minHeight: heightPx,
         height: exactHeight
