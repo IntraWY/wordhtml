@@ -10,6 +10,7 @@ import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/sto
 import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { cn } from "@/lib/utils";
+import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("th-TH", {
@@ -41,6 +42,7 @@ export function TemplatePanel() {
   // Single renameValue shared across rows — only one row renames at a time via renamingId.
   const [renameValue, setRenameValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const hasDoc = documentHtml.trim().length > 0;
 
@@ -123,6 +125,38 @@ export function TemplatePanel() {
       useToastStore.getState().show("อ่านไฟล์ไม่สำเร็จ", "error");
     } finally {
       // reset input so same file can be selected again
+      e.target.value = "";
+    }
+  }
+
+  async function handleBackup() {
+    try {
+      const blob = await exportAllSettings();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `wordhtml-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      useToastStore.getState().show("สำรองข้อมูลทั้งหมดแล้ว");
+    } catch {
+      useToastStore.getState().show("สำรองข้อมูลไม่สำเร็จ", "error");
+    }
+  }
+
+  function handleRestoreClick() {
+    restoreInputRef.current?.click();
+  }
+
+  async function handleRestoreFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await importAllSettings(file);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "กู้คืนข้อมูลไม่สำเร็จ";
+      useToastStore.getState().show(message, "error");
+    } finally {
       e.target.value = "";
     }
   }
@@ -229,10 +263,41 @@ export function TemplatePanel() {
             )}
           </div>
 
-          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-muted-foreground)]">
-              บันทึกเอกสารปัจจุบันเป็น Template
-            </p>
+          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4 space-y-4">
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-muted-foreground)]">
+                สำรอง/กู้คืนข้อมูลทั้งหมด (Backup/Restore)
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleBackup}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                >
+                  <Download className="size-3.5" />
+                  สำรองข้อมูลทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRestoreClick}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                >
+                  <Upload className="size-3.5" />
+                  กู้คืนข้อมูลทั้งหมด
+                </button>
+                <input
+                  ref={restoreInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleRestoreFile}
+                  className="hidden"
+                />
+              </div>
+            </div>
+            <div className="border-t border-[color:var(--color-border)] pt-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-muted-foreground)]">
+                บันทึกเอกสารปัจจุบันเป็น Template
+              </p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -257,6 +322,7 @@ export function TemplatePanel() {
                 เปิดหรือสร้างเอกสารก่อนบันทึก template
               </p>
             )}
+            </div>
           </footer>
         </Dialog.Content>
       </Dialog.Portal>

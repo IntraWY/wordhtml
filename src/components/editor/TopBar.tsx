@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Clock } from "lucide-react";
+import { Download, Clock, Bookmark } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
@@ -9,6 +9,7 @@ import { useUiStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
+import { dispatchOpenTemplates } from "@/lib/events";
 
 export function TopBar() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
@@ -57,6 +58,15 @@ export function TopBar() {
                 {historyCount > 9 ? "9+" : historyCount}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={dispatchOpenTemplates}
+            title="Template ของฉัน"
+            aria-label="Template ของฉัน"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+          >
+            <Bookmark className="size-4" />
           </button>
           <UploadButton />
           <Button
