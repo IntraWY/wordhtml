@@ -1,0 +1,267 @@
+- generic [active] [ref=e1]:
+  - link "ข้ามไปยังเนื้อหา (Skip to content)" [ref=e2] [cursor=pointer]:
+    - /url: "#editor-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - link "wh wordhtml" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: wh
+        - generic [ref=e8]: wordhtml
+      - generic [ref=e9]:
+        - button "โหมดมืด (Dark mode)" [ref=e10]:
+          - img [ref=e11]
+        - button "ประวัติเอกสาร" [ref=e17]:
+          - img [ref=e18]
+          - generic [ref=e21]: ประวัติ
+          - generic "จำนวนเอกสาร (Document count) 1" [ref=e302]: "1"
+        - button "Template ของฉัน" [ref=e22]:
+          - img [ref=e23]
+          - generic [ref=e25]: Template
+        - button "บันทึก Snapshot" [disabled] [ref=e26]:
+          - img [ref=e27]
+          - generic [ref=e31]: บันทึก
+        - button "แบ่งหน้า (Page Break)" [disabled] [ref=e32]:
+          - img [ref=e33]
+          - generic [ref=e38]: แบ่งหน้า
+        - button "อัปโหลดไฟล์ .docx, .html, หรือ .md" [ref=e39]:
+          - img [ref=e40]
+          - text: อัปโหลด
+        - button "ส่งออก HTML พร้อมตัวทำความสะอาด 2 รายการ" [disabled]:
+          - img
+          - text: ส่งออก HTML
+          - generic "ตัวทำความสะอาดที่เปิดใช้งาน (Active cleaners) 2": "2"
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - button "หน้าแรก (Home)" [ref=e46]: หน้าแรก (Home)
+        - button "แทรก (Insert)" [ref=e48]
+        - button "เค้าโครง (Layout)" [ref=e49]
+        - button "ล้าง (Clean)" [ref=e50]
+        - button "มุมมอง (View)" [ref=e51]
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: คลิปบอร์ด
+          - generic [ref=e55]:
+            - button "วาง (Paste)" [ref=e303]:
+              - img [ref=e304]
+            - button "ตัด (Cut)" [ref=e309]:
+              - img [ref=e310]
+            - button "คัดลอก (Copy)" [ref=e316]:
+              - img [ref=e317]
+        - generic [ref=e56]:
+          - generic [ref=e57]: ตัวอักษร
+          - generic [ref=e58]:
+            - combobox "ฟอนต์ (Font)" [ref=e59] [cursor=pointer]:
+              - option "ค่าเริ่มต้น" [selected]
+              - option "TH Sarabun PSK"
+              - option "Sarabun"
+              - option "Noto Sans Thai"
+              - option "Geist"
+              - option "System Sans"
+              - option "Serif"
+              - option "Monospace"
+            - generic [ref=e320]:
+              - img
+              - combobox "ขนาดตัวอักษร (Font Size)" [ref=e321] [cursor=pointer]:
+                - option "ค่าเริ่มต้น" [selected]
+                - option "10 px"
+                - option "11 px"
+                - option "12 px"
+                - option "14 px"
+                - option "16 px"
+                - option "18 px"
+                - option "20 px"
+                - option "22 px"
+                - option "24 px"
+                - option "28 px"
+                - option "32 px"
+                - option "36 px"
+              - generic: ▼
+            - button "ตัวหนา (Bold)" [ref=e322]:
+              - img [ref=e323]
+            - button "ตัวเอียง (Italic)" [ref=e325]:
+              - img [ref=e326]
+            - button "ขีดเส้นใต้ (Underline)" [ref=e328]:
+              - img [ref=e329]
+            - button "ขีดทับ (Strikethrough)" [ref=e331]:
+              - img [ref=e332]
+            - button "ตัวห้อย (Subscript)" [ref=e335]:
+              - img [ref=e336]
+            - button "ตัวยก (Superscript)" [ref=e340]:
+              - img [ref=e341]
+            - generic [ref=e60]:
+              - button "สีตัวอักษร" [ref=e345]:
+                - img [ref=e347]
+              - textbox: "#000000"
+            - generic [ref=e61]:
+              - button "สีพื้นหลัง" [ref=e354]:
+                - img [ref=e356]
+              - textbox: "#ffff00"
+        - generic [ref=e62]:
+          - generic [ref=e63]: ย่อหน้า
+          - generic [ref=e64]:
+            - button "ชิดซ้าย" [ref=e360]:
+              - img [ref=e361]
+            - button "กึ่งกลาง" [ref=e362]:
+              - img [ref=e363]
+            - button "ชิดขวา" [ref=e364]:
+              - img [ref=e365]
+            - button "เต็มบรรทัด" [ref=e366]:
+              - img [ref=e367]
+            - combobox "ระยะบรรทัด (Spacing)" [ref=e65] [cursor=pointer]:
+              - option "Single" [selected]
+              - option "1.5 Lines"
+              - option "Double"
+              - option "At least"
+              - option "Exactly"
+              - option "Multiple"
+            - button "ลดเยื้อง (Outdent)" [ref=e368]:
+              - img [ref=e369]
+            - button "เพิ่มเยื้อง (Indent)" [ref=e371]:
+              - img [ref=e372]
+            - generic [ref=e66]:
+              - generic [ref=e67]: ก่อน
+              - spinbutton "ก่อน (Before) pt" [ref=e68]: "0"
+              - generic [ref=e69]: pt
+            - generic [ref=e70]:
+              - generic [ref=e71]: หลัง
+              - spinbutton "หลัง (After) pt" [ref=e72]: "0"
+              - generic [ref=e73]: pt
+            - button "ย่อหน้า…" [ref=e374]:
+              - img [ref=e375]
+            - button "รายการจุด" [ref=e377]:
+              - img [ref=e378]
+            - button "รายการตัวเลข" [ref=e379]:
+              - img [ref=e380]
+            - button "ลดเยื้อง" [disabled]:
+              - img
+            - button "เพิ่มเยื้อง" [disabled]:
+              - img
+        - generic [ref=e74]:
+          - generic [ref=e75]: รูปแบบ
+          - generic [ref=e76]:
+            - button "หัวเรื่อง 1" [ref=e383]:
+              - img [ref=e384]
+            - button "หัวเรื่อง 2" [ref=e386]:
+              - img [ref=e387]
+            - button "หัวเรื่อง 3" [ref=e389]:
+              - img [ref=e390]
+            - button "อ้างอิง" [ref=e393]:
+              - img [ref=e394]
+            - button "บล็อกโค้ด" [ref=e397]:
+              - img [ref=e398]
+            - button "โค้ดบรรทัด" [ref=e402]:
+              - img [ref=e403]
+            - button "เส้นคั่น" [ref=e406]:
+              - img [ref=e407]
+            - button "ล้างการจัดรูปแบบ" [ref=e408]:
+              - img [ref=e409]
+        - generic [ref=e77]:
+          - generic [ref=e78]: แก้ไข
+          - generic [ref=e79]:
+            - button "เลิกทำ" [disabled]:
+              - img
+            - button "ทำซ้ำ" [disabled]:
+              - img
+            - button "ค้นหา/แทนที่" [ref=e80]:
+              - img [ref=e81]
+    - generic [ref=e86]:
+      - generic [ref=e89]:
+        - generic [ref=e91]:
+          - generic [ref=e135]: "1"
+          - generic [ref=e136]: "2"
+          - generic [ref=e137]: "3"
+          - generic [ref=e138]: "4"
+          - generic [ref=e139]: "5"
+          - generic [ref=e140]: "6"
+          - generic [ref=e141]: "7"
+          - generic [ref=e142]: "8"
+          - generic [ref=e143]: "9"
+          - generic [ref=e144]: "10"
+          - generic [ref=e145]: "11"
+          - generic [ref=e146]: "12"
+          - generic [ref=e147]: "13"
+          - generic [ref=e148]: "14"
+          - generic [ref=e149]: "15"
+          - generic [ref=e150]: "16"
+          - generic [ref=e151]: "17"
+          - generic [ref=e152]: "18"
+          - generic [ref=e153]: "19"
+          - generic [ref=e154]: "20"
+          - generic [ref=e155]: "21"
+          - slider "ขอบซ้าย (Left margin) 19.0 มม." [ref=e158]
+          - slider "ขอบขวา (Right margin) 19.0 มม." [ref=e160]
+          - slider "ย่อหน้าแรก (First-line indent) 0.0 ซม." [ref=e162]
+          - slider "ย่อหน้าซ้าย (Left indent) 0.0 ซม." [ref=e164]
+        - generic [ref=e166]:
+          - generic [ref=e227]: "1"
+          - generic [ref=e228]: "2"
+          - generic [ref=e229]: "3"
+          - generic [ref=e230]: "4"
+          - generic [ref=e231]: "5"
+          - generic [ref=e232]: "6"
+          - generic [ref=e233]: "7"
+          - generic [ref=e234]: "8"
+          - generic [ref=e235]: "9"
+          - generic [ref=e236]: "10"
+          - generic [ref=e237]: "11"
+          - generic [ref=e238]: "12"
+          - generic [ref=e239]: "13"
+          - generic [ref=e240]: "14"
+          - generic [ref=e241]: "15"
+          - generic [ref=e242]: "16"
+          - generic [ref=e243]: "17"
+          - generic [ref=e244]: "18"
+          - generic [ref=e245]: "19"
+          - generic [ref=e246]: "20"
+          - generic [ref=e247]: "21"
+          - generic [ref=e248]: "22"
+          - generic [ref=e249]: "23"
+          - generic [ref=e250]: "24"
+          - generic [ref=e251]: "25"
+          - generic [ref=e252]: "26"
+          - generic [ref=e253]: "27"
+          - generic [ref=e254]: "28"
+          - generic [ref=e255]: "29"
+          - slider "ขอบบน (Top margin) 45.0 มม." [ref=e412]
+          - slider "ขอบล่าง (Bottom margin) 25.0 มม." [ref=e260]
+        - article [ref=e263]:
+          - generic [ref=e413]: พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…
+          - generic "เนื้อหาเอกสาร (Document content)" [ref=e414]:
+            - textbox "โปรแกรมแก้ไขเอกสาร" [ref=e415]:
+              - paragraph [ref=e416]: พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                - generic: อัปโหลด .docx
+              - generic:
+                - generic:
+                  - img
+                - generic: วางจาก Word
+              - generic:
+                - generic:
+                  - img
+                - generic: พิมพ์เอง
+            - paragraph: Ctrl+O เปิดไฟล์ · ลากวางไฟล์ที่นี่ · Ctrl+Shift+N เอกสารใหม่
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - generic "จำนวนหน้า (Pages)" [ref=e274]:
+            - img [ref=e275]
+            - generic [ref=e278]: 1 หน้า
+          - generic "จำนวนคำ (Words)" [ref=e279]:
+            - img [ref=e280]
+            - generic [ref=e282]: 0 คำ
+          - generic "จำนวนตัวอักษร (Characters)" [ref=e283]:
+            - img [ref=e284]
+            - generic [ref=e285]: 0 ตัวอักษร
+        - generic [ref=e286]:
+          - generic "ตัวทำความสะอาด" [ref=e287]:
+            - img [ref=e288]
+            - generic [ref=e291]: 2/9 ตัวทำความสะอาด
+          - generic [ref=e292]: A4 · แนวตั้ง
+    - status:
+      - img
+  - button "Open Next.js Dev Tools" [ref=e298] [cursor=pointer]:
+    - img [ref=e299]
+  - alert [ref=e417]
