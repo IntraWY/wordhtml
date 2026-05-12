@@ -50,7 +50,169 @@ export function cleanPastedHtml(input: string): string {
   //    (preserve single nbsp — sometimes intentional)
   html = html.replace(/(?:&nbsp;){2,}/g, "&nbsp;");
 
+  // 9. Normalize structural wrappers — unwrap <div> containers and convert
+  //    <br>-separated inline content into proper <p> paragraphs so that pastes
+  //    from external sources (Word, web pages, plain-text editors) don't end
+  //    up as a single oversized paragraph.
+  html = normalizePastedStructure(html);
+
   return html;
+}
+
+/**
+ * Normalize common paste structural patterns:
+ * - Unwrap <div> tags that wrap block-level children (e.g. <p>, <h1>…).
+ * - Convert <div> or <p> tags that use <br> to separate lines into
+ *   multiple <p> paragraphs.
+ *
+ * This prevents pasted content from collapsing into a single paragraph
+ * with hard breaks, which makes Enter/splitBlock behave unexpectedly.
+ */
+function normalizePastedStructure(html: string): string {
+  if (typeof document === "undefined") return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  const skipTags = new Set([
+    "pre",
+    "code",
+    "table",
+    "blockquote",
+    "li",
+    "td",
+    "th",
+  ]);
+
+  const blockTags = new Set([
+    "p",
+    "div",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "blockquote",
+    "pre",
+    "table",
+    "figure",
+    "hr",
+    "section",
+    "article",
+  ]);
+
+  function isInsideSkipped(el: Element): boolean {
+    let parent = el.parentElement;
+    while (parent) {
+      if (skipTags.has(parent.tagName.toLowerCase())) return true;
+      parent = parent.parentElement;
+    }
+    return false;
+  }
+
+  // ── 1. Unwrap or convert <div> tags ──
+  const divs = Array.from(doc.body.querySelectorAll("div"));
+  for (const div of divs) {
+    if (!div.parentNode || isInsideSkipped(div)) continue;
+
+    const hasBlockChildren = Array.from(div.children).some((child) =>
+      blockTags.has(child.tagName.toLowerCase())
+    );
+
+    if (hasBlockChildren) {
+      // Move every child out of the div, then remove the div itself.
+      while (div.firstChild) {
+        div.parentNode!.insertBefore(div.firstChild, div);
+      }
+      div.parentNode!.removeChild(div);
+    } else {
+      // Inline content: split at <br> into <p> paragraphs.
+      const paragraphs: HTMLParagraphElement[] = [];
+      let currentP = doc.createElement("p");
+
+      const children = Array.from(div.childNodes);
+      for (const node of children) {
+        if (
+          node.nodeType === Node.ELEMENT_NODE &&
+          (node as Element).tagName.toLowerCase() === "br"
+        ) {
+          if (currentP.childNodes.length > 0) {
+            paragraphs.push(currentP);
+            currentP = doc.createElement("p");
+          }
+        } else {
+          currentP.appendChild(node.cloneNode(true));
+        }
+      }
+
+      if (currentP.childNodes.length > 0) {
+        paragraphs.push(currentP);
+      }
+
+      const parent = div.parentNode;
+      paragraphs.forEach((p) => parent!.insertBefore(p, div));
+      parent!.removeChild(div);
+    }
+  }
+
+  // ── 2. Split <p> tags at direct <br> children ──
+  const ps = Array.from(doc.body.querySelectorAll("p"));
+  for (const p of ps) {
+    if (isInsideSkipped(p)) continue;
+
+    const directBrs = Array.from(p.children).filter(
+      (child) => child.tagName.toLowerCase() === "br"
+    );
+    if (directBrs.length === 0) continue;
+
+    // Don't split if the paragraph already contains other block elements.
+    const hasOtherBlocks = Array.from(p.children).some((child) => {
+      const tag = child.tagName.toLowerCase();
+      return tag !== "br" && blockTags.has(tag);
+    });
+    if (hasOtherBlocks) continue;
+
+    const newPs: HTMLParagraphElement[] = [];
+    let currentP = doc.createElement("p");
+
+    // Preserve attributes from the original paragraph on each new one.
+    for (const attr of Array.from(p.attributes)) {
+      currentP.setAttribute(attr.name, attr.value);
+    }
+
+    const children = Array.from(p.childNodes);
+    for (const node of children) {
+      if (
+        node.nodeType === Node.ELEMENT_NODE &&
+        (node as Element).tagName.toLowerCase() === "br"
+      ) {
+        if (currentP.childNodes.length > 0) {
+          newPs.push(currentP);
+          currentP = doc.createElement("p");
+          for (const attr of Array.from(p.attributes)) {
+            currentP.setAttribute(attr.name, attr.value);
+          }
+        }
+      } else {
+        currentP.appendChild(node.cloneNode(true));
+      }
+    }
+
+    if (currentP.childNodes.length > 0) {
+      newPs.push(currentP);
+    }
+
+    if (newPs.length > 1) {
+      const parent = p.parentNode;
+      newPs.forEach((np) => parent!.insertBefore(np, p));
+      parent!.removeChild(p);
+    }
+  }
+
+  return doc.body.innerHTML;
 }
 
 function removeConditionalComments(html: string): string {

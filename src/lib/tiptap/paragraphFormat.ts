@@ -62,9 +62,35 @@ function parseLineHeight(
     const v = parseFloat(trimmed);
     if (!Number.isNaN(v)) return { lineHeightMode: "atLeast", lineHeight: v };
   }
+  if (trimmed.endsWith("%")) {
+    const v = parseFloat(trimmed);
+    if (!Number.isNaN(v)) return { lineHeightMode: "multiple", lineHeight: v / 100 };
+  }
   const v = parseFloat(trimmed);
-  if (!Number.isNaN(v)) return { lineHeightMode: "multiple", lineHeight: v };
+  if (!Number.isNaN(v)) {
+    // Very large bare numbers are likely mis-parsed percentages (e.g. 150 instead of 1.5)
+    if (v > 5) return { lineHeightMode: "multiple", lineHeight: v / 100 };
+    return { lineHeightMode: "multiple", lineHeight: v };
+  }
   return null;
+}
+
+/** Convert a CSS length value to centimetres. */
+function parseCssLengthToCm(value: string): number {
+  const trimmed = value.trim().toLowerCase();
+  const num = parseFloat(trimmed);
+  if (Number.isNaN(num)) return 0;
+
+  if (trimmed.endsWith("cm")) return num;
+  if (trimmed.endsWith("mm")) return num / 10;
+  if (trimmed.endsWith("in")) return num * 2.54;
+  if (trimmed.endsWith("pt")) return num * 0.0352778;
+  if (trimmed.endsWith("pc")) return num * 0.423333;
+  if (trimmed.endsWith("px")) return num / 37.81;
+
+  // Unknown unit or unitless — treat as cm for backward compatibility with
+  // Word HTML that sometimes omits units on zero values.
+  return num;
 }
 
 export const ParagraphFormatExtension = Extension.create({
@@ -85,7 +111,8 @@ export const ParagraphFormatExtension = Extension.create({
             parseHTML: (el) => {
               const legacy = el.getAttribute("data-indent");
               if (legacy) return parseInt(legacy, 10) * 0.5;
-              return parseFloat(el.style.marginLeft) || 0;
+              const raw = el.style.marginLeft;
+              return raw ? parseCssLengthToCm(raw) : 0;
             },
           },
           marginRight: {
@@ -95,7 +122,10 @@ export const ParagraphFormatExtension = Extension.create({
               if (!v) return {};
               return { style: `margin-right:${v}cm` };
             },
-            parseHTML: (el) => parseFloat(el.style.marginRight) || 0,
+            parseHTML: (el) => {
+              const raw = el.style.marginRight;
+              return raw ? parseCssLengthToCm(raw) : 0;
+            },
           },
           textIndent: {
             default: 0,
@@ -106,7 +136,8 @@ export const ParagraphFormatExtension = Extension.create({
             },
             parseHTML: (el) => {
               if (el.getAttribute("data-indent")) return 0;
-              return parseFloat(el.style.textIndent) || 0;
+              const raw = el.style.textIndent;
+              return raw ? parseCssLengthToCm(raw) : 0;
             },
           },
           spaceBefore: {

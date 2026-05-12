@@ -81,4 +81,36 @@ describe("cleanPastedHtml", () => {
     expect(result).not.toContain("mso-margin");
     expect(result).toContain("font-weight:bold");
   });
+
+  it("unwraps <div> tags that wrap block-level children", () => {
+    const input = `<div><p>Paragraph 1</p><p>Paragraph 2</p></div>`;
+    const result = cleanPastedHtml(input);
+    expect(result).not.toContain("<div>");
+    expect(result).toContain("<p>Paragraph 1</p>");
+    expect(result).toContain("<p>Paragraph 2</p>");
+  });
+
+  it("converts <div> with <br> separators into multiple <p> paragraphs", () => {
+    const input = `<div>Line 1<br>Line 2<br>Line 3</div>`;
+    const result = cleanPastedHtml(input);
+    expect(result).not.toContain("<div>");
+    expect(result).toContain("<p>Line 1</p>");
+    expect(result).toContain("<p>Line 2</p>");
+    expect(result).toContain("<p>Line 3</p>");
+  });
+
+  it("splits <p> tags at direct <br> children into separate paragraphs", () => {
+    const input = `<p>First line<br>Second line</p>`;
+    const result = cleanPastedHtml(input);
+    expect(result).toContain("<p>First line</p>");
+    expect(result).toContain("<p>Second line</p>");
+  });
+
+  it("preserves <br> inside inline spans without splitting the paragraph", () => {
+    const input = `<p><span>Line 1<br>Line 2</span></p>`;
+    const result = cleanPastedHtml(input);
+    // Should NOT split because <br> is inside <span>, not a direct child of <p>
+    expect(result).toContain("<p>");
+    expect(result).toContain("<span>Line 1<br>Line 2</span>");
+  });
 });
