@@ -59,7 +59,7 @@ src/
 │   │   │   ├── primitives.tsx    # MenuDropdown, MenuItem, MenuSub, Sep
 │   │   │   ├── FileMenu.tsx      # New, Open, Export HTML/ZIP/DOCX/MD, Snapshot
 │   │   │   ├── EditMenu.tsx      # Undo/Redo/Copy-as-HTML/Select All
-│   │   │   ├── InsertMenu.tsx    # Link, Image upload/URL, Table, HR, Soft Break, Code
+│   │   │   ├── InsertMenu.tsx    # Link, Image upload/URL, Table, HR, Soft Break, Code, Variable
 │   │   │   ├── ViewMenu.tsx      # Source HTML, Fullscreen
 │   │   │   ├── FormatMenu.tsx    # paragraph, B/I/U/Strike, Sub/Sup/Code,
 │   │   │   │                     #   Align submenu, Font submenu, Font Size submenu, Paragraph dialog, Clear Formatting
@@ -205,6 +205,28 @@ Wired in `EditorShell.tsx`:
 
 Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (block indent +0.5cm, or sink list), Shift+Tab (block indent -0.5cm, or lift list).
+VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-space tab block), Ctrl+Enter (insert page break node).
+
+## Recent Changes & Known Issues
+
+### Recently Completed (2026-05-12)
+1. **Placeholder hints** — `EmptyHint` now shows guidance about `{{variable}}` template syntax; FAQ and PasteTips include variable usage sections.
+2. **Dashed page break indicators** — Automatic pagination separators (`.page-break-indicator`) changed from thick dot-grid bands to simple dashed horizontal lines with centered page labels, matching Microsoft Word style.
+3. **Insert Variable button** — Added to Insert ribbon tab (`InsertMenu.tsx`); inserts `{{variable}}` template mark.
+4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
+
+### Known Pending Bug: Paste + Enter Behavior
+**Symptom:** When copying text from external sources and pasting into the editor, pressing Enter to create a new paragraph causes the entire content to "move together" instead of cleanly inserting a line break at cursor position.
+
+**Suspects:**
+- Malformed paste HTML creating a single wrapper node (e.g., all content inside one `<div>` or `<p>`)
+- `transformPastedHTML` in `VisualEditor.tsx` or `cleanPastedHtml` in `pasteCleanup.ts` producing node structures that confuse Tiptap's paragraph splitting
+- Cursor positioned inside a non-splittable container
+
+**Relevant files to investigate:**
+- `src/components/editor/VisualEditor.tsx` — `editorProps.transformPastedHTML`
+- `src/lib/conversion/pasteCleanup.ts` — `cleanPastedHtml()`
+- Tiptap StarterKit default Enter behavior (paragraph splitting)
 
 ## Adding features
 
@@ -241,5 +263,9 @@ npm run build              # produces ./out
 npx serve out              # local static preview
 # Deploy ./out to any static host: Vercel, Netlify, CF Pages, S3+CloudFront, GitHub Pages, etc.
 ```
+
+**Current deployment:**
+- **GitHub:** `IntraWY/wordhtml` (private repo)
+- **Vercel:** `wordhtml.vercel.app` (auto-deploy on push to `master`)
 
 That's it — no env vars, no secrets, no runtime config required.
