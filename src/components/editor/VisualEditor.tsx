@@ -25,7 +25,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import FontFamily from "@tiptap/extension-font-family";
 
 import { useEditorStore } from "@/store/editorStore";
-import { Upload, FileText, Keyboard } from "lucide-react";
+import { Upload, FileText, Keyboard, Braces } from "lucide-react";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { ParagraphFormatExtension } from "@/lib/tiptap/paragraphFormat";
@@ -308,9 +308,18 @@ function EmptyHint() {
           </div>
           <span className="text-[11px]">พิมพ์เอง</span>
         </div>
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
+            <Braces className="size-4" />
+          </div>
+          <span className="text-[11px]">ใช้ตัวแปร (Vars)</span>
+        </div>
       </div>
       <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
         Ctrl+O เปิดไฟล์ · ลากวางไฟล์ที่นี่ · Ctrl+Shift+N เอกสารใหม่
+      </p>
+      <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+        พิมพ์ {"{{ชื่อตัวแปร}}"} เพื่อสร้างตัวแปร · เปิดโหมด Template ที่เมนูมุมมอง
       </p>
     </div>
   );
