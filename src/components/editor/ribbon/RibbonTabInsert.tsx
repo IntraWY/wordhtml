@@ -13,6 +13,7 @@ import {
   Split,
   FilePlus,
   Globe,
+  Braces,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -124,6 +125,15 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
   }, [editor]);
 
   const handlePageBreak = useCallback(() => editor?.chain().focus().insertPageBreak().run(), [editor]);
+  const handleVariable = useCallback(() => {
+    if (!editor) return;
+    if (!useEditorStore.getState().templateMode) {
+      useEditorStore.getState().toggleTemplateMode();
+    }
+    editor.chain().focus().insertContent("{{}}").run();
+    const pos = editor.state.selection.from;
+    editor.chain().focus().setTextSelection(pos - 2).run();
+  }, [editor]);
   const handleAddPage = useCallback(() => {
     if (!editor) return;
     const doc = editor.state.doc;
@@ -185,6 +195,12 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="เพิ่มหน้าใหม่" onClick={handleAddPage} disabled={!hasEditor || !editor?.can().insertPageBreak?.()}>
           <FilePlus className="size-3.5" />
+        </RibbonButton>
+      </RibbonGroup>
+
+      <RibbonGroup label="ตัวแปร (Vars)">
+        <RibbonButton label="แทรกตัวแปร" onClick={handleVariable} disabled={!hasEditor}>
+          <Braces className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
     </>
