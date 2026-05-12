@@ -157,9 +157,11 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
           // Case 2: Isolated 4-space tab block before cursor → delete all 4
           if ($from.parentOffset >= 4) {
             const text = $from.parent.textContent;
-            const offset = $from.parentOffset;
-            const prev4 = text.slice(offset - 4, offset);
-            const charBefore = offset > 4 ? text[offset - 5] : "";
+            // parentOffset counts ProseMirror document positions (1-based into the
+            // paragraph), whereas textContent is a 0-based string — align them.
+            const textOffset = $from.parentOffset - 1;
+            const prev4 = text.slice(textOffset - 4, textOffset);
+            const charBefore = textOffset >= 5 ? text[textOffset - 5] : "";
             if (prev4 === "    " && charBefore !== " ") {
               const startPos = $from.pos - 4;
               const slice = ed.state.doc.textBetween(startPos, $from.pos);
