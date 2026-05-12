@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+import { PX_PER_CM } from "@/lib/page";
 
 export type LineHeightMode =
   | "single"
@@ -51,7 +52,7 @@ function lineHeightFromMode(
   }
 }
 
-function parseLineHeight(
+export function parseLineHeight(
   raw: string
 ): { lineHeightMode: LineHeightMode; lineHeight: number } | null {
   const trimmed = raw.trim().toLowerCase();
@@ -60,14 +61,18 @@ function parseLineHeight(
   if (trimmed === "2") return { lineHeightMode: "double", lineHeight: 2 };
   if (trimmed.endsWith("pt")) {
     const v = parseFloat(trimmed);
-    if (!Number.isNaN(v)) return { lineHeightMode: "atLeast", lineHeight: v };
+    if (!Number.isNaN(v) && v > 0 && v <= 1000) {
+      return { lineHeightMode: "atLeast", lineHeight: v };
+    }
   }
   if (trimmed.endsWith("%")) {
     const v = parseFloat(trimmed);
-    if (!Number.isNaN(v)) return { lineHeightMode: "multiple", lineHeight: v / 100 };
+    if (!Number.isNaN(v) && v > 0 && v <= 1000) {
+      return { lineHeightMode: "multiple", lineHeight: v / 100 };
+    }
   }
   const v = parseFloat(trimmed);
-  if (!Number.isNaN(v)) {
+  if (!Number.isNaN(v) && v > 0 && v <= 1000) {
     // Very large bare numbers are likely mis-parsed percentages (e.g. 150 instead of 1.5)
     if (v > 5) return { lineHeightMode: "multiple", lineHeight: v / 100 };
     return { lineHeightMode: "multiple", lineHeight: v };
@@ -76,17 +81,17 @@ function parseLineHeight(
 }
 
 /** Convert a CSS length value to centimetres. */
-function parseCssLengthToCm(value: string): number {
+export function parseCssLengthToCm(value: string): number {
   const trimmed = value.trim().toLowerCase();
   const num = parseFloat(trimmed);
-  if (Number.isNaN(num)) return 0;
+  if (Number.isNaN(num) || num < 0) return 0;
 
   if (trimmed.endsWith("cm")) return num;
   if (trimmed.endsWith("mm")) return num / 10;
   if (trimmed.endsWith("in")) return num * 2.54;
   if (trimmed.endsWith("pt")) return num * 0.0352778;
   if (trimmed.endsWith("pc")) return num * 0.423333;
-  if (trimmed.endsWith("px")) return num / 37.81;
+  if (trimmed.endsWith("px")) return num / PX_PER_CM;
 
   // Unknown unit or unitless — treat as cm for backward compatibility with
   // Word HTML that sometimes omits units on zero values.
@@ -108,7 +113,7 @@ export const ParagraphFormatExtension = Extension.create({
               if (!v) return {};
               return { style: `margin-left:${v}cm` };
             },
-            parseHTML: (el) => {
+            parseHTML: (el): number => {
               const legacy = el.getAttribute("data-indent");
               if (legacy) return parseInt(legacy, 10) * 0.5;
               const raw = el.style.marginLeft;
@@ -122,7 +127,7 @@ export const ParagraphFormatExtension = Extension.create({
               if (!v) return {};
               return { style: `margin-right:${v}cm` };
             },
-            parseHTML: (el) => {
+            parseHTML: (el): number => {
               const raw = el.style.marginRight;
               return raw ? parseCssLengthToCm(raw) : 0;
             },
@@ -134,7 +139,7 @@ export const ParagraphFormatExtension = Extension.create({
               if (!v) return {};
               return { style: `text-indent:${v}cm` };
             },
-            parseHTML: (el) => {
+            parseHTML: (el): number => {
               if (el.getAttribute("data-indent")) return 0;
               const raw = el.style.textIndent;
               return raw ? parseCssLengthToCm(raw) : 0;
@@ -147,7 +152,7 @@ export const ParagraphFormatExtension = Extension.create({
               if (!v) return {};
               return { style: `margin-top:${v}pt` };
             },
-            parseHTML: (el) => {
+            parseHTML: (el): number => {
               const mt = el.style.marginTop;
               if (mt && mt.endsWith("pt")) return parseFloat(mt);
               return 0;
@@ -160,7 +165,7 @@ export const ParagraphFormatExtension = Extension.create({
               if (!v) return {};
               return { style: `margin-bottom:${v}pt` };
             },
-            parseHTML: (el) => {
+            parseHTML: (el): number => {
               const mb = el.style.marginBottom;
               if (mb && mb.endsWith("pt")) return parseFloat(mb);
               return 0;
@@ -175,7 +180,7 @@ export const ParagraphFormatExtension = Extension.create({
               if (!css) return {};
               return { style: `line-height:${css}` };
             },
-            parseHTML: (el) => {
+            parseHTML: (el): LineHeightMode | null => {
               const lh = el.style.lineHeight;
               if (!lh) return null;
               const parsed = parseLineHeight(lh);
@@ -185,7 +190,7 @@ export const ParagraphFormatExtension = Extension.create({
           lineHeight: {
             default: null,
             renderHTML: () => ({}),
-            parseHTML: (el) => {
+            parseHTML: (el): number | null => {
               const lh = el.style.lineHeight;
               if (!lh) return null;
               const parsed = parseLineHeight(lh);

@@ -116,7 +116,8 @@ function normalizePastedStructure(html: string): string {
   // ── 1. Unwrap or convert <div> tags ──
   const divs = Array.from(doc.body.querySelectorAll("div"));
   for (const div of divs) {
-    if (!div.parentNode || isInsideSkipped(div)) continue;
+    const parent = div.parentNode;
+    if (!parent || isInsideSkipped(div)) continue;
 
     const hasBlockChildren = Array.from(div.children).some((child) =>
       blockTags.has(child.tagName.toLowerCase())
@@ -125,9 +126,9 @@ function normalizePastedStructure(html: string): string {
     if (hasBlockChildren) {
       // Move every child out of the div, then remove the div itself.
       while (div.firstChild) {
-        div.parentNode!.insertBefore(div.firstChild, div);
+        parent.insertBefore(div.firstChild, div);
       }
-      div.parentNode!.removeChild(div);
+      parent.removeChild(div);
     } else {
       // Inline content: split at <br> into <p> paragraphs.
       const paragraphs: HTMLParagraphElement[] = [];
@@ -152,9 +153,8 @@ function normalizePastedStructure(html: string): string {
         paragraphs.push(currentP);
       }
 
-      const parent = div.parentNode;
-      paragraphs.forEach((p) => parent!.insertBefore(p, div));
-      parent!.removeChild(div);
+      paragraphs.forEach((p) => parent.insertBefore(p, div));
+      parent.removeChild(div);
     }
   }
 
@@ -207,8 +207,9 @@ function normalizePastedStructure(html: string): string {
 
     if (newPs.length > 1) {
       const parent = p.parentNode;
-      newPs.forEach((np) => parent!.insertBefore(np, p));
-      parent!.removeChild(p);
+      if (!parent) continue;
+      newPs.forEach((np) => parent.insertBefore(np, p));
+      parent.removeChild(p);
     }
   }
 
