@@ -14,7 +14,7 @@ Everything runs **client-side** — no API routes, no server processing. The sit
 npm install
 npm run dev          # http://localhost:3000
 npm run build        # produces ./out — static export
-npm test             # vitest run (112 tests across 9 files)
+npm test             # vitest run (190 tests across 15 files)
 npm run lint
 ```
 
@@ -33,6 +33,9 @@ npm run lint
 | HTML → markdown | **turndown** | with custom GFM-table rule |
 | ZIP packaging | **JSZip** | for ZIP exports with extracted images |
 | Icons | **lucide-react** | |
+| Math | **KaTeX** | Tiptap Node extension with `data-latex`; inline + block |
+| PDF export | **html2pdf.js** | client-side rasterized PDF with A4/Letter margins |
+| E2E | **Playwright** | `tests/e2e/*.spec.ts`; auto-runs `npm run dev` |
 | Tests | **Vitest** + **jsdom** | `*.test.ts` colocated next to source |
 
 > **Heads-up:** This is **Next.js 16** — APIs and conventions can differ from older training data. Read `node_modules/next/dist/docs/01-app/...` before introducing patterns from earlier versions.
@@ -78,9 +81,13 @@ src/
 │   │   │                         #   + indent triangles (left/first-line).
 │   │   ├── SearchPanel.tsx       # Ctrl+F floating Find & Replace panel
 │   │   ├── PageSetupDialog.tsx   # A4/Letter, portrait/landscape, margins
-│   │   ├── ExportDialog.tsx      # 4-format download + cleaner preview
+│   │   ├── ExportDialog.tsx      # 5-format download (HTML/ZIP/DOCX/MD/PDF) + cleaner preview
 │   │   ├── UploadButton.tsx      # listens "wordhtml:open-file" event
-│   │   └── HistoryPanel.tsx      # snapshot list with restore/duplicate/delete
+│   │   ├── HistoryPanel.tsx      # snapshot list with restore/duplicate/delete
+│   │   ├── MathInputDialog.tsx   # KaTeX LaTeX equation editor (Ctrl+Shift+M)
+│   │   ├── SourcePane.tsx        # HTML source editor panel
+│   │   ├── TemplatePreview.tsx   # processed template preview for preview mode
+│   │   └── IndentRuler.tsx       # horizontal ruler with indent handles (extracted from EditorShell)
 │   ├── landing/                  # Hero, Features, HowItWorks, Footer, Header
 │   ├── help/                     # FAQ, CleanerExplainers, PasteTips
 │   ├── ui/Button.tsx             # primary button primitive (cva variants)
@@ -99,6 +106,7 @@ src/
 │   │   ├── exportHtml.ts
 │   │   ├── exportZip.ts          # JSZip + extracted images
 │   │   ├── exportDocx.ts         # html-docx-js (dynamic import)
+│   │   ├── exportPdf.ts          # html2pdf.js client-side PDF generation
 │   │   ├── exportMarkdown.ts     # turndown wrapper with GFM tables (+ tests)
 │   │   └── wrap.ts               # wrapAsDocument({ title, pageSetup }), @page CSS
 │   ├── tiptap/
@@ -111,11 +119,18 @@ src/
 │   │   ├── repeatingRow.ts       # Table row with data-repeat attrs
 │   │   ├── headingWithId.ts      # Heading with preserved id attr
 │   │   ├── bulletListWithClass.ts# BulletList with preserved class attr
-│   │   └── imageWithAlign.ts     # Image extension extended with align/width attrs
+│   │   ├── imageWithAlign.ts     # Image extension extended with align/width attrs
+│   │   └── mathEquation.ts       # KaTeX Node extension (inline + block LaTeX)
+│   ├── onboarding/
+│   │   └── Tour.tsx              # driver.js 5-step onboarding spotlight tour
 │   ├── images.ts                 # extract base64 <img> → File[] for ZIP
 │   ├── page.ts                   # A4/LETTER constants + mmToPx (shared by EditorShell & Ruler)
 │   ├── text.ts                   # plainTextFromHtml, Thai-aware countWords (+ tests)
 │   └── utils.ts                  # cn() — clsx + tailwind-merge
+├── hooks/
+│   ├── useEditorResize.ts       # ResizeObserver on article; returns contentHeight
+│   ├── useOnboarding.ts         # localStorage-backed tour state (start/skip/reset)
+│   └── useVirtualScroll.ts      # IntersectionObserver + content-visibility for >5 pages
 ├── store/editorStore.ts          # Zustand global store
 └── types/
     ├── index.ts                  # CleanerKey, CLEANERS, ImageMode,
@@ -154,7 +169,7 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 
 Tokens live in `src/app/globals.css` under `@theme inline`. Tailwind v4 picks them up automatically as `bg-background`, `text-foreground`, etc.
 
-- **Palette:** zinc-based monochrome (`#fafafa` / `#18181b`) with success green and danger red. No dark mode (light only).
+- **Palette:** zinc-based monochrome (`#fafafa` / `#18181b`) with success green and danger red. Dark mode supported via `html[data-theme="dark"]`; `.paper` uses `--color-paper` token (`#1f1f23` in dark) to remain distinct from the canvas. Print stylesheet forces white paper regardless of theme.
 - **Type:** Geist Sans for UI and body, Geist Mono for code/terminal surfaces. Font menu also offers TH Sarabun PSK, Sarabun, Noto Sans Thai, Kanit, Prompt, system-ui, serif, monospace.
 - **Radius:** 4 / 6 / 8 / 12 / 16 px (`--radius-xs` … `--radius-xl`).
 - **Editor IS the paper.** The Tiptap `EditorContent` renders directly inside `<article class="paper printable-paper">` in `EditorShell`. `.prose-editor` and `.paper` share the same typography rules in `globals.css` so exports look identical to what you type.
@@ -200,6 +215,7 @@ Wired in `EditorShell.tsx`:
 | Ctrl+Shift+N | Reset to new document |
 | Ctrl+F | Toggle Find & Replace panel |
 | Ctrl+K | Insert link prompt |
+| Ctrl+Shift+M | Open math equation dialog |
 | Ctrl+P | Print (A4 preview only via `@media print`) |
 | F11 | Toggle fullscreen |
 
@@ -209,24 +225,29 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 
 ## Recent Changes & Known Issues
 
-### Recently Completed (2026-05-12)
-1. **Placeholder hints** — `EmptyHint` now shows guidance about `{{variable}}` template syntax; FAQ and PasteTips include variable usage sections.
+### Phase 1 — Stability (2026-05-14)
+1. **Paste + Enter bug fixed** — `pasteCleanup.ts` now unwraps semantic container elements (`<section>`, `<article>`, `<main>`, `<header>`, `<footer>`, `<aside>`, `<nav>`) that previously caused Tiptap paragraph splitting to fail after paste.
+2. **E2E smoke tests** — Playwright tests for app load, typing, export dialog, and .docx upload (`tests/e2e/smoke.spec.ts`).
+3. **GitHub Actions CI** — `.github/workflows/ci.yml` runs lint + unit tests + build + E2E on push/PR to `master`.
+
+### Phase 2 — Advanced Features (2026-05-14)
+4. **KaTeX math equations** — Tiptap Node extension with `MathInputDialog` (Ctrl+Shift+M). Supports inline and block LaTeX. Rendered via KaTeX in editor and exports.
+5. **PDF export** — Client-side PDF generation via `html2pdf.js` with A4/Letter margins, fonts, and image support. Added as 5th export format.
+6. **EditorShell refactor** — Extracted `IndentRuler`, `TemplatePreview`, `SourcePane` into standalone files. Reduced `EditorShell.tsx` from 495 to 376 lines.
+
+### Phase 3 — Polish (2026-05-14)
+7. **Onboarding tour** — 5-step `driver.js` spotlight tour auto-starts on first visit to `/app`. Skippable. State persisted in `localStorage`.
+8. **Virtual scroll** — `content-visibility: auto` + `contain-intrinsic-size` for documents >5 pages. Keeps ProseMirror state intact while improving scroll performance.
+9. **Dark mode paper** — `.paper` now uses `--color-paper` token (`#1f1f23` in dark mode) distinct from canvas. Print stylesheet forces white paper regardless of theme.
+
+### Previously (2026-05-12)
+- **Placeholder hints** — `EmptyHint` now shows guidance about `{{variable}}` template syntax; FAQ and PasteTips include variable usage sections.
 2. **Dashed page break indicators** — Automatic pagination separators (`.page-break-indicator`) changed from thick dot-grid bands to simple dashed horizontal lines with centered page labels, matching Microsoft Word style.
 3. **Insert Variable button** — Added to Insert ribbon tab (`InsertMenu.tsx`); inserts `{{variable}}` template mark.
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
-### Known Pending Bug: Paste + Enter Behavior
-**Symptom:** When copying text from external sources and pasting into the editor, pressing Enter to create a new paragraph causes the entire content to "move together" instead of cleanly inserting a line break at cursor position.
-
-**Suspects:**
-- Malformed paste HTML creating a single wrapper node (e.g., all content inside one `<div>` or `<p>`)
-- `transformPastedHTML` in `VisualEditor.tsx` or `cleanPastedHtml` in `pasteCleanup.ts` producing node structures that confuse Tiptap's paragraph splitting
-- Cursor positioned inside a non-splittable container
-
-**Relevant files to investigate:**
-- `src/components/editor/VisualEditor.tsx` — `editorProps.transformPastedHTML`
-- `src/lib/conversion/pasteCleanup.ts` — `cleanPastedHtml()`
-- Tiptap StarterKit default Enter behavior (paragraph splitting)
+### Known Pending Issues
+- None at this time.
 
 ## Adding features
 
@@ -242,8 +263,9 @@ Before writing new code:
 
 ## Testing
 
-- Pure libs in `lib/cleaning/`, `lib/export/`, `lib/conversion/`, `lib/text.ts`, `lib/images.ts` are unit-tested with Vitest + jsdom (112 tests across 9 files).
-- No E2E suite is wired up — verify manually via `npm run dev`. Past sessions have also used Playwright MCP for smoke testing.
+- Pure libs in `lib/cleaning/`, `lib/export/`, `lib/conversion/`, `lib/text.ts`, `lib/images.ts` are unit-tested with Vitest + jsdom (190 tests across 15 files).
+- E2E suite is wired up with Playwright (`tests/e2e/smoke.spec.ts`) covering app load, typing, export dialog, and .docx upload.
+- CI runs on GitHub Actions (`lint → unit test → build → e2e`).
 - TypeScript runs as part of `next build` — `npm run build` is your type-check.
 
 ## What NOT to do
