@@ -34,6 +34,7 @@ export function UploadButton() {
   return (
     <>
       <Button
+        data-tour="upload"
         variant="secondary"
         size="sm"
         onClick={() => inputRef.current?.click()}

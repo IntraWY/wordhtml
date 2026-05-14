@@ -40,6 +40,7 @@
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "driver.js": "^1.4.0",
     "html-docx-js": "^0.3.1",
     "html2pdf.js": "^0.14.0",
     "jszip": "^3.10.1",

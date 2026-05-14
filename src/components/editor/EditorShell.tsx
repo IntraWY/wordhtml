@@ -27,6 +27,7 @@ import { useDragAndDrop } from "@/hooks/useDragAndDrop";
 import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { useEditorResize } from "@/hooks/useEditorResize";
 import { useAutoPagination } from "@/hooks/useAutoPagination";
+import { useVirtualScroll } from "@/hooks/useVirtualScroll";
 import { DialogManager } from "./DialogManager";
 import { ParagraphDialog } from "./ParagraphDialog";
 import { MathInputDialog } from "./MathInputDialog";
@@ -35,6 +36,7 @@ import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
 import { PageBreakIndicator } from "./PageBreakIndicator";
 import { ParagraphContextMenu } from "./ParagraphContextMenu";
+import { Tour } from "@/components/onboarding/Tour";
 
 export function EditorShell() {
   const editorRef = useRef<Editor | null>(null);
@@ -80,6 +82,7 @@ export function EditorShell() {
     undefined,
     [documentHtml, pageSetup]
   );
+  const { visiblePages, isActive: virtualScrollActive, containerRef: virtualScrollContainerRef } = useVirtualScroll(pageBreaks, { overscan: 1, threshold: 5 });
   const { onDragOver, onDragLeave, onDrop } = useDragAndDrop(editor, setIsDragging);
 
   /* custom-event bridge between menu components and shell */
@@ -265,7 +268,7 @@ export function EditorShell() {
                   <PreviewToggle />
                 </div>
               )}
-              <div className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
+              <div ref={virtualScrollContainerRef} className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
                 {previewMode === "preview" && templateMode ? (
                   <TemplatePreview widthPx={widthPx} />
                 ) : (
@@ -299,12 +302,12 @@ export function EditorShell() {
                         onRulerActive={handleRulerActive}
                         contentHeight={contentHeight > 0 ? contentHeight : undefined}
                       />
-                      <div className="relative">
+                      <div className="relative" data-tour="editor">
                         <PageBreakIndicator pageBreaks={pageBreaks} />
                         <article
                           id="editor-content"
                           ref={articleRef}
-                          className="paper printable-paper"
+                          className={cn("paper printable-paper", virtualScrollActive && "page-virtual")}
                           style={{
                             minHeight: heightPx,
                             width: widthPx,
@@ -312,9 +315,13 @@ export function EditorShell() {
                             paddingRight: marginRightPx,
                             paddingBottom: marginBottomPx,
                             paddingLeft: marginLeftPx,
+                            /* dynamic intrinsic size per page when virtual scroll is active */
+                            containIntrinsicSize: virtualScrollActive
+                              ? `${widthPx}px ${heightPx}px`
+                              : undefined,
                           }}
                         >
-                          <VisualEditor onEditorReady={onEditorReady} />
+                          <VisualEditor onEditorReady={onEditorReady} visiblePages={visiblePages} virtualScrollActive={virtualScrollActive} />
                         </article>
                       </div>
                     </div>
@@ -374,6 +381,7 @@ export function EditorShell() {
         <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />
         <ParagraphContextMenu editor={editor} containerRef={articleRef} />
         <MobileBlock />
+        <Tour />
       </div>
     </>
   );

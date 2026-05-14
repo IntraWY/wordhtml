@@ -33,7 +33,7 @@ export function RibbonTabLayout({ editor }: { editor: Editor | null }) {
 
   return (
     <>
-      <RibbonGroup label="ขนาดกระดาษ">
+      <RibbonGroup label="ขนาดกระดาษ" data-tour="layout">
         <RibbonSelect
           label="ขนาด (Size)"
           value={pageSetup.size}

@@ -23,7 +23,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-5">
+      <header data-tour="welcome" className="flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-5">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-md bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)] text-xs font-bold tracking-tighter">
@@ -95,6 +95,7 @@ export function TopBar() {
           </button>
           <UploadButton />
           <Button
+            data-tour="export"
             size="sm"
             onClick={() => {
               prepareExport();

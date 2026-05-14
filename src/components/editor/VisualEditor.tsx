@@ -26,6 +26,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import FontFamily from "@tiptap/extension-font-family";
 
 import { useEditorStore } from "@/store/editorStore";
+import { usePaginationStore } from "@/store/paginationStore";
 import { Upload, FileText, Keyboard, Braces } from "lucide-react";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
@@ -39,9 +40,11 @@ import { ImageResizeView } from "./ImageResizeView";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
+  visiblePages?: Set<number>;
+  virtualScrollActive?: boolean;
 }
 
-export function VisualEditor({ onEditorReady }: VisualEditorProps) {
+export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive }: VisualEditorProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const setHtml = useEditorStore((s) => s.setHtml);
   const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
@@ -266,6 +269,46 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       removeEventListener(EVENT_NAMES.insertPageBreak, handler);
     };
   }, []);
+
+  useEffect(() => {
+    if (!virtualScrollActive || !editor) return;
+    if (!visiblePages || visiblePages.size === 0) return;
+
+    const prose = editor.view.dom as HTMLElement;
+    if (!prose) return;
+
+    const children = Array.from(prose.children) as HTMLElement[];
+    if (children.length === 0) return;
+
+    // Map each child element to its page index based on offsetTop relative to article.
+    const article = prose.closest("article.paper") as HTMLElement | null;
+    const articleTop = article?.getBoundingClientRect().top ?? 0;
+
+    const pageBreaks = usePaginationStore.getState().pageBreaks;
+
+    for (const el of children) {
+      const elTop = el.getBoundingClientRect().top - articleTop;
+      let pageIdx = 0;
+      for (let i = 1; i < pageBreaks.length; i++) {
+        if (pageBreaks[i] <= elTop + 1) {
+          pageIdx = i;
+        } else {
+          break;
+        }
+      }
+
+      const isVisible = visiblePages.has(pageIdx);
+      if (isVisible) {
+        el.style.contentVisibility = "";
+        el.style.containIntrinsicSize = "";
+      } else {
+        el.style.contentVisibility = "auto";
+        // Approximate intrinsic height to preserve scroll thumb size.
+        const rect = el.getBoundingClientRect();
+        el.style.containIntrinsicSize = `${rect.width}px ${rect.height}px`;
+      }
+    }
+  }, [editor, visiblePages, virtualScrollActive]);
 
   if (!editor) {
     return (

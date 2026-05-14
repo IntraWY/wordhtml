@@ -14,6 +14,7 @@
   --color-success: #16a34a;
   --color-danger: #dc2626;
   --color-selected-cell: rgba(79, 70, 229, 0.07);
+  --color-paper: #ffffff;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -39,6 +40,7 @@ html[data-theme="dark"] {
   --color-success: #22c55e;
   --color-danger: #ef4444;
   --color-selected-cell: rgba(129, 140, 248, 0.12);
+  --color-paper: #1f1f23;
 }
 
 html,
@@ -425,7 +427,7 @@ html[data-theme="dark"] .page-break-indicator-label {
 /* Ensure paper container has relative position for absolute children */
 .paper {
   position: relative;
-  background: var(--color-background);
+  background: var(--color-paper);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.04),
     0 1px 3px rgba(0, 0, 0, 0.08),
@@ -435,10 +437,10 @@ html[data-theme="dark"] .page-break-indicator-label {
 
 html[data-theme="dark"] .paper {
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.25),
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    0 12px 28px rgba(0, 0, 0, 0.2);
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.40),
+    0 12px 28px rgba(0, 0, 0, 0.30);
 }
 
 /* Multi-page preview spacing */
@@ -512,6 +514,7 @@ html[data-theme="dark"] .paper {
 
   .printable-paper {
     position: static;
+    background: #fff !important;
     box-shadow: none !important;
     margin: 0 auto;
     page-break-after: always;
@@ -561,6 +564,112 @@ html[data-theme="dark"] .paper {
 .paper h2 + p,
 .paper h3 + p {
   break-before: auto;
+}
+
+/* ── Driver.js onboarding theme overrides ── */
+.wordhtml-driver-popover .driver-popover {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 12px 28px rgba(0, 0, 0, 0.06);
+  padding: 1rem;
+  font-family: var(--font-sans), -apple-system, system-ui, sans-serif;
+  max-width: 360px;
+}
+
+html[data-theme="dark"] .wordhtml-driver-popover .driver-popover {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.wordhtml-driver-popover .driver-popover-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-foreground);
+  margin-bottom: 0.5rem;
+}
+
+.wordhtml-driver-popover .driver-popover-description {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-muted-foreground);
+  margin-bottom: 1rem;
+}
+
+.wordhtml-driver-popover .driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground);
+  font-weight: 500;
+}
+
+.wordhtml-driver-popover .driver-popover-close-btn {
+  color: var(--color-muted-foreground);
+  transition: color 150ms ease;
+}
+.wordhtml-driver-popover .driver-popover-close-btn:hover {
+  color: var(--color-foreground);
+}
+
+.wordhtml-driver-popover .driver-popover-arrow {
+  border-color: var(--color-border);
+}
+
+.wordhtml-driver-popover .driver-popover-navigation-btns {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.wordhtml-driver-popover .driver-popover-prev-btn,
+.wordhtml-driver-popover .driver-popover-next-btn,
+.wordhtml-driver-popover .driver-popover-close-btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+/* Secondary / Prev button */
+.wordhtml-driver-popover .driver-popover-prev-btn,
+.wordhtml-driver-popover .driver-popover-close-btn-text {
+  background: transparent;
+  color: var(--color-muted-foreground);
+  border-color: var(--color-border);
+}
+.wordhtml-driver-popover .driver-popover-prev-btn:hover,
+.wordhtml-driver-popover .driver-popover-close-btn-text:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+/* Primary / Next button */
+.wordhtml-driver-popover .driver-popover-next-btn {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: transparent;
+}
+.wordhtml-driver-popover .driver-popover-next-btn:hover {
+  background: var(--color-accent-hover);
+}
+
+/* Stage spotlight */
+#driver-stage {
+  border-radius: var(--radius-md) !important;
 }
 
 /* ── KaTeX math equation styles ── */
