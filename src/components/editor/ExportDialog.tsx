@@ -8,6 +8,7 @@ import {
   FileArchive,
   FileText,
   FileType2,
+  FileDown,
   Loader2,
   Copy,
   Check,
@@ -21,6 +22,7 @@ import { downloadHtml } from "@/lib/export/exportHtml";
 import { downloadZip } from "@/lib/export/exportZip";
 import { downloadDocx } from "@/lib/export/exportDocx";
 import { exportMarkdown } from "@/lib/export/exportMarkdown";
+import { exportPdf } from "@/lib/export/exportPdf";
 import { generateGASFunction } from "@/lib/gasGenerator";
 import type { ExportFormat, ImageMode } from "@/types";
 import { cn } from "@/lib/utils";
@@ -106,6 +108,8 @@ export function ExportDialog() {
     }
   };
 
+  const pageSetup = useEditorStore((s) => s.pageSetup);
+
   const handleDownload = async (kind: ExportKind) => {
     if (busy) return;
     setBusy(kind);
@@ -121,6 +125,11 @@ export function ExportDialog() {
         await downloadZip(cleanedHtml, opts);
       } else if (kind === "md") {
         await exportMarkdown(cleanedHtml, fileName);
+      } else if (kind === "pdf") {
+        await exportPdf(cleanedHtml, {
+          sourceName: fileName,
+          pageSetup,
+        });
       } else {
         await downloadDocx(cleanedHtml, opts);
       }
@@ -308,6 +317,23 @@ export function ExportDialog() {
                       <FileType2 />
                     )}
                     ดาวน์โหลด .md
+                  </Button>
+                  <Button
+                    variant={selectedFormat === "pdf" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setPendingExportFormat("pdf");
+                      handleDownload("pdf");
+                    }}
+                    disabled={busy !== null}
+                    aria-busy={busy === "pdf"}
+                    aria-label={busy === "pdf" ? "กำลังดาวน์โหลด .pdf" : "ดาวน์โหลด .pdf"}
+                  >
+                    {busy === "pdf" ? (
+                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .pdf" />
+                    ) : (
+                      <FileDown />
+                    )}
+                    ดาวน์โหลด .pdf
                   </Button>
                 </div>
               </footer>

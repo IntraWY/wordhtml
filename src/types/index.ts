@@ -65,7 +65,7 @@ export const CLEANERS: readonly CleanerInfo[] = [
 
 export type ImageMode = "inline" | "separate";
 
-export type ExportFormat = "html" | "zip" | "docx" | "md";
+export type ExportFormat = "html" | "zip" | "docx" | "md" | "pdf";
 
 export interface HeaderFooterConfig {
   enabled: boolean;

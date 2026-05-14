@@ -71,6 +71,10 @@ export function wrapAsDocument(
     code { background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; }
     pre { background: #f4f4f5; padding: 1em; border-radius: 6px; overflow-x: auto; }
     h1, h2, h3 { letter-spacing: -0.01em; }
+    /* KaTeX math equation styles */
+    .katex-display { margin: 1em 0; overflow-x: auto; }
+    .katex { font-size: 1.1em; line-height: 1.2; }
+    span[data-type="math-equation"] { display: inline-block; }
   </style>
 </head>
 <body>

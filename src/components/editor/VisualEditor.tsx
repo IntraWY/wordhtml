@@ -10,6 +10,7 @@ import { RepeatingRow } from "@/lib/tiptap/repeatingRow";
 import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
 import { PaginationAware } from "@/lib/tiptap/paginationAware";
+import { MathEquation } from "@/lib/tiptap/mathEquation";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -95,6 +96,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TaskItem.configure({ nested: true }),
       FontFamily,
       PaginationAware,
+      MathEquation,
     ],
     []
   );

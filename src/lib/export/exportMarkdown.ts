@@ -52,6 +52,18 @@ function getTurndown(): TurndownService {
       );
     },
   });
+  // Math equations → plain text fallback $$latex$$
+  td.addRule("mathEquation", {
+    filter: (node) =>
+      node instanceof HTMLElement &&
+      node.getAttribute("data-type") === "math-equation",
+    replacement: (_, node) => {
+      if (!(node instanceof HTMLElement)) return "";
+      const latex = node.getAttribute("data-latex") ?? "";
+      const inline = node.getAttribute("data-inline") === "true";
+      return inline ? `$${latex}$` : `\n\n$$${latex}$$\n\n`;
+    },
+  });
   cachedTurndown = td;
   return td;
 }

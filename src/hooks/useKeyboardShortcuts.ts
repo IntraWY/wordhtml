@@ -123,6 +123,12 @@ export function useKeyboardShortcuts(editor: Editor | null) {
         window.print();
         return;
       }
+
+      if (key === "m" && event.shiftKey) {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("wordhtml:open-math-dialog"));
+        return;
+      }
     };
 
     window.addEventListener("keydown", onKey);

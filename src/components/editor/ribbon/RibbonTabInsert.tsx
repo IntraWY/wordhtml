@@ -14,6 +14,7 @@ import {
   FilePlus,
   Globe,
   Braces,
+  Sigma,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -146,6 +147,10 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     }
   }, [editor]);
 
+  const handleMath = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("wordhtml:open-math-dialog"));
+  }, []);
+
   return (
     <>
       <RibbonGroup label="ลิงก์ & รูปภาพ">
@@ -201,6 +206,12 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
       <RibbonGroup label="ตัวแปร (Vars)">
         <RibbonButton label="แทรกตัวแปร" onClick={handleVariable} disabled={!hasEditor}>
           <Braces className="size-3.5" />
+        </RibbonButton>
+      </RibbonGroup>
+
+      <RibbonGroup label="สมการ (Math)">
+        <RibbonButton label="แทรกสมการ" onClick={handleMath} disabled={!hasEditor}>
+          <Sigma className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
     </>

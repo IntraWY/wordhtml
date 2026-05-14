@@ -562,3 +562,19 @@ html[data-theme="dark"] .paper {
 .paper h3 + p {
   break-before: auto;
 }
+
+/* ── KaTeX math equation styles ── */
+.prose-editor .katex-display,
+.paper .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+}
+.prose-editor .katex,
+.paper .katex {
+  font-size: 1.1em;
+  line-height: 1.2;
+}
+.prose-editor span[data-type="math-equation"],
+.paper span[data-type="math-equation"] {
+  display: inline-block;
+}

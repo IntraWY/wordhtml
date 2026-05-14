@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, X, Loader2, FileUp, Image as ImageIcon, FileText } from "lucide-react";
 import { StatusBar } from "./StatusBar";
 import type { Editor } from "@tiptap/react";
@@ -11,16 +11,16 @@ import { MobileToolbar } from "./MobileToolbar";
 import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
 import { PreviewToggle } from "./PreviewToggle";
-import { MultiPagePreview } from "./MultiPagePreview";
 import { VariablePanel } from "./VariablePanel";
+import { IndentRuler } from "./IndentRuler";
+import { TemplatePreview } from "./TemplatePreview";
+import { SourcePane } from "./SourcePane";
 import { usePaginationStore } from "@/store/paginationStore";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
-import { useToastStore } from "@/store/toastStore";
 import { useUiStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 import { A4, LETTER, mmToPx } from "@/lib/page";
-import { processTemplate } from "@/lib/templateEngine";
 
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useDragAndDrop } from "@/hooks/useDragAndDrop";
@@ -29,131 +29,12 @@ import { useEditorResize } from "@/hooks/useEditorResize";
 import { useAutoPagination } from "@/hooks/useAutoPagination";
 import { DialogManager } from "./DialogManager";
 import { ParagraphDialog } from "./ParagraphDialog";
+import { MathInputDialog } from "./MathInputDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
 import { PageBreakIndicator } from "./PageBreakIndicator";
 import { ParagraphContextMenu } from "./ParagraphContextMenu";
-
-function IndentRuler({
-  editor,
-  cm,
-  marginStart,
-  marginEnd,
-  marginLeftMm,
-  marginRightMm,
-  onMarginChange,
-  onRulerActive,
-}: {
-  editor: Editor | null;
-  cm: number;
-  marginStart: number;
-  marginEnd: number;
-  marginLeftMm: number;
-  marginRightMm: number;
-  onMarginChange: (leftMm: number, rightMm: number) => void;
-  onRulerActive?: (info: { label: string } | null) => void;
-}) {
-  const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
-
-  useEffect(() => {
-    if (!editor) return;
-    const update = () => {
-      const { state } = editor;
-      const nodeType = state.selection.$from.parent.type.name;
-      const attrs =
-        nodeType === "heading"
-          ? editor.getAttributes("heading")
-          : editor.getAttributes("paragraph");
-      setCurrentIndent({
-        marginLeft: (attrs.marginLeft as number) ?? 0,
-        textIndent: (attrs.textIndent as number) ?? 0,
-      });
-    };
-    editor.on("selectionUpdate", update);
-    return () => {
-      editor.off("selectionUpdate", update);
-    };
-  }, [editor]);
-
-  const handleIndentChange = useCallback(
-    (marginLeft: number, textIndent: number) => {
-      editor?.commands.setIndent(marginLeft, textIndent);
-    },
-    [editor]
-  );
-
-  return (
-    <Ruler
-      orientation="horizontal"
-      cm={cm}
-      marginStart={marginStart}
-      marginEnd={marginEnd}
-      indentLeft={currentIndent.marginLeft}
-      indentFirst={currentIndent.textIndent}
-      onIndentChange={handleIndentChange}
-      marginLeftMm={marginLeftMm}
-      marginRightMm={marginRightMm}
-      onMarginChange={onMarginChange}
-      onRulerActive={onRulerActive}
-    />
-  );
-}
-
-function TemplatePreview({ widthPx }: { widthPx: number }) {
-  const documentHtml = useEditorStore((s) => s.documentHtml);
-  const pageSetup = useEditorStore((s) => s.pageSetup);
-  const templateMode = useEditorStore((s) => s.templateMode);
-  const previewMode = useEditorStore((s) => s.previewMode);
-  const variables = useEditorStore((s) => s.variables);
-  const dataSet = useEditorStore((s) => s.dataSet);
-
-  const processedHtml = useMemo(() => {
-    if (previewMode !== "preview" || !templateMode) return "";
-    try {
-      const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
-      const variableFallback = Object.fromEntries(
-        variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
-      );
-      const mergedRow = { ...variableFallback, ...dataRow };
-      return processTemplate(documentHtml, variables, mergedRow).html;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Template processing failed";
-      useToastStore.getState().show(`ตัวอย่าง Template ล้มเหลว: ${message}`, "error");
-      return documentHtml;
-    }
-  }, [previewMode, templateMode, documentHtml, variables, dataSet]);
-
-  if (previewMode !== "preview" || !templateMode) return null;
-  return (
-    <div className="mx-auto" style={{ width: widthPx }}>
-      <MultiPagePreview html={processedHtml} pageSetup={pageSetup} />
-    </div>
-  );
-}
-
-function SourcePane() {
-  const documentHtml = useEditorStore((s) => s.documentHtml);
-  const setHtml = useEditorStore((s) => s.setHtml);
-  return (
-    <div className="flex flex-col overflow-hidden bg-[color:var(--color-background)]">
-      <div
-        id="source-pane-label"
-        className="shrink-0 border-b border-[color:var(--color-border)] px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]"
-      >
-        ซอร์ส HTML
-      </div>
-      <textarea
-        aria-label="ซอร์ส HTML"
-        aria-labelledby="source-pane-label"
-        className="flex-1 resize-none p-4 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)] outline-none"
-        value={documentHtml}
-        onChange={(e) => setHtml(e.target.value)}
-        spellCheck={false}
-      />
-    </div>
-  );
-}
 
 export function EditorShell() {
   const editorRef = useRef<Editor | null>(null);
@@ -187,6 +68,7 @@ export function EditorShell() {
   const openHeaderFooter = useUiStore((s) => s.openHeaderFooter);
   const paragraphOpen = useUiStore((s) => s.paragraphOpen);
   const closeParagraph = useUiStore((s) => s.closeParagraph);
+  const [mathOpen, setMathOpen] = useState(false);
 
   /* consolidated hooks */
   useKeyboardShortcuts(editor);
@@ -221,6 +103,7 @@ export function EditorShell() {
       ed.view.dispatch(state.tr.insert(pos, text));
       ed.commands.focus();
     };
+    const onOpenMath = () => setMathOpen(true);
     addEventListener("wordhtml:open-search", onSearch);
     addEventListener("wordhtml:open-page-setup", onPageSetup);
     addEventListener("wordhtml:open-shortcuts", onShortcuts);
@@ -230,6 +113,7 @@ export function EditorShell() {
     addEventListener("wordhtml:page-next", onPageNext);
     addEventListener("wordhtml:page-prev", onPagePrev);
     addEventListener("wordhtml:insert-variable", onInsertVariable);
+    window.addEventListener("wordhtml:open-math-dialog", onOpenMath);
     return () => {
       removeEventListener("wordhtml:open-search", onSearch);
       removeEventListener("wordhtml:open-page-setup", onPageSetup);
@@ -240,6 +124,7 @@ export function EditorShell() {
       removeEventListener("wordhtml:page-next", onPageNext);
       removeEventListener("wordhtml:page-prev", onPagePrev);
       removeEventListener("wordhtml:insert-variable", onInsertVariable);
+      window.removeEventListener("wordhtml:open-math-dialog", onOpenMath);
     };
   }, [openSearch, openPageSetup, openShortcuts, openToc, openHeaderFooter]);
 
@@ -486,6 +371,7 @@ export function EditorShell() {
 
         <DialogManager editor={editor} />
         <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
+        <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />
         <ParagraphContextMenu editor={editor} containerRef={articleRef} />
         <MobileBlock />
       </div>
