@@ -61,9 +61,11 @@ export function cleanPastedHtml(input: string): string {
 
 /**
  * Normalize common paste structural patterns:
- * - Unwrap <div> tags that wrap block-level children (e.g. <p>, <h1>…).
- * - Convert <div> or <p> tags that use <br> to separate lines into
- *   multiple <p> paragraphs.
+ * - Unwrap generic container tags (<div>, <section>, <article>, etc.) that
+ *   wrap block-level children (e.g. <p>, <h1>…).
+ * - Convert generic containers that use <br> to separate lines into multiple
+ *   <p> paragraphs.
+ * - Split <p> tags at direct <br> children into separate paragraphs.
  *
  * This prevents pasted content from collapsing into a single paragraph
  * with hard breaks, which makes Enter/splitBlock behave unexpectedly.
@@ -104,6 +106,20 @@ function normalizePastedStructure(html: string): string {
     "article",
   ]);
 
+  // Container tags that should be unwrapped or converted to <p>.
+  // We intentionally omit <figure> because it carries semantic meaning
+  // (image + caption) that we don't want to flatten.
+  const containerSelector = [
+    "div",
+    "section",
+    "article",
+    "main",
+    "header",
+    "footer",
+    "aside",
+    "nav",
+  ].join(",");
+
   function isInsideSkipped(el: Element): boolean {
     let parent = el.parentElement;
     while (parent) {
@@ -113,28 +129,26 @@ function normalizePastedStructure(html: string): string {
     return false;
   }
 
-  // ── 1. Unwrap or convert <div> tags ──
-  const divs = Array.from(doc.body.querySelectorAll("div"));
-  for (const div of divs) {
-    const parent = div.parentNode;
-    if (!parent || isInsideSkipped(div)) continue;
+  function unwrapOrConvertContainer(container: Element): void {
+    const parent = container.parentNode;
+    if (!parent || isInsideSkipped(container)) return;
 
-    const hasBlockChildren = Array.from(div.children).some((child) =>
+    const hasBlockChildren = Array.from(container.children).some((child) =>
       blockTags.has(child.tagName.toLowerCase())
     );
 
     if (hasBlockChildren) {
-      // Move every child out of the div, then remove the div itself.
-      while (div.firstChild) {
-        parent.insertBefore(div.firstChild, div);
+      // Move every child out of the container, then remove the container itself.
+      while (container.firstChild) {
+        parent.insertBefore(container.firstChild, container);
       }
-      parent.removeChild(div);
+      parent.removeChild(container);
     } else {
       // Inline content: split at <br> into <p> paragraphs.
       const paragraphs: HTMLParagraphElement[] = [];
       let currentP = doc.createElement("p");
 
-      const children = Array.from(div.childNodes);
+      const children = Array.from(container.childNodes);
       for (const node of children) {
         if (
           node.nodeType === Node.ELEMENT_NODE &&
@@ -153,9 +167,15 @@ function normalizePastedStructure(html: string): string {
         paragraphs.push(currentP);
       }
 
-      paragraphs.forEach((p) => parent.insertBefore(p, div));
-      parent.removeChild(div);
+      paragraphs.forEach((p) => parent.insertBefore(p, container));
+      parent.removeChild(container);
     }
+  }
+
+  // ── 1. Unwrap or convert generic container tags ──
+  const containers = Array.from(doc.body.querySelectorAll(containerSelector));
+  for (const container of containers) {
+    unwrapOrConvertContainer(container);
   }
 
   // ── 2. Split <p> tags at direct <br> children ──
