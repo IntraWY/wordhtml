@@ -2,8 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-
-const PX_PER_CM = 794 / 21; // ~37.81
+import { PX_PER_CM } from "@/lib/page";
 
 interface RulerProps {
   orientation: "horizontal" | "vertical";
@@ -31,6 +30,30 @@ interface Tick {
   pos: number;
   major: boolean;
   label: number | null;
+}
+
+function Tooltip({ tooltip }: { tooltip: { x: number; y: number; text: string } }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [style, setStyle] = useState<{ left: number; top: number }>({ left: tooltip.x + 12, top: tooltip.y });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const left = Math.min(tooltip.x + 12, window.innerWidth - rect.width - 8);
+    const top = Math.min(tooltip.y, window.innerHeight - rect.height - 8);
+    setStyle({ left, top });
+  }, [tooltip.x, tooltip.y]);
+
+  return (
+    <div
+      ref={ref}
+      className="pointer-events-none fixed z-[300] rounded-md bg-[color:var(--color-foreground)] px-2 py-1 text-[11px] font-medium text-[color:var(--color-background)] shadow-lg"
+      style={{ left: style.left, top: style.top }}
+    >
+      {tooltip.text}
+    </div>
+  );
 }
 
 interface DragState {
@@ -69,7 +92,6 @@ function RulerInner({
   const anyInteractive = indentInteractive || marginInteractive;
 
   const dragRef = useRef<DragState | null>(null);
-  const rulerRef = useRef<HTMLDivElement>(null);
 
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -366,7 +388,6 @@ function RulerInner({
 
   return (
     <div
-      ref={rulerRef}
       className={cn(
         "ruler",
         isH ? "ruler-h" : "ruler-v",
@@ -420,15 +441,33 @@ function RulerInner({
             : { top: `${marginGuideStart}px`, left: 0, right: 0, height: "1px" }),
         }}
       />
-      <div
-        className="absolute"
-        style={{
-          background: "oklch(70% 0.15 25 / 0.5)",
-          ...(isH
-            ? { left: `${marginGuideEnd}px`, top: 0, bottom: 0, width: "1px" }
-            : { top: `${marginGuideEnd}px`, left: 0, right: 0, height: "1px" }),
-        }}
-      />
+      {isH ? (
+        <div
+          className="absolute"
+          style={{
+            background: "oklch(70% 0.15 25 / 0.5)",
+            left: `${marginGuideEnd}px`,
+            top: 0,
+            bottom: 0,
+            width: "1px",
+          }}
+        />
+      ) : (
+        // For vertical ruler, render bottom margin guides at the end of every page
+        Array.from({ length: Math.max(1, Math.ceil((contentHeight ?? totalPx) / totalPx)) }, (_, i) => (
+          <div
+            key={`margin-guide-end-${i}`}
+            className="absolute"
+            style={{
+              background: "oklch(70% 0.15 25 / 0.5)",
+              top: `${(i + 1) * totalPx - marginEnd}px`,
+              left: 0,
+              right: 0,
+              height: "1px",
+            }}
+          />
+        ))
+      )}
 
       {/* Margin handles */}
       {marginInteractive && (
@@ -439,7 +478,10 @@ function RulerInner({
               <div
                 role="slider"
                 tabIndex={0}
+                aria-orientation="horizontal"
                 aria-label={`ขอบซ้าย (Left margin) ${marginLeftMm.toFixed(1)} มม.`}
+                aria-valuemin={0}
+                aria-valuemax={pageWidthMm - marginRightMm - minContentMm}
                 aria-valuenow={Math.round(marginLeftMm)}
                 onMouseDown={startMarginDrag("marginLeft")}
                 onTouchStart={startMarginDrag("marginLeft")}
@@ -464,8 +506,8 @@ function RulerInner({
                   className={cn(
                     "rounded-sm transition-all duration-150",
                     hovered === "marginLeft"
-                      ? "scale-125 bg-[#1f2937] shadow-md"
-                      : "bg-[#4b5563] hover:scale-[1.15] hover:bg-[#374151]"
+                      ? "scale-125 bg-gray-800 shadow-md"
+                      : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
                   )}
                   style={{ width: "8px", height: "14px" }}
                 />
@@ -474,7 +516,10 @@ function RulerInner({
               <div
                 role="slider"
                 tabIndex={0}
+                aria-orientation="horizontal"
                 aria-label={`ขอบขวา (Right margin) ${marginRightMm.toFixed(1)} มม.`}
+                aria-valuemin={0}
+                aria-valuemax={pageWidthMm - marginLeftMm - minContentMm}
                 aria-valuenow={Math.round(marginRightMm)}
                 onMouseDown={startMarginDrag("marginRight")}
                 onTouchStart={startMarginDrag("marginRight")}
@@ -499,8 +544,8 @@ function RulerInner({
                   className={cn(
                     "rounded-sm transition-all duration-150",
                     hovered === "marginRight"
-                      ? "scale-125 bg-[#1f2937] shadow-md"
-                      : "bg-[#4b5563] hover:scale-[1.15] hover:bg-[#374151]"
+                      ? "scale-125 bg-gray-800 shadow-md"
+                      : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
                   )}
                   style={{ width: "8px", height: "14px" }}
                 />
@@ -512,7 +557,10 @@ function RulerInner({
               <div
                 role="slider"
                 tabIndex={0}
+                aria-orientation="vertical"
                 aria-label={`ขอบบน (Top margin) ${marginTopMm.toFixed(1)} มม.`}
+                aria-valuemin={0}
+                aria-valuemax={pageHeightMm - marginBottomMm - minContentMm}
                 aria-valuenow={Math.round(marginTopMm)}
                 onMouseDown={startMarginDrag("marginTop")}
                 onTouchStart={startMarginDrag("marginTop")}
@@ -537,47 +585,53 @@ function RulerInner({
                   className={cn(
                     "rounded-sm transition-all duration-150",
                     hovered === "marginTop"
-                      ? "scale-125 bg-[#1f2937] shadow-md"
-                      : "bg-[#4b5563] hover:scale-[1.15] hover:bg-[#374151]"
+                      ? "scale-125 bg-gray-800 shadow-md"
+                      : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
                   )}
                   style={{ width: "14px", height: "8px" }}
                 />
               </div>
-              {/* Bottom margin handle */}
-              <div
-                role="slider"
-                tabIndex={0}
-                aria-label={`ขอบล่าง (Bottom margin) ${marginBottomMm.toFixed(1)} มม.`}
-                aria-valuenow={Math.round(marginBottomMm)}
-                onMouseDown={startMarginDrag("marginBottom")}
-                onTouchStart={startMarginDrag("marginBottom")}
-                onKeyDown={handleMarginKeyDown("marginBottom")}
-                onMouseEnter={() =>
-                  handleEnter("marginBottom", `ขอบล่าง (Bottom): ${marginBottomMm.toFixed(1)} มม.`)
-                }
-                onMouseLeave={handleLeave}
-                className={cn(
-                  "absolute grid cursor-ns-resize place-items-center",
-                  hovered === "marginBottom" && "z-20"
-                )}
-                style={{
-                  top: `${marginGuideEnd}px`,
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: "20px",
-                  height: "20px",
-                }}
-              >
+              {/* Bottom margin handles — one at the end of every page */}
+              {Array.from({ length: Math.max(1, Math.ceil((contentHeight ?? totalPx) / totalPx)) }, (_, i) => (
                 <div
+                  key={`margin-bottom-handle-${i}`}
+                  role="slider"
+                  tabIndex={0}
+                  aria-orientation="vertical"
+                  aria-label={`ขอบล่าง (Bottom margin) ${marginBottomMm.toFixed(1)} มม.`}
+                  aria-valuemin={0}
+                  aria-valuemax={pageHeightMm - marginTopMm - minContentMm}
+                  aria-valuenow={Math.round(marginBottomMm)}
+                  onMouseDown={startMarginDrag("marginBottom")}
+                  onTouchStart={startMarginDrag("marginBottom")}
+                  onKeyDown={handleMarginKeyDown("marginBottom")}
+                  onMouseEnter={() =>
+                    handleEnter("marginBottom", `ขอบล่าง (Bottom): ${marginBottomMm.toFixed(1)} มม.`)
+                  }
+                  onMouseLeave={handleLeave}
                   className={cn(
-                    "rounded-sm transition-all duration-150",
-                    hovered === "marginBottom"
-                      ? "scale-125 bg-[#1f2937] shadow-md"
-                      : "bg-[#4b5563] hover:scale-[1.15] hover:bg-[#374151]"
+                    "absolute grid cursor-ns-resize place-items-center",
+                    hovered === "marginBottom" && "z-20"
                   )}
-                  style={{ width: "14px", height: "8px" }}
-                />
-              </div>
+                  style={{
+                    top: `${(i + 1) * totalPx - marginEnd}px`,
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: "20px",
+                    height: "20px",
+                  }}
+                >
+                  <div
+                    className={cn(
+                      "rounded-sm transition-all duration-150",
+                      hovered === "marginBottom"
+                        ? "scale-125 bg-gray-800 shadow-md"
+                        : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
+                    )}
+                    style={{ width: "14px", height: "8px" }}
+                  />
+                </div>
+              ))}
             </>
           )}
         </>
@@ -590,7 +644,10 @@ function RulerInner({
           <div
             role="slider"
             tabIndex={0}
+            aria-orientation="horizontal"
             aria-label={`ย่อหน้าแรก (First-line indent) ${indentFirst.toFixed(1)} ซม.`}
+            aria-valuemin={-indentLeft}
+            aria-valuemax={maxIndentCm - indentLeft}
             aria-valuenow={Math.round(indentFirst * 10)}
             onMouseDown={startIndentDrag("first")}
             onTouchStart={startIndentDrag("first")}
@@ -629,7 +686,10 @@ function RulerInner({
           <div
             role="slider"
             tabIndex={0}
+            aria-orientation="horizontal"
             aria-label={`ย่อหน้าซ้าย (Left indent) ${indentLeft.toFixed(1)} ซม.`}
+            aria-valuemin={0}
+            aria-valuemax={maxIndentCm}
             aria-valuenow={Math.round(indentLeft * 10)}
             onMouseDown={startIndentDrag("left")}
             onTouchStart={startIndentDrag("left")}
@@ -685,12 +745,7 @@ function RulerInner({
 
       {/* Drag tooltip */}
       {tooltip && (
-        <div
-          className="pointer-events-none fixed z-[300] rounded-md bg-[color:var(--color-foreground)] px-2 py-1 text-[11px] font-medium text-[color:var(--color-background)] shadow-lg"
-          style={{ left: tooltip.x + 12, top: tooltip.y }}
-        >
-          {tooltip.text}
-        </div>
+        <Tooltip tooltip={tooltip} />
       )}
     </div>
   );

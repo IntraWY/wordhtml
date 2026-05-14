@@ -59,7 +59,12 @@ function IndentRuler({
   useEffect(() => {
     if (!editor) return;
     const update = () => {
-      const attrs = editor.getAttributes("paragraph");
+      const { state } = editor;
+      const nodeType = state.selection.$from.parent.type.name;
+      const attrs =
+        nodeType === "heading"
+          ? editor.getAttributes("heading")
+          : editor.getAttributes("paragraph");
       setCurrentIndent({
         marginLeft: (attrs.marginLeft as number) ?? 0,
         textIndent: (attrs.textIndent as number) ?? 0,
