@@ -24,6 +24,7 @@ import Superscript from "@tiptap/extension-superscript";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import FontFamily from "@tiptap/extension-font-family";
+import { VariableSuggestion } from "@/lib/tiptap/variableSuggestionExtension";
 
 import { useEditorStore } from "@/store/editorStore";
 import { usePaginationStore } from "@/store/paginationStore";
@@ -98,6 +99,7 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
       TaskList,
       TaskItem.configure({ nested: true }),
       FontFamily,
+      VariableSuggestion,
       PaginationAware,
       MathEquation,
     ],

@@ -45,12 +45,14 @@ export function Ribbon({ editor }: { editor: Editor | null }) {
       </div>
 
       {/* Tab content */}
-      <div className="flex min-h-[72px] items-stretch overflow-x-auto">
-        {activeTab === "home" && <RibbonTabHome editor={editor} />}
-        {activeTab === "insert" && <RibbonTabInsert editor={editor} />}
-        {activeTab === "layout" && <RibbonTabLayout editor={editor} />}
-        {activeTab === "clean" && <RibbonTabClean />}
-        {activeTab === "view" && <RibbonTabView editor={editor} />}
+      <div className="flex min-h-[72px] items-stretch overflow-x-auto scrollbar-hide">
+        <div className="flex min-w-full divide-x divide-[color:var(--color-border)]/40">
+          {activeTab === "home" && <RibbonTabHome editor={editor} />}
+          {activeTab === "insert" && <RibbonTabInsert editor={editor} />}
+          {activeTab === "layout" && <RibbonTabLayout editor={editor} />}
+          {activeTab === "clean" && <RibbonTabClean />}
+          {activeTab === "view" && <RibbonTabView editor={editor} />}
+        </div>
       </div>
     </div>
   );

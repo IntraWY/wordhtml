@@ -35,7 +35,7 @@ import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
 import { PageBreakIndicator } from "./PageBreakIndicator";
-import { ParagraphContextMenu } from "./ParagraphContextMenu";
+import { EditorContextMenu } from "./EditorContextMenu";
 import { Tour } from "@/components/onboarding/Tour";
 
 export function EditorShell() {
@@ -379,7 +379,7 @@ export function EditorShell() {
         <DialogManager editor={editor} />
         <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
         <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />
-        <ParagraphContextMenu editor={editor} containerRef={articleRef} />
+        <EditorContextMenu editor={editor} containerRef={articleRef} />
         <MobileBlock />
         <Tour />
       </div>

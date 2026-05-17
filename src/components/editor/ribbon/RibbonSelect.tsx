@@ -22,7 +22,11 @@ export function RibbonSelect({ label, value, onChange, options, className }: Rib
       )}
     >
       {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
+        <option 
+          key={opt.value} 
+          value={opt.value}
+          style={{ fontFamily: opt.value }}
+        >
           {opt.label}
         </option>
       ))}

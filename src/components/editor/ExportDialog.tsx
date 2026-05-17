@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 
 type ExportKind = ExportFormat;
 
-type ExportTab = "file" | "gas";
+type ExportTab = "file" | "preview" | "gas";
 
 export function ExportDialog() {
   const open = useUiStore((s) => s.exportDialogOpen);
@@ -167,25 +167,42 @@ export function ExportDialog() {
           </header>
 
           {/* Tabs */}
-          {templateMode && (
-            <div className="flex shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6" role="tablist" aria-label="ตัวเลือกการส่งออก">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "file"}
-                onClick={() => setActiveTab("file")}
-                className={cn(
-                  "relative px-4 py-2.5 text-xs font-medium transition-colors",
-                  activeTab === "file"
-                    ? "text-[color:var(--color-foreground)]"
-                    : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
-                )}
-              >
-                ไฟล์ (File)
-                {activeTab === "file" && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
-                )}
-              </button>
+          <div className="flex shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6" role="tablist" aria-label="ตัวเลือกการส่งออก">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "file"}
+              onClick={() => setActiveTab("file")}
+              className={cn(
+                "relative px-4 py-2.5 text-xs font-medium transition-colors",
+                activeTab === "file"
+                  ? "text-[color:var(--color-foreground)]"
+                  : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
+              )}
+            >
+              ไฟล์ (File)
+              {activeTab === "file" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
+              )}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "preview"}
+              onClick={() => setActiveTab("preview")}
+              className={cn(
+                "relative px-4 py-2.5 text-xs font-medium transition-colors",
+                activeTab === "preview"
+                  ? "text-[color:var(--color-foreground)]"
+                  : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
+              )}
+            >
+              ตัวอย่าง (Preview)
+              {activeTab === "preview" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
+              )}
+            </button>
+            {templateMode && (
               <button
                 type="button"
                 role="tab"
@@ -203,15 +220,15 @@ export function ExportDialog() {
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
                 )}
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === "file" || !templateMode ? (
+          {activeTab === "file" ? (
             <>
               <div className="flex min-h-0 flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
-                    ตัวอย่าง
+                    ซอร์สโค้ด (Source)
                   </span>
                   <button
                     type="button"
@@ -338,6 +355,15 @@ export function ExportDialog() {
                 </div>
               </footer>
             </>
+          ) : activeTab === "preview" ? (
+            <div className="flex min-h-0 flex-col overflow-hidden bg-[color:var(--color-muted)] p-6">
+              <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-inner shadow-slate-200">
+                <div
+                  className="prose prose-slate max-w-none"
+                  dangerouslySetInnerHTML={{ __html: cleanedHtml }}
+                />
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex min-h-0 flex-col overflow-hidden">
@@ -383,6 +409,12 @@ export function ExportDialog() {
               </footer>
             </>
           )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
