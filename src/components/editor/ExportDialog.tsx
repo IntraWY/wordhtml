@@ -415,12 +415,6 @@ export function ExportDialog() {
   );
 }
 
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
-
 interface ImageModeToggleProps {
   imageMode: ImageMode;
   onChange: (mode: ImageMode) => void;

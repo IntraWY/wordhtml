@@ -25,9 +25,9 @@ const INPUT_RULE_BLOCK = /\$\$\$\$([^$]+)\$\$\$\$/;
 export const MathEquation = Node.create<MathEquationOptions>({
   name: "mathEquation",
 
-  group: "inline block",
+  group: "inline",
 
-  inline: false,
+  inline: true,
 
   atom: true,
 
@@ -39,10 +39,14 @@ export const MathEquation = Node.create<MathEquationOptions>({
     return {
       latex: {
         default: "",
+        parseHTML: (el) => el.getAttribute("data-latex") ?? "",
+        renderHTML: (attrs) => ({
+          "data-latex": attrs.latex,
+        }),
       },
       inline: {
-        default: false,
-        parseHTML: (el) => el.getAttribute("data-inline") === "true",
+        default: true,
+        parseHTML: (el) => el.getAttribute("data-inline") !== "false",
         renderHTML: (attrs) => ({
           "data-inline": String(attrs.inline),
         }),
@@ -54,60 +58,45 @@ export const MathEquation = Node.create<MathEquationOptions>({
     return [
       {
         tag: "span[data-type=\"math-equation\"]",
-        getAttrs: (el) => {
-          if (!(el instanceof HTMLElement)) return false;
-          const latex = el.getAttribute("data-latex");
-          if (!latex) return false;
-          return {
-            latex,
-            inline: el.getAttribute("data-inline") === "true",
-          };
-        },
+      },
+      {
+        tag: "div[data-type=\"math-equation\"]",
+        getAttrs: (el) => ({
+          inline: false,
+        }),
       },
     ];
   },
 
   renderHTML({ HTMLAttributes, node }) {
-    const { latex, inline } = node.attrs as MathEquationAttributes;
-    try {
-      const html = katex.renderToString(latex, {
-        throwOnError: false,
-        displayMode: !inline,
-        ...(this.options.katexOptions ?? {}),
-      });
-      const wrapper = document.createElement("span");
-      wrapper.innerHTML = html;
-      const first = wrapper.firstElementChild;
-      if (first) {
-        first.setAttribute("data-type", "math-equation");
-        first.setAttribute("data-latex", latex);
-        first.setAttribute("data-inline", String(inline));
-        return first.outerHTML as unknown as [string, Record<string, unknown>, ...unknown[]];
-      }
-    } catch {
-      // fall through to plain fallback
-    }
+    const { inline } = node.attrs as MathEquationAttributes;
     return [
-      "span",
+      inline ? "span" : "div",
       {
         "data-type": "math-equation",
-        "data-latex": latex,
-        "data-inline": String(inline),
         ...HTMLAttributes,
+        style: inline ? "display: inline-block; vertical-align: middle;" : "display: block; text-align: center; margin: 1em 0;",
       },
-      latex,
     ];
   },
 
   addNodeView() {
-    return ({ node }) => {
+    return ({ node, HTMLAttributes }) => {
       const { latex, inline } = node.attrs as MathEquationAttributes;
       const dom = document.createElement(inline ? "span" : "div");
-      dom.setAttribute("data-type", "math-equation");
-      dom.setAttribute("data-latex", latex);
-      dom.setAttribute("data-inline", String(inline));
+      
+      // Apply attributes
+      Object.entries(HTMLAttributes).forEach(([key, value]) => {
+        dom.setAttribute(key, value as string);
+      });
+      
       dom.style.display = inline ? "inline-block" : "block";
       dom.style.cursor = "default";
+      if (!inline) {
+        dom.style.textAlign = "center";
+        dom.style.margin = "1em 0";
+      }
+
       try {
         katex.render(latex, dom, {
           throwOnError: false,
@@ -117,13 +106,24 @@ export const MathEquation = Node.create<MathEquationOptions>({
       } catch {
         dom.textContent = latex;
       }
+
       return {
         dom,
         update: (updatedNode) => {
           if (updatedNode.type.name !== this.name) return false;
           const next = updatedNode.attrs as MathEquationAttributes;
-          if (next.latex === latex && next.inline === inline) return true;
-          return false;
+          if (next.latex !== node.attrs.latex || next.inline !== node.attrs.inline) {
+            try {
+              katex.render(next.latex, dom, {
+                throwOnError: false,
+                displayMode: !next.inline,
+                ...(this.options.katexOptions ?? {}),
+              });
+            } catch {
+              dom.textContent = next.latex;
+            }
+          }
+          return true;
         },
       };
     };

@@ -162,7 +162,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
       {
         id: "delete-col",
         label: "ลบคอลัมน์ (Delete column)",
-        icon: <Minus className="size-4" className="rotate-90" />,
+        icon: <Minus className="size-4 rotate-90" />,
         action: () => {
           editor?.chain().focus().deleteColumn().run();
           setOpen(false);
