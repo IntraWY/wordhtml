@@ -170,8 +170,10 @@ export function ExportDialog() {
           <div className="flex shrink-0 border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6" role="tablist" aria-label="ตัวเลือกการส่งออก">
             <button
               type="button"
+              id="export-tab-btn-file"
               role="tab"
               aria-selected={activeTab === "file"}
+              tabIndex={activeTab === "file" ? 0 : -1}
               onClick={() => setActiveTab("file")}
               className={cn(
                 "relative px-4 py-2.5 text-xs font-medium transition-colors",
@@ -187,8 +189,10 @@ export function ExportDialog() {
             </button>
             <button
               type="button"
+              id="export-tab-btn-preview"
               role="tab"
               aria-selected={activeTab === "preview"}
+              tabIndex={activeTab === "preview" ? 0 : -1}
               onClick={() => setActiveTab("preview")}
               className={cn(
                 "relative px-4 py-2.5 text-xs font-medium transition-colors",
@@ -205,8 +209,10 @@ export function ExportDialog() {
             {templateMode && (
               <button
                 type="button"
+                id="export-tab-btn-gas"
                 role="tab"
                 aria-selected={activeTab === "gas"}
+                tabIndex={activeTab === "gas" ? 0 : -1}
                 onClick={() => setActiveTab("gas")}
                 className={cn(
                   "relative px-4 py-2.5 text-xs font-medium transition-colors",
@@ -223,9 +229,16 @@ export function ExportDialog() {
             )}
           </div>
 
-          {activeTab === "file" ? (
-            <>
-              <div className="flex min-h-0 flex-col overflow-hidden">
+          <div
+            role="tabpanel"
+            id="export-tab-file"
+            aria-labelledby="export-tab-btn-file"
+            hidden={activeTab !== "file"}
+            className={activeTab === "file" ? "contents" : ""}
+          >
+            {activeTab === "file" ? (
+              <>
+                <div className="flex min-h-0 flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
                     ซอร์สโค้ด (Source)
@@ -355,60 +368,81 @@ export function ExportDialog() {
                 </div>
               </footer>
             </>
-          ) : activeTab === "preview" ? (
-            <div className="flex min-h-0 flex-col overflow-hidden bg-[color:var(--color-muted)] p-6">
-              <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-inner shadow-slate-200">
-                <div
-                  className="prose prose-slate max-w-none"
-                  dangerouslySetInnerHTML={{ __html: cleanedHtml }}
-                />
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex min-h-0 flex-col overflow-hidden">
-                <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
-                    โค้ด GAS (GAS Code)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopyGAS}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
-                  >
-                    {gasCopied ? <Check className="size-3.5 text-[color:var(--color-success)]" /> : <Copy className="size-3.5" />}
-                    {gasCopied ? "คัดลอกแล้ว" : "คัดลอก"}
-                  </button>
-                </div>
-                <pre className="m-0 flex-1 overflow-auto bg-[color:var(--color-background)] p-6 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)]">
-                  <code>{gasCode || "// เปิดโหมด Template และเพิ่มตัวแปรเพื่อสร้างโค้ด\n// Enable Template Mode and add variables to generate code"}</code>
-                </pre>
-              </div>
+          ) : null}
+          </div>
 
-              <footer className="flex flex-col gap-3 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-[color:var(--color-muted-foreground)]">
-                    ชื่อฟังก์ชัน:
-                  </label>
-                  <input
-                    type="text"
-                    value={gasFunctionName}
-                    onChange={(e) => setGasFunctionName(e.target.value)}
-                    className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-[color:var(--color-foreground)]"
+          <div
+            role="tabpanel"
+            id="export-tab-preview"
+            aria-labelledby="export-tab-btn-preview"
+            hidden={activeTab !== "preview"}
+            className={activeTab === "preview" ? "contents" : ""}
+          >
+            {activeTab === "preview" ? (
+              <div className="flex min-h-0 flex-col overflow-hidden bg-[color:var(--color-muted)] p-6">
+                <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-inner shadow-slate-200">
+                  <div
+                    className="prose prose-slate max-w-none"
+                    dangerouslySetInnerHTML={{ __html: cleanedHtml }}
                   />
                 </div>
-                <label className="inline-flex items-center gap-2 text-xs text-[color:var(--color-muted-foreground)]">
-                  <input
-                    type="checkbox"
-                    checked={includeSheetIntegration}
-                    onChange={(e) => setIncludeSheetIntegration(e.target.checked)}
-                    className="rounded border-[color:var(--color-border-strong)]"
-                  />
-                  รวมฟังก์ชัน integrate กับ Google Sheets
-                </label>
-              </footer>
-            </>
-          )}
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            role="tabpanel"
+            id="export-tab-gas"
+            aria-labelledby="export-tab-btn-gas"
+            hidden={activeTab !== "gas"}
+            className={activeTab === "gas" ? "contents" : ""}
+          >
+            {activeTab === "gas" ? (
+              <>
+                <div className="flex min-h-0 flex-col overflow-hidden">
+                  <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
+                      โค้ด GAS (GAS Code)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyGAS}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                    >
+                      {gasCopied ? <Check className="size-3.5 text-[color:var(--color-success)]" /> : <Copy className="size-3.5" />}
+                      {gasCopied ? "คัดลอกแล้ว" : "คัดลอก"}
+                    </button>
+                  </div>
+                  <pre className="m-0 flex-1 overflow-auto bg-[color:var(--color-background)] p-6 font-mono text-xs leading-relaxed text-[color:var(--color-foreground)]">
+                    <code>{gasCode || "// เปิดโหมด Template และเพิ่มตัวแปรเพื่อสร้างโค้ด\n// Enable Template Mode and add variables to generate code"}</code>
+                  </pre>
+                </div>
+
+                <footer className="flex flex-col gap-3 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-[color:var(--color-muted-foreground)]">
+                      ชื่อฟังก์ชัน:
+                    </label>
+                    <input
+                      type="text"
+                      value={gasFunctionName}
+                      onChange={(e) => setGasFunctionName(e.target.value)}
+                      className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-[color:var(--color-foreground)]"
+                    />
+                  </div>
+                  <label className="inline-flex items-center gap-2 text-xs text-[color:var(--color-muted-foreground)]">
+                    <input
+                      type="checkbox"
+                      checked={includeSheetIntegration}
+                      onChange={(e) => setIncludeSheetIntegration(e.target.checked)}
+                      className="rounded border-[color:var(--color-border-strong)]"
+                    />
+                    รวมฟังก์ชัน integrate กับ Google Sheets
+                  </label>
+                </footer>
+              </>
+            ) : null}
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

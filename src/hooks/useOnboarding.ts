@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 const STORAGE_KEY = "wordhtml-onboarding";
 
@@ -38,13 +38,8 @@ function writeState(state: OnboardingState): void {
 }
 
 export function useOnboarding() {
-  const [hasSeenTour, setHasSeenTour] = useState<boolean>(false);
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setHasSeenTour(readState().hasSeenTour);
-    setIsReady(true);
-  }, []);
+  const [hasSeenTour, setHasSeenTour] = useState<boolean>(() => readState().hasSeenTour);
+  const isReady = true;
 
   const startTour = useCallback(() => {
     setHasSeenTour(false);

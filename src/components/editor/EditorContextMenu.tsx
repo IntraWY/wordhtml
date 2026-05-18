@@ -3,18 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { useUiStore } from "@/store/uiStore";
-import { 
-  Trash2, 
-  Plus, 
-  Minus, 
-  Columns, 
-  Rows, 
-  Table as TableIcon, 
-  AlignLeft, 
-  AlignCenter, 
+import {
+  Trash2,
+  Minus,
+  AlignLeft,
+  AlignCenter,
   AlignRight,
   Settings,
-  Type,
   FileText,
   Merge,
   Split,
@@ -42,6 +37,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const openParagraph = useUiStore((s) => s.openParagraph);
 
   const handleContextMenu = useCallback(
@@ -77,7 +73,38 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
   }, [handleContextMenu]);
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const container = containerRef?.current;
+      if (!container) return;
+      if (event.key === "Shift" || event.key === "F10") {
+        if (event.shiftKey && event.key === "F10") {
+          event.preventDefault();
+          const selection = window.getSelection();
+          let rect: DOMRect | undefined;
+          if (selection && selection.rangeCount > 0) {
+            rect = selection.getRangeAt(0).getBoundingClientRect();
+          }
+          const x = rect ? rect.left : container.getBoundingClientRect().left;
+          const y = rect ? rect.bottom : container.getBoundingClientRect().top;
+          const menuWidth = 240;
+          const menuHeight = 400;
+          const adjustedX = x + menuWidth > window.innerWidth ? x - menuWidth : x;
+          const adjustedY = y + menuHeight > window.innerHeight ? y - menuHeight : y;
+          setPosition({ x: adjustedX, y: adjustedY });
+          setOpen(true);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [containerRef]);
+
+  useEffect(() => {
     if (!open) return;
+
+    // Move focus to first menu item
+    const firstItem = itemRefs.current.find(Boolean);
+    firstItem?.focus();
 
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -87,16 +114,35 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
         setOpen(false);
       }
     };
 
+    const handleArrowNav = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      event.preventDefault();
+      const enabled = itemRefs.current.filter(Boolean) as HTMLButtonElement[];
+      if (enabled.length === 0) return;
+      const currentIndex = enabled.findIndex((el) => el === document.activeElement);
+      let nextIndex: number;
+      if (event.key === "ArrowDown") {
+        nextIndex = currentIndex < enabled.length - 1 ? currentIndex + 1 : 0;
+      } else {
+        nextIndex = currentIndex > 0 ? currentIndex - 1 : enabled.length - 1;
+      }
+      enabled[nextIndex]?.focus();
+    };
+
+    const menuNode = menuRef.current;
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
+    menuNode?.addEventListener("keydown", handleArrowNav);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
+      menuNode?.removeEventListener("keydown", handleArrowNav);
     };
   }, [open]);
 
@@ -322,7 +368,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
         top: position.y,
       }}
     >
-      {menuItems.map((item) =>
+      {menuItems.map((item, index) =>
         item.divider ? (
           <div
             key={item.id}
@@ -332,11 +378,12 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
         ) : (
           <button
             key={item.id}
+            ref={(el) => { itemRefs.current[index] = el; }}
             role="menuitem"
             type="button"
             disabled={item.disabled}
             onClick={item.action}
-            className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:bg-[color:var(--color-muted)]"
           >
             <span className="shrink-0 text-[color:var(--color-muted-foreground)]">
               {item.icon}

@@ -43,7 +43,7 @@ describe("useEditorResize", () => {
     function Wrapper({ children }: { children?: ReactNode }) {
       const { articleRef } = useEditorResize();
       return (
-        <article ref={articleRef as any} data-testid="article">
+        <article ref={articleRef as React.RefObject<HTMLElement>} data-testid="article">
           {children}
         </article>
       );
@@ -60,7 +60,7 @@ describe("useEditorResize", () => {
     function Wrapper({ children }: { children?: ReactNode }) {
       const { articleRef, contentHeight } = useEditorResize();
       return (
-        <article ref={articleRef as any} data-testid="article" data-height={contentHeight}>
+        <article ref={articleRef as React.RefObject<HTMLElement>} data-testid="article" data-height={contentHeight}>
           {children}
         </article>
       );
@@ -92,7 +92,7 @@ describe("useEditorResize", () => {
     function Wrapper({ children }: { children?: ReactNode }) {
       const { articleRef, contentHeight } = useEditorResize();
       return (
-        <article ref={articleRef as any} data-testid="article" data-height={contentHeight}>
+        <article ref={articleRef as React.RefObject<HTMLElement>} data-testid="article" data-height={contentHeight}>
           {children}
         </article>
       );
@@ -124,7 +124,7 @@ describe("useEditorResize", () => {
     function Wrapper({ children }: { children?: ReactNode }) {
       const { articleRef } = useEditorResize();
       return (
-        <article ref={articleRef as any} data-testid="article">
+        <article ref={articleRef as React.RefObject<HTMLElement>} data-testid="article">
           {children}
         </article>
       );
@@ -140,7 +140,7 @@ describe("useEditorResize", () => {
 
 // Helper since @testing-library/react's renderHook isn't available in this version
 function renderHook<T>(callback: () => T) {
-  let result = { current: null as T | null };
+  const result = { current: null as T | null };
 
   function Wrapper() {
     result.current = callback();

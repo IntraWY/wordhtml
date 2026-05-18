@@ -60,6 +60,7 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
                   <button
                     key={s}
                     type="button"
+                    aria-pressed={draft.size === s}
                     onClick={() => setDraft((d) => ({ ...d, size: s }))}
                     className={cn(
                       "rounded-md border px-3 py-1.5 text-sm font-medium",
@@ -84,6 +85,7 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
                   <button
                     key={o}
                     type="button"
+                    aria-pressed={draft.orientation === o}
                     onClick={() => setDraft((d) => ({ ...d, orientation: o }))}
                     className={cn(
                       "rounded-md border px-3 py-1.5 text-sm font-medium",

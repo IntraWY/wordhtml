@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import {
@@ -31,22 +31,9 @@ import {
 import { cn } from "@/lib/utils";
 import { RibbonSelect } from "./ribbon/RibbonSelect";
 import { FontSizeSelector } from "./FontSizeSelector";
-import { useEditorStore } from "@/store/editorStore";
-import { useToastStore } from "@/store/toastStore";
-import { useUiStore } from "@/store/uiStore";
-import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { dispatchOpenSearch } from "@/lib/events";
-
-const FONT_OPTIONS = [
-  { label: "ค่าเริ่มต้น", value: "" },
-  { label: "TH Sarabun PSK", value: "'TH Sarabun PSK', 'Sarabun', sans-serif" },
-  { label: "Sarabun", value: "Sarabun, sans-serif" },
-  { label: "Noto Sans Thai", value: "'Noto Sans Thai', sans-serif" },
-  { label: "Geist", value: "var(--font-geist-sans)" },
-  { label: "System", value: "system-ui, sans-serif" },
-  { label: "Serif", value: "Georgia, serif" },
-  { label: "Mono", value: "var(--font-geist-mono)" },
-];
+import { FONT_OPTIONS } from "@/lib/fonts";
+import { useCleanDocument } from "@/hooks/useCleanDocument";
 
 function MobileBtn({
   active,
@@ -84,10 +71,7 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
   const [showMore, setShowMore] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
-  const documentHtml = useEditorStore((s) => s.documentHtml);
-  const setHtml = useEditorStore((s) => s.setHtml);
-  const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
-  const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
+  const { cleanNow: handleCleanNow } = useCleanDocument();
 
   const state = useEditorState({
     editor,
@@ -115,33 +99,65 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
 
   const currentFont = state?.fontFamily ?? "";
 
-  const handleCleanNow = useCallback(() => {
-    if (!documentHtml.trim()) {
-      useToastStore.getState().show("ไม่มีเนื้อหาที่จะล้าง", "error");
-      return;
-    }
-    saveSnapshot();
-    const beforeLen = documentHtml.length;
-    const cleaned = applyCleaners(documentHtml, enabledCleaners);
-    const afterLen = cleaned.length;
-    const removed = beforeLen - afterLen;
-    setHtml(cleaned);
-    const message =
-      removed > 0
-        ? `ล้างเสร็จแล้ว — ลบ ${removed.toLocaleString()} ตัวอักษร`
-        : `ล้างเสร็จแล้ว — ไม่มีการเปลี่ยนแปลง`;
-    useToastStore.getState().show(message, "success");
-    useUiStore.getState().setLastAction(`ล้างเอกสาร — ลบ ${removed.toLocaleString()} ตัวอักษร`);
-  }, [documentHtml, enabledCleaners, setHtml, saveSnapshot]);
-
-  /* close more dropdown on outside click */
+  /* close more dropdown on outside click or Escape */
   useEffect(() => {
     if (!showMore) return;
     const onDocClick = (e: MouseEvent) => {
       if (!moreRef.current?.contains(e.target as Node)) setShowMore(false);
     };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowMore(false);
+      }
+    };
     document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showMore]);
+
+  /* focus trap for more dropdown */
+  useEffect(() => {
+    if (!showMore) return;
+    const dropdown = moreRef.current;
+    if (!dropdown) return;
+
+    const focusableSelectors =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const getFocusable = () =>
+      Array.from(dropdown.querySelectorAll<HTMLElement>(focusableSelectors));
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = getFocusable();
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    dropdown.addEventListener("keydown", handleTab);
+    // Move focus into dropdown when opened
+    const focusable = getFocusable();
+    focusable[0]?.focus();
+
+    return () => {
+      dropdown.removeEventListener("keydown", handleTab);
+    };
   }, [showMore]);
 
   const can = {

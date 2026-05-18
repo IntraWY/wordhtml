@@ -2,14 +2,40 @@ import { Extension } from "@tiptap/core";
 import Suggestion from "@tiptap/suggestion";
 import { variableSuggestion } from "./variableSuggestion";
 
+interface SuggestionCommandProps {
+  editor: {
+    chain: () => {
+      focus: () => {
+        insertContentAt: (range: { from: number; to: number }, content: unknown[]) => { run: () => boolean };
+      };
+    };
+  };
+  range: { from: number; to: number };
+  props: { name: string };
+}
+
+interface SuggestionAllowProps {
+  state: {
+    doc: {
+      resolve: (pos: number) => {
+        parent: {
+          type: {
+            name: string;
+          };
+        };
+      };
+    };
+  };
+  range: { from: number };
+}
+
 export const VariableSuggestion = Extension.create({
   name: "variableSuggestion",
 
   addOptions() {
     return {
       suggestion: {
-        char: "{{",
-        command: ({ editor, range, props }: any) => {
+        command: ({ editor, range, props }: SuggestionCommandProps) => {
           editor
             .chain()
             .focus()
@@ -29,7 +55,7 @@ export const VariableSuggestion = Extension.create({
             ])
             .run();
         },
-        allow: ({ state, range }: any) => {
+        allow: ({ state, range }: SuggestionAllowProps) => {
           const $from = state.doc.resolve(range.from);
           const type = $from.parent.type.name;
           return type === "paragraph" || type === "heading";

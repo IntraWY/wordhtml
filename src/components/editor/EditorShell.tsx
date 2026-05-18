@@ -255,7 +255,7 @@ export function EditorShell() {
             </button>
           </div>
         )}
-        <div className="flex flex-1 overflow-hidden">
+        <main className="flex flex-1 overflow-hidden">
           <div
             className={cn(
               "grid flex-1 gap-px overflow-hidden bg-[color:var(--color-border)]",
@@ -336,7 +336,7 @@ export function EditorShell() {
             {sourceOpen && <SourcePane />}
           </div>
           {templateMode && <VariablePanel />}
-        </div>
+        </main>
 
         {isDragging && (
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[color:var(--color-background)]/70 backdrop-blur-[2px]">
@@ -377,8 +377,12 @@ export function EditorShell() {
         )}
 
         <DialogManager editor={editor} />
-        <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
-        <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />
+        {paragraphOpen && (
+          <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
+        )}
+        {mathOpen && (
+          <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />
+        )}
         <EditorContextMenu editor={editor} containerRef={articleRef} />
         <MobileBlock />
         <Tour />

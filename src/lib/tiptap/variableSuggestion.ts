@@ -1,9 +1,17 @@
 "use client";
 
-import { ReactRenderer } from "@tiptap/react";
+import { ReactRenderer, type Editor } from "@tiptap/react";
 import tippy, { Instance as TippyInstance, GetReferenceClientRect } from "tippy.js";
 import { VariableSuggestionList } from "@/components/editor/VariableSuggestionList";
 import { useEditorStore } from "@/store/editorStore";
+
+interface SuggestionProps {
+  editor: Editor;
+  range: { from: number; to: number };
+  clientRect?: (() => DOMRect) | null;
+  event: KeyboardEvent;
+  items: string[];
+}
 
 export const variableSuggestion = {
   char: "{{",
@@ -16,13 +24,13 @@ export const variableSuggestion = {
       .slice(0, 10);
   },
   render: () => {
-    let component: ReactRenderer<any>;
+    let component: ReactRenderer<unknown>;
     let popup: TippyInstance[];
 
     return {
-      onStart: (props: any) => {
+      onStart: (props: SuggestionProps) => {
         component = new ReactRenderer(VariableSuggestionList, {
-          props,
+          props: props as unknown as Record<string, unknown>,
           editor: props.editor,
         });
 
@@ -41,8 +49,8 @@ export const variableSuggestion = {
         });
       },
 
-      onUpdate(props: any) {
-        component.updateProps(props);
+      onUpdate(props: SuggestionProps) {
+        component.updateProps(props as unknown as Record<string, unknown>);
 
         if (!props.clientRect) {
           return;
@@ -53,13 +61,14 @@ export const variableSuggestion = {
         });
       },
 
-      onKeyDown(props: any) {
+      onKeyDown(props: SuggestionProps) {
         if (props.event.key === "Escape") {
           popup[0].hide();
           return true;
         }
 
-        return (component.ref as any)?.onKeyDown(props);
+        const ref = component.ref as { onKeyDown?: (p: SuggestionProps) => boolean | void } | undefined;
+        return ref?.onKeyDown?.(props) ?? false;
       },
 
       onExit() {

@@ -17,36 +17,26 @@ interface MathInputDialogProps {
 export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps) {
   const [latex, setLatex] = useState("");
   const [inline, setInline] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const titleId = useId();
   const descId = useId();
 
   useEffect(() => {
-    if (open) {
-      setLatex("");
-      setInline(false);
-      setPreviewHtml("");
-      // Focus textarea after dialog opens
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-      });
-    }
-  }, [open]);
+    // Focus textarea after dialog opens (single mount since parent conditionally renders)
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, []);
 
-  useEffect(() => {
-    if (!latex.trim()) {
-      setPreviewHtml("");
-      return;
-    }
+  const previewHtml = useMemo(() => {
+    if (!latex.trim()) return "";
     try {
-      const html = katex.renderToString(latex, {
+      return katex.renderToString(latex, {
         throwOnError: false,
         displayMode: !inline,
       });
-      setPreviewHtml(html);
     } catch {
-      setPreviewHtml(`<span style=\"color:var(--color-danger)\">Error rendering equation</span>`);
+      return `<span style=\"color:var(--color-danger)\">Error rendering equation</span>`;
     }
   }, [latex, inline]);
 
@@ -72,6 +62,11 @@ export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps)
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            const trigger = document.activeElement as HTMLElement | null;
+            trigger?.focus();
+          }}
           aria-labelledby={titleId}
           aria-describedby={descId}
           className="fixed left-1/2 top-1/2 z-50 w-[560px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-lg"
@@ -103,6 +98,7 @@ export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps)
               <div className="flex rounded-md border border-[color:var(--color-border)] overflow-hidden">
                 <button
                   type="button"
+                  aria-pressed={!inline}
                   onClick={() => setInline(false)}
                   className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                     !inline
@@ -114,6 +110,7 @@ export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps)
                 </button>
                 <button
                   type="button"
+                  aria-pressed={inline}
                   onClick={() => setInline(true)}
                   className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                     inline
@@ -172,8 +169,8 @@ export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps)
                 ตัวอย่าง (Preview)
               </div>
               <div
+                aria-live="polite"
                 className="min-h-[48px] rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-3 text-[color:var(--color-foreground)]"
-                // eslint-disable-next-line react/no-danger
                 dangerouslySetInnerHTML={{
                   __html: previewHtml || '<span class="text-[color:var(--color-muted-foreground)] text-sm">พิมพ์ LaTeX เพื่อดูตัวอย่าง...</span>',
                 }}

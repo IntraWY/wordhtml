@@ -1,5 +1,33 @@
 import { test, expect } from "@playwright/test";
 
+interface ProseMirrorView {
+  state: {
+    tr: {
+      replaceWith: (from: number, to: number, node: unknown) => unknown;
+    };
+    doc: {
+      content: {
+        size: number;
+      };
+    };
+    schema: {
+      nodeFromJSON: (json: unknown) => unknown;
+    };
+  };
+  dispatch: (tr: unknown) => void;
+}
+
+declare global {
+  interface Window {
+    __PROSE_MIRROR_EDITOR_VIEW__?: ProseMirrorView;
+  }
+}
+
+interface ProseMirrorNodeJSON {
+  type: string;
+  content?: Array<{ type: string; text?: string }>;
+}
+
 const MULTI_PAGE_HTML = (() => {
   const paragraphs = Array.from({ length: 60 }, (_, i) => {
     const num = i + 1;
@@ -18,12 +46,12 @@ test.describe("Page Break Smoke", () => {
 
     // 2. Inject multi-page content via ProseMirror API
     await editor.evaluate((el, html) => {
-      const view = (window as any).__PROSE_MIRROR_EDITOR_VIEW__;
+      const view = window.__PROSE_MIRROR_EDITOR_VIEW__;
       if (view) {
         const { state } = view;
         const parser = new DOMParser();
         const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
-        const content: any[] = [];
+        const content: ProseMirrorNodeJSON[] = [];
         doc.querySelectorAll("p").forEach((p) => {
           content.push({
             type: "paragraph",
