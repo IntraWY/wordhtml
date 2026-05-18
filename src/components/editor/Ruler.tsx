@@ -1,7 +1,8 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useRulerDrag } from "@/hooks/useRulerDrag";
 import { PX_PER_CM } from "@/lib/page";
 
 interface RulerProps {
@@ -56,17 +57,6 @@ function Tooltip({ tooltip }: { tooltip: { x: number; y: number; text: string } 
   );
 }
 
-interface DragState {
-  type: "left" | "first" | "marginLeft" | "marginRight" | "marginTop" | "marginBottom";
-  startX: number;
-  startY: number;
-  startLeft: number;
-  startFirst: number;
-  startMarginLeftMm: number;
-  startMarginRightMm: number;
-  startMarginTopMm: number;
-  startMarginBottomMm: number;
-}
 
 function RulerInner({
   orientation,
@@ -89,16 +79,7 @@ function RulerInner({
   const rulerLengthPx = !isH && contentHeight ? contentHeight : totalPx;
   const indentInteractive = isH && !!onIndentChange;
   const marginInteractive = !!onMarginChange;
-  const anyInteractive = indentInteractive || marginInteractive;
-
-  const dragRef = useRef<DragState | null>(null);
-
-  const [tooltip, setTooltip] = useState<{
-    x: number;
-    y: number;
-    text: string;
-  } | null>(null);
-
+  
   // Generate tick positions — ensure we cover the full length, not just integer cm
   const ticks: Tick[] = useMemo(() => {
     const result: Tick[] = [];
@@ -126,252 +107,22 @@ function RulerInner({
   const pageHeightMm = cm * 10;
   const minContentMm = 20; // minimum 2cm content width/height
 
-  const snapMargin = useCallback((v: number) => Math.round(v / 5) * 5, []);
-  const snapIndent = useCallback((v: number) => Math.round(v / 0.5) * 0.5, []);
+  const { dragRef, tooltip, startDrag, handleKeyDown } = useRulerDrag({
+    maxIndentCm,
+    pageWidthMm,
+    pageHeightMm,
+    minContentMm,
+    indentLeft,
+    indentFirst,
+    marginLeftMm,
+    marginRightMm,
+    marginTopMm,
+    marginBottomMm,
+    onIndentChange,
+    onMarginChange,
+    onRulerActive,
+  });
 
-  const makeTooltipText = useCallback(
-    (type: DragState["type"], value: number) => {
-      switch (type) {
-        case "marginLeft":
-          return `ขอบซ้าย (Left): ${value.toFixed(1)} มม.`;
-        case "marginRight":
-          return `ขอบขวา (Right): ${value.toFixed(1)} มม.`;
-        case "marginTop":
-          return `ขอบบน (Top): ${value.toFixed(1)} มม.`;
-        case "marginBottom":
-          return `ขอบล่าง (Bottom): ${value.toFixed(1)} มม.`;
-        case "left":
-          return `ย่อหน้าซ้าย (Left indent): ${value.toFixed(1)} ซม.`;
-        case "first":
-          return `ย่อหน้าแรก (First line): ${value.toFixed(1)} ซม.`;
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!anyInteractive) return;
-
-    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(v, max));
-    const pxToMm = (px: number) => (px / PX_PER_CM) * 10;
-
-    const processMove = (clientX: number, clientY: number, shiftKey: boolean) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-
-      let newTooltip: { x: number; y: number; text: string } | null = null;
-
-      if (drag.type === "left") {
-        if (!onIndentChange) return;
-        const dx = clientX - drag.startX;
-        const dMm = pxToMm(dx);
-        let newLeft = clamp(drag.startLeft + dMm / 10, 0, maxIndentCm);
-        if (!shiftKey) newLeft = snapIndent(newLeft);
-        onIndentChange(newLeft, drag.startFirst);
-        newTooltip = { x: clientX, y: clientY + 16, text: makeTooltipText("left", newLeft) };
-      } else if (drag.type === "first") {
-        if (!onIndentChange) return;
-        const dx = clientX - drag.startX;
-        const dMm = pxToMm(dx);
-        let newFirst = drag.startFirst + dMm / 10;
-        if (!shiftKey) newFirst = snapIndent(newFirst);
-        onIndentChange(drag.startLeft, newFirst);
-        newTooltip = { x: clientX, y: clientY + 16, text: makeTooltipText("first", newFirst) };
-      } else if (drag.type === "marginLeft") {
-        if (!onMarginChange) return;
-        const dx = clientX - drag.startX;
-        const dMm = pxToMm(dx);
-        let newLeft = clamp(
-          drag.startMarginLeftMm + dMm,
-          0,
-          pageWidthMm - drag.startMarginRightMm - minContentMm
-        );
-        if (!shiftKey) newLeft = snapMargin(newLeft);
-        onMarginChange(newLeft, drag.startMarginRightMm);
-        newTooltip = { x: clientX, y: clientY + 16, text: makeTooltipText("marginLeft", newLeft) };
-      } else if (drag.type === "marginRight") {
-        if (!onMarginChange) return;
-        const dx = clientX - drag.startX;
-        const dMm = pxToMm(dx);
-        let newRight = clamp(
-          drag.startMarginRightMm - dMm,
-          0,
-          pageWidthMm - drag.startMarginLeftMm - minContentMm
-        );
-        if (!shiftKey) newRight = snapMargin(newRight);
-        onMarginChange(drag.startMarginLeftMm, newRight);
-        newTooltip = { x: clientX, y: clientY + 16, text: makeTooltipText("marginRight", newRight) };
-      } else if (drag.type === "marginTop") {
-        if (!onMarginChange) return;
-        const dy = clientY - drag.startY;
-        const dMm = pxToMm(dy);
-        let newTop = clamp(
-          drag.startMarginTopMm + dMm,
-          0,
-          pageHeightMm - drag.startMarginBottomMm - minContentMm
-        );
-        if (!shiftKey) newTop = snapMargin(newTop);
-        onMarginChange(newTop, drag.startMarginBottomMm);
-        newTooltip = { x: clientX, y: clientY + 16, text: makeTooltipText("marginTop", newTop) };
-      } else if (drag.type === "marginBottom") {
-        if (!onMarginChange) return;
-        const dy = clientY - drag.startY;
-        const dMm = pxToMm(dy);
-        let newBottom = clamp(
-          drag.startMarginBottomMm + dMm,
-          0,
-          pageHeightMm - drag.startMarginTopMm - minContentMm
-        );
-        if (!shiftKey) newBottom = snapMargin(newBottom);
-        onMarginChange(drag.startMarginTopMm, newBottom);
-        newTooltip = { x: clientX, y: clientY + 16, text: makeTooltipText("marginBottom", newBottom) };
-      }
-
-      if (newTooltip) {
-        setTooltip(newTooltip);
-        onRulerActive?.({ label: newTooltip.text });
-      }
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      processMove(e.clientX, e.clientY, e.shiftKey);
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const t = e.touches[0];
-      if (t) processMove(t.clientX, t.clientY, false);
-    };
-
-    const onMouseUp = () => {
-      dragRef.current = null;
-      setTooltip(null);
-      onRulerActive?.(null);
-    };
-
-    const onTouchEnd = () => {
-      dragRef.current = null;
-      setTooltip(null);
-      onRulerActive?.(null);
-    };
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-    document.addEventListener("touchend", onTouchEnd);
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [anyInteractive, onIndentChange, onMarginChange, maxIndentCm, pageWidthMm, pageHeightMm, snapIndent, snapMargin, makeTooltipText, onRulerActive]);
-
-  const startIndentDrag = useCallback(
-    (type: "left" | "first") => (e: React.MouseEvent | React.TouchEvent) => {
-      e.preventDefault();
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-      dragRef.current = {
-        type,
-        startX: clientX,
-        startY: clientY,
-        startLeft: indentLeft,
-        startFirst: indentFirst,
-        startMarginLeftMm: marginLeftMm,
-        startMarginRightMm: marginRightMm,
-        startMarginTopMm: marginTopMm,
-        startMarginBottomMm: marginBottomMm,
-      };
-    },
-    [indentLeft, indentFirst, marginLeftMm, marginRightMm, marginTopMm, marginBottomMm]
-  );
-
-  const startMarginDrag = useCallback(
-    (type: "marginLeft" | "marginRight" | "marginTop" | "marginBottom") => (e: React.MouseEvent | React.TouchEvent) => {
-      e.preventDefault();
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-      dragRef.current = {
-        type,
-        startX: clientX,
-        startY: clientY,
-        startLeft: indentLeft,
-        startFirst: indentFirst,
-        startMarginLeftMm: marginLeftMm,
-        startMarginRightMm: marginRightMm,
-        startMarginTopMm: marginTopMm,
-        startMarginBottomMm: marginBottomMm,
-      };
-    },
-    [indentLeft, indentFirst, marginLeftMm, marginRightMm, marginTopMm, marginBottomMm]
-  );
-
-  const handleMarginKeyDown =
-    (type: "marginLeft" | "marginRight" | "marginTop" | "marginBottom") => (e: React.KeyboardEvent) => {
-      const isVertical = type === "marginTop" || type === "marginBottom";
-      if (isVertical) {
-        if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-      } else {
-        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      }
-      e.preventDefault();
-      if (!onMarginChange) return;
-      const step = 1; // 1 mm per arrow key press
-
-      if (type === "marginLeft") {
-        const delta = e.key === "ArrowRight" ? step : -step;
-        const newLeft = Math.max(
-          0,
-          Math.min(pageWidthMm - marginRightMm - minContentMm, marginLeftMm + delta)
-        );
-        onMarginChange(newLeft, marginRightMm);
-        onRulerActive?.({ label: makeTooltipText("marginLeft", newLeft) });
-      } else if (type === "marginRight") {
-        const delta = e.key === "ArrowLeft" ? step : -step;
-        const newRight = Math.max(
-          0,
-          Math.min(pageWidthMm - marginLeftMm - minContentMm, marginRightMm + delta)
-        );
-        onMarginChange(marginLeftMm, newRight);
-        onRulerActive?.({ label: makeTooltipText("marginRight", newRight) });
-      } else if (type === "marginTop") {
-        const delta = e.key === "ArrowDown" ? step : -step;
-        const newTop = Math.max(
-          0,
-          Math.min(pageHeightMm - marginBottomMm - minContentMm, marginTopMm + delta)
-        );
-        onMarginChange(newTop, marginBottomMm);
-        onRulerActive?.({ label: makeTooltipText("marginTop", newTop) });
-      } else if (type === "marginBottom") {
-        const delta = e.key === "ArrowDown" ? step : -step;
-        const newBottom = Math.max(
-          0,
-          Math.min(pageHeightMm - marginTopMm - minContentMm, marginBottomMm + delta)
-        );
-        onMarginChange(marginTopMm, newBottom);
-        onRulerActive?.({ label: makeTooltipText("marginBottom", newBottom) });
-      }
-    };
-
-  const handleIndentKeyDown =
-    (type: "left" | "first") => (e: React.KeyboardEvent) => {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      e.preventDefault();
-      if (!onIndentChange) return;
-      const step = 0.1; // 0.1 cm per arrow key press
-      if (type === "left") {
-        const delta = e.key === "ArrowRight" ? step : -step;
-        const newLeft = Math.max(0, Math.min(maxIndentCm, indentLeft + delta));
-        onIndentChange(newLeft, indentFirst);
-        onRulerActive?.({ label: makeTooltipText("left", newLeft) });
-      } else {
-        const delta = e.key === "ArrowRight" ? step : -step;
-        const newFirst = indentFirst + delta;
-        onIndentChange(indentLeft, newFirst);
-        onRulerActive?.({ label: makeTooltipText("first", newFirst) });
-      }
-    };
 
   // Hover state helpers
   const [hovered, setHovered] = useState<string | null>(null);
@@ -483,9 +234,9 @@ function RulerInner({
                 aria-valuemin={0}
                 aria-valuemax={pageWidthMm - marginRightMm - minContentMm}
                 aria-valuenow={Math.round(marginLeftMm)}
-                onMouseDown={startMarginDrag("marginLeft")}
-                onTouchStart={startMarginDrag("marginLeft")}
-                onKeyDown={handleMarginKeyDown("marginLeft")}
+                onMouseDown={startDrag("marginLeft")}
+                onTouchStart={startDrag("marginLeft")}
+                onKeyDown={handleKeyDown("marginLeft")}
                 onMouseEnter={() =>
                   handleEnter("marginLeft", `ขอบซ้าย (Left): ${marginLeftMm.toFixed(1)} มม.`)
                 }
@@ -521,9 +272,9 @@ function RulerInner({
                 aria-valuemin={0}
                 aria-valuemax={pageWidthMm - marginLeftMm - minContentMm}
                 aria-valuenow={Math.round(marginRightMm)}
-                onMouseDown={startMarginDrag("marginRight")}
-                onTouchStart={startMarginDrag("marginRight")}
-                onKeyDown={handleMarginKeyDown("marginRight")}
+                onMouseDown={startDrag("marginRight")}
+                onTouchStart={startDrag("marginRight")}
+                onKeyDown={handleKeyDown("marginRight")}
                 onMouseEnter={() =>
                   handleEnter("marginRight", `ขอบขวา (Right): ${marginRightMm.toFixed(1)} มม.`)
                 }
@@ -562,9 +313,9 @@ function RulerInner({
                 aria-valuemin={0}
                 aria-valuemax={pageHeightMm - marginBottomMm - minContentMm}
                 aria-valuenow={Math.round(marginTopMm)}
-                onMouseDown={startMarginDrag("marginTop")}
-                onTouchStart={startMarginDrag("marginTop")}
-                onKeyDown={handleMarginKeyDown("marginTop")}
+                onMouseDown={startDrag("marginTop")}
+                onTouchStart={startDrag("marginTop")}
+                onKeyDown={handleKeyDown("marginTop")}
                 onMouseEnter={() =>
                   handleEnter("marginTop", `ขอบบน (Top): ${marginTopMm.toFixed(1)} มม.`)
                 }
@@ -602,9 +353,9 @@ function RulerInner({
                   aria-valuemin={0}
                   aria-valuemax={pageHeightMm - marginTopMm - minContentMm}
                   aria-valuenow={Math.round(marginBottomMm)}
-                  onMouseDown={startMarginDrag("marginBottom")}
-                  onTouchStart={startMarginDrag("marginBottom")}
-                  onKeyDown={handleMarginKeyDown("marginBottom")}
+                  onMouseDown={startDrag("marginBottom")}
+                  onTouchStart={startDrag("marginBottom")}
+                  onKeyDown={handleKeyDown("marginBottom")}
                   onMouseEnter={() =>
                     handleEnter("marginBottom", `ขอบล่าง (Bottom): ${marginBottomMm.toFixed(1)} มม.`)
                   }
@@ -646,12 +397,12 @@ function RulerInner({
             tabIndex={0}
             aria-orientation="horizontal"
             aria-label={`ย่อหน้าแรก (First-line indent) ${indentFirst.toFixed(1)} ซม.`}
-            aria-valuemin={-indentLeft}
+            aria-valuemin={Number(-indentLeft)}
             aria-valuemax={maxIndentCm - indentLeft}
             aria-valuenow={Math.round(indentFirst * 10)}
-            onMouseDown={startIndentDrag("first")}
-            onTouchStart={startIndentDrag("first")}
-            onKeyDown={handleIndentKeyDown("first")}
+            onMouseDown={startDrag("first")}
+            onTouchStart={startDrag("first")}
+            onKeyDown={handleKeyDown("first")}
             onMouseEnter={() =>
               handleEnter("first", `ย่อหน้าแรก (First line): ${indentFirst.toFixed(1)} ซม.`)
             }
@@ -691,9 +442,9 @@ function RulerInner({
             aria-valuemin={0}
             aria-valuemax={maxIndentCm}
             aria-valuenow={Math.round(indentLeft * 10)}
-            onMouseDown={startIndentDrag("left")}
-            onTouchStart={startIndentDrag("left")}
-            onKeyDown={handleIndentKeyDown("left")}
+            onMouseDown={startDrag("left")}
+            onTouchStart={startDrag("left")}
+            onKeyDown={handleKeyDown("left")}
             onMouseEnter={() =>
               handleEnter("left", `ย่อหน้าซ้าย (Left indent): ${indentLeft.toFixed(1)} ซม.`)
             }

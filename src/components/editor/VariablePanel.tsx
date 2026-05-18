@@ -65,13 +65,13 @@ export function VariablePanel() {
 
   const handleUpdateVariable = useCallback(
     (name: string, patch: Partial<TemplateVariable>) => {
-      setVariables(
-        variables.map((v) =>
+      setVariables((prev: TemplateVariable[]) =>
+        prev.map((v) =>
           v.name === name ? { ...v, ...patch } : v
         )
       );
     },
-    [variables, setVariables]
+    [setVariables]
   );
 
   const handleClear = useCallback(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useLayoutEffect, useRef, useState, useCallback } from "react";
 
 interface UseVirtualScrollOptions {
   /** Number of pages to render outside the viewport (before and after). */
@@ -30,7 +30,7 @@ export function useVirtualScroll(
   pageBreaks: number[],
   options: UseVirtualScrollOptions = {}
 ): UseVirtualScrollResult {
-  const { overscan = 1, threshold = 5 } = options;
+  const { overscan = 1, threshold = 3 } = options;
   const containerRef = useRef<HTMLDivElement>(null);
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
 
@@ -51,12 +51,11 @@ export function useVirtualScroll(
     return Array.from(prose.children) as HTMLElement[];
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isActive) {
-      setVisiblePages(new Set());
+      // State already defaults to empty Set; skip synchronous setState here.
       return;
     }
-
     const container = containerRef.current;
     if (!container) return;
 
@@ -117,33 +116,12 @@ export function useVirtualScroll(
       observer.observe(el);
     }
 
-    // Initial pass: mark all currently intersecting elements.
-    const initialVisible = new Set<number>();
-    for (const el of pageElements) {
-      const rect = el.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      const isInView =
-        rect.top < containerRect.bottom + 100 &&
-        rect.bottom > containerRect.top - 100;
-      if (isInView) {
-        const pageIdx = elementPageMap.get(el);
-        if (pageIdx !== undefined) {
-          initialVisible.add(pageIdx);
-          for (let i = 1; i <= overscan; i++) {
-            if (pageIdx - i >= 0) initialVisible.add(pageIdx - i);
-            if (pageIdx + i < totalPages) initialVisible.add(pageIdx + i);
-          }
-        }
-      }
-    }
-    setVisiblePages(initialVisible);
-
     return () => {
       observer.disconnect();
       visible.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, pageBreaks, totalPages, overscan]);
+    // isActive, pageBreaks, totalPages, and overscan are the stable dependencies for this layout effect.
+  }, [isActive, pageBreaks, totalPages, overscan, buildPageElements]);
 
   return { visiblePages, isActive, containerRef };
-}
+}

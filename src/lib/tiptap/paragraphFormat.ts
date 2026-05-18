@@ -31,7 +31,7 @@ declare module "@tiptap/core" {
   }
 }
 
-function lineHeightFromMode(
+export function lineHeightFromMode(
   mode: LineHeightMode | undefined,
   value: number | undefined
 ): string | undefined {

@@ -11,6 +11,7 @@ import { useUiStore } from "@/store/uiStore";
 import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
+import { useCleanDocument } from "@/hooks/useCleanDocument";
 
 const DEFAULT_CLEANERS = ["removeInlineStyles", "removeEmptyTags"] as const;
 
@@ -18,11 +19,11 @@ export function RibbonTabClean() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const toggleCleaner = useEditorStore((s) => s.toggleCleaner);
   const documentHtml = useEditorStore((s) => s.documentHtml);
-  const setHtml = useEditorStore((s) => s.setHtml);
-  const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
 
   const [isCleaning, setIsCleaning] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  const { cleanNow: handleCleanNowBase } = useCleanDocument();
 
   const previewHtml = useMemo(() => {
     if (!showPreview) return "";
@@ -36,26 +37,20 @@ export function RibbonTabClean() {
     }
     setIsCleaning(true);
 
-    // Auto-save snapshot before cleaning
-    saveSnapshot();
-
-    const beforeLen = documentHtml.length;
-    const cleaned = applyCleaners(documentHtml, enabledCleaners);
-    const afterLen = cleaned.length;
-    const removed = beforeLen - afterLen;
-
-    setHtml(cleaned);
-
     const enabledCount = enabledCleaners.length;
-    const message =
-      removed > 0
-        ? `ล้างเสร็จแล้ว — ลบ ${removed.toLocaleString()} ตัวอักษร (${enabledCount} ตัวเลือก)`
-        : `ล้างเสร็จแล้ว — ไม่มีการเปลี่ยนแปลง (${enabledCount} ตัวเลือก)`;
+    handleCleanNowBase({
+      onCleaned: ({ removed }) => {
+        const message =
+          removed > 0
+            ? `ล้างเสร็จแล้ว — ลบ ${removed.toLocaleString()} ตัวอักษร (${enabledCount} ตัวเลือก)`
+            : `ล้างเสร็จแล้ว — ไม่มีการเปลี่ยนแปลง (${enabledCount} ตัวเลือก)`;
+        useToastStore.getState().show(message, "success");
+        useUiStore.getState().setLastAction(`ล้างเอกสาร — ลบ ${removed.toLocaleString()} ตัวอักษร`);
+      },
+    });
 
-    useToastStore.getState().show(message, "success");
-    useUiStore.getState().setLastAction(`ล้างเอกสาร — ลบ ${removed.toLocaleString()} ตัวอักษร`);
     setIsCleaning(false);
-  }, [documentHtml, enabledCleaners, setHtml, saveSnapshot]);
+  }, [documentHtml, enabledCleaners, handleCleanNowBase]);
 
   const handleReset = useCallback(() => {
     DEFAULT_CLEANERS.forEach((key) => {

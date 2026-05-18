@@ -54,15 +54,60 @@ export function useAutoPagination(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idleRef = useRef<number | null>(null);
 
+  const measurePages = useCallback((html: string) => {
+    return calculatePageBreaks(html, pageSetup, options);
+  }, [pageSetup, options]);
+
+  const removeBreaks = useCallback(() => {
+    setPageBreaks([]);
+    setTotalPages(1);
+    setIsCalculating(false);
+  }, [setPageBreaks, setTotalPages, setIsCalculating]);
+
+  const insertBreaks = useCallback((
+    breaks: number[],
+    controller: AbortController
+  ) => {
+    // For very large documents, commit the result in chunks so React
+    // does not block the main thread with a huge state swap.
+    if (breaks.length > CHUNKED_PAGE_THRESHOLD) {
+      let idx = 0;
+      const chunkSize = CHUNKED_PAGE_THRESHOLD;
+
+      const pushChunk = () => {
+        if (controller.signal.aborted) return;
+        const chunk = breaks.slice(idx, Math.min(idx + chunkSize, breaks.length));
+        setPageBreaks(chunk);
+        setTotalPages(chunk.length);
+        usePaginationStore.getState().setCurrentPage(
+          Math.min(usePaginationStore.getState().currentPage, chunk.length)
+        );
+        idx += chunkSize;
+        if (idx < breaks.length) {
+          idleRef.current = scheduleIdle(pushChunk);
+        } else {
+          setIsCalculating(false);
+        }
+      };
+
+      pushChunk();
+    } else {
+      setPageBreaks(breaks);
+      setTotalPages(breaks.length);
+      usePaginationStore.getState().setCurrentPage(
+        Math.min(usePaginationStore.getState().currentPage, breaks.length)
+      );
+      setIsCalculating(false);
+    }
+  }, [setPageBreaks, setTotalPages, setIsCalculating]);
+
   const runRecalculation = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const html = container.innerHTML;
     if (!html.trim()) {
-      setPageBreaks([]);
-      setTotalPages(1);
-      setIsCalculating(false);
+      removeBreaks();
       return;
     }
 
@@ -91,42 +136,10 @@ export function useAutoPagination(
 
       const execute = () => {
         if (controller.signal.aborted) return;
-
         try {
-          const breaks = calculatePageBreaks(html, pageSetup, options);
+          const breaks = measurePages(html);
           if (controller.signal.aborted) return;
-
-          // For very large documents, commit the result in chunks so React
-          // doesn't block the main thread with a huge state swap.
-          if (breaks.length > CHUNKED_PAGE_THRESHOLD) {
-            let idx = 0;
-            const chunkSize = CHUNKED_PAGE_THRESHOLD;
-
-            const pushChunk = () => {
-              if (controller.signal.aborted) return;
-              const chunk = breaks.slice(idx, Math.min(idx + chunkSize, breaks.length));
-              setPageBreaks(chunk);
-              setTotalPages(chunk.length);
-              usePaginationStore.getState().setCurrentPage(
-                Math.min(usePaginationStore.getState().currentPage, chunk.length)
-              );
-              idx += chunkSize;
-              if (idx < breaks.length) {
-                idleRef.current = scheduleIdle(pushChunk);
-              } else {
-                setIsCalculating(false);
-              }
-            };
-
-            pushChunk();
-          } else {
-            setPageBreaks(breaks);
-            setTotalPages(breaks.length);
-            usePaginationStore.getState().setCurrentPage(
-              Math.min(usePaginationStore.getState().currentPage, breaks.length)
-            );
-            setIsCalculating(false);
-          }
+          insertBreaks(breaks, controller);
         } catch {
           // Error logged silently - pagination will retry on next mutation
           if (!controller.signal.aborted) {
@@ -139,10 +152,9 @@ export function useAutoPagination(
     }, RECALC_DEBOUNCE_MS);
   }, [
     containerRef,
-    pageSetup,
-    options,
-    setPageBreaks,
-    setTotalPages,
+    measurePages,
+    removeBreaks,
+    insertBreaks,
     setIsCalculating,
   ]);
 
@@ -185,7 +197,8 @@ export function useAutoPagination(
   // Re-run when explicit deps change (e.g. html prop, pageSetup object identity).
   useEffect(() => {
     runRecalculation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // deps is caller-controlled: we intentionally re-run only when the caller signals a change rather than tracking every possible internal dependency.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   // Cleanup any pending work on unmount.

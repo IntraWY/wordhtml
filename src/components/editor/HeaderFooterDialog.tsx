@@ -9,6 +9,7 @@ import { useEditorStore } from "@/store/editorStore";
 import type { HeaderFooterConfig } from "@/types";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { replaceVariables } from "@/lib/variables";
 
 interface HeaderFooterDialogProps {
   open: boolean;
@@ -308,11 +309,3 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
   );
 }
 
-function replaceVariables(html: string, pageNumber: number, totalPages: number): string {
-  if (!html) return "";
-  const date = new Date().toLocaleDateString("th-TH");
-  return html
-    .replace(/\{page\}/g, String(pageNumber))
-    .replace(/\{total\}/g, String(totalPages))
-    .replace(/\{date\}/g, date);
-}

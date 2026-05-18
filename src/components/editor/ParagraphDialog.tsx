@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import type { Editor } from "@tiptap/react";
+import { lineHeightFromMode } from "@/lib/tiptap/paragraphFormat";
 import type { ParagraphFormatValues, LineHeightMode } from "@/lib/tiptap/paragraphFormat";
 
 interface ParagraphDialogProps {
@@ -38,24 +39,6 @@ function readCurrentFormat(editor: Editor | null): ParagraphFormatValues {
   };
 }
 
-function lineHeightCss(mode: LineHeightMode | undefined, value: number | undefined): string | undefined {
-  switch (mode) {
-    case "single":
-      return "1.15";
-    case "oneHalf":
-      return "1.5";
-    case "double":
-      return "2";
-    case "atLeast":
-    case "exactly":
-      return value != null ? `${value}pt` : undefined;
-    case "multiple":
-      return value != null ? `${value}` : undefined;
-    default:
-      return undefined;
-  }
-}
-
 function buildPreviewStyle(draft: ParagraphFormatValues): React.CSSProperties {
   return {
     marginLeft: draft.marginLeft ? `${draft.marginLeft}cm` : undefined,
@@ -63,18 +46,13 @@ function buildPreviewStyle(draft: ParagraphFormatValues): React.CSSProperties {
     textIndent: draft.textIndent ? `${draft.textIndent}cm` : undefined,
     marginTop: draft.spaceBefore ? `${draft.spaceBefore}pt` : undefined,
     marginBottom: draft.spaceAfter ? `${draft.spaceAfter}pt` : undefined,
-    lineHeight: lineHeightCss(draft.lineHeightMode, draft.lineHeight ?? undefined),
+    lineHeight: lineHeightFromMode(draft.lineHeightMode, draft.lineHeight ?? undefined),
   };
 }
 
 export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps) {
   const [draft, setDraft] = useState<ParagraphFormatValues>(() => readCurrentFormat(editor));
 
-  useEffect(() => {
-    if (open) {
-      setDraft(readCurrentFormat(editor));
-    }
-  }, [open, editor]);
 
   const handleSave = () => {
     if (!editor) return;
@@ -102,7 +80,14 @@ export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps)
     <Dialog.Root open={open} onOpenChange={(o) => (o ? null : onClose())}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[720px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-lg">
+        <Dialog.Content
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            const trigger = document.activeElement as HTMLElement | null;
+            trigger?.focus();
+          }}
+          className="fixed left-1/2 top-1/2 z-50 w-[720px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-lg"
+        >
           <header className="flex items-center justify-between border-b border-[color:var(--color-border)] px-5 py-3">
             <Dialog.Title className="text-base font-semibold tracking-tight">
               ย่อหน้า (Paragraph)
@@ -196,7 +181,7 @@ export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps)
               </fieldset>
 
               {/* Line height */}
-              <fieldset>
+              <fieldset role="radiogroup" aria-label="ระยะบรรทัด (Line Height)">
                 <legend className="mb-2 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">
                   ระยะบรรทัด (Line Height)
                 </legend>
@@ -205,6 +190,8 @@ export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps)
                     <button
                       key={value}
                       type="button"
+                      role="radio"
+                      aria-checked={draft.lineHeightMode === value}
                       onClick={() => setDraft((d) => ({ ...d, lineHeightMode: value }))}
                       className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
                         draft.lineHeightMode === value

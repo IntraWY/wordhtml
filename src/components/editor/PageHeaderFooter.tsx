@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { replaceVariables } from "@/lib/variables";
 
 export interface PageHeaderFooterProps {
   pageNumber: number;
@@ -13,21 +14,7 @@ export interface PageHeaderFooterProps {
   className?: string;
 }
 
-/**
- * Replaces template variables in header/footer HTML with actual values.
- */
-export function replaceVariables(
-  html: string,
-  pageNumber: number,
-  totalPages: number
-): string {
-  if (!html) return "";
-  const date = new Date().toLocaleDateString("th-TH");
-  return html
-    .replace(/\{page\}/g, String(pageNumber))
-    .replace(/\{total\}/g, String(totalPages))
-    .replace(/\{date\}/g, date);
-}
+export { replaceVariables };
 
 /**
  * Resolves the correct header/footer HTML for a given page number

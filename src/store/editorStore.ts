@@ -96,7 +96,7 @@ interface EditorState {
   clearHistory: () => void;
   // template actions
   toggleTemplateMode: () => void;
-  setVariables: (variables: TemplateVariable[]) => void;
+  setVariables: (variables: TemplateVariable[] | ((prev: TemplateVariable[]) => TemplateVariable[])) => void;
   setDataSet: (dataSet: DataSet | null) => void;
   setPreviewMode: (mode: "edit" | "preview") => void;
 }
@@ -282,7 +282,7 @@ export const useEditorStore = create<EditorState>()(
           templateMode: !s.templateMode,
           previewMode: s.templateMode ? "edit" : s.previewMode,
         })),
-      setVariables: (variables) => set({ variables }),
+      setVariables: (variables) => set((state) => ({ variables: typeof variables === "function" ? variables(state.variables) : variables })),
       setDataSet: (dataSet) => set({ dataSet }),
       setPreviewMode: (previewMode) => set({ previewMode }),
     }),
