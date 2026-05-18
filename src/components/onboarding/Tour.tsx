@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { driver, type DriveStep } from "driver.js";
-import "driver.js/dist/driver.css";
+import type { DriveStep } from "driver.js";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
 interface TourProps {
@@ -13,7 +12,7 @@ interface TourProps {
 export function Tour({ onDismiss }: TourProps) {
   const { hasSeenTour, isReady, skipTour } = useOnboarding();
   const [tourStarted, setTourStarted] = useState(false);
-  const driverRef = useRef<ReturnType<typeof driver> | null>(null);
+  const driverRef = useRef<ReturnType<typeof import("driver.js").driver> | null>(null);
 
   const buildSteps = useCallback((): DriveStep[] => {
     return [
@@ -75,11 +74,14 @@ export function Tour({ onDismiss }: TourProps) {
 
     // Wait a short moment so the editor and ribbon have mounted
     // and data-tour attributes are present in the DOM.
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       const steps = buildSteps();
       // Only start if at least the first target exists
       const first = document.querySelector(steps[0].element as string);
       if (!first) return;
+
+      const { driver } = await import("driver.js");
+      await import("driver.js/dist/driver.css");
 
       const d = driver({
         showProgress: true,

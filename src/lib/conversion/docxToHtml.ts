@@ -1,6 +1,4 @@
-// mammoth ships a `browser` field in package.json that swaps Node-only modules
-// for browser-compatible builds, so the standard import works in webpack/turbopack.
-import mammoth, { type ConvertMessage } from "mammoth";
+import type { ConvertMessage } from "mammoth";
 
 export type MammothMessage = ConvertMessage;
 
@@ -20,6 +18,7 @@ export interface ConvertResult {
  * and errors so the UI can surface them with the correct severity.
  */
 export async function docxToHtml(file: File): Promise<ConvertResult> {
+  const mammoth = await import("mammoth");
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.convertToHtml(
     { arrayBuffer },

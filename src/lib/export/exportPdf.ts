@@ -129,7 +129,8 @@ export async function exportPdf(
     }
     await waitForImages(container);
 
-    const html2pdf = (await import("html2pdf.js")).default;
+    const html2pdfModule = await import("html2pdf.js");
+    const html2pdf = html2pdfModule.default;
 
     const ps = pageSetup ?? {
       size: "A4" as const,

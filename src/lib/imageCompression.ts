@@ -1,5 +1,3 @@
-import imageCompression from "browser-image-compression";
-
 export interface CompressionOptions {
   maxWidthOrHeight?: number;
   maxSizeMB?: number;
@@ -16,6 +14,7 @@ export async function compressImage(
   file: File,
   options: CompressionOptions = {}
 ): Promise<File> {
+  const imageCompression = (await import("browser-image-compression")).default;
   const opts = { ...DEFAULT_OPTIONS, ...options };
   return imageCompression(file, opts);
 }

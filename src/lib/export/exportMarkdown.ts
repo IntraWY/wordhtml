@@ -1,11 +1,12 @@
-import TurndownService from "turndown";
+import type TurndownService from "turndown";
 
 import { triggerDownload, deriveFileName } from "./wrap";
 
 let cachedTurndown: TurndownService | null = null;
 
-function getTurndown(): TurndownService {
+async function getTurndown(): Promise<TurndownService> {
   if (cachedTurndown) return cachedTurndown;
+  const TurndownService = (await import("turndown")).default;
   const td = new TurndownService({
     headingStyle: "atx",
     codeBlockStyle: "fenced",
@@ -68,15 +69,16 @@ function getTurndown(): TurndownService {
   return td;
 }
 
-export function htmlToMarkdown(html: string): string {
-  return getTurndown().turndown(html);
+export async function htmlToMarkdown(html: string): Promise<string> {
+  const td = await getTurndown();
+  return td.turndown(html);
 }
 
 export async function exportMarkdown(
   html: string,
   fileName: string | null
 ): Promise<void> {
-  const md = htmlToMarkdown(html);
+  const md = await htmlToMarkdown(html);
   const base = deriveFileName(fileName, "md");
   const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
   triggerDownload(blob, base);

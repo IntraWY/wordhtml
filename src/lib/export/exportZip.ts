@@ -1,5 +1,3 @@
-import JSZip from "jszip";
-
 import { extractImages } from "@/lib/images";
 import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
 
@@ -18,6 +16,7 @@ export async function downloadZip(
 ): Promise<void> {
   const { sourceName = null, title = "Document" } = options;
 
+  const JSZip = (await import("jszip")).default;
   const { html: rewrittenHtml, images } = extractImages(html, "img");
   const zip = new JSZip();
   zip.file("index.html", wrapAsDocument(rewrittenHtml, title));

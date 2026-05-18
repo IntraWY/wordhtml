@@ -1,5 +1,5 @@
 import { Node, nodeInputRule } from "@tiptap/core";
-import katex from "katex";
+import type katex from "katex";
 
 export interface MathEquationOptions {
   /** KaTeX render options passed to katex.render */
@@ -21,6 +21,11 @@ declare module "@tiptap/core" {
 
 const INPUT_RULE_INLINE = /\$\$([^$]+)\$\$/;
 const INPUT_RULE_BLOCK = /\$\$\$\$([^$]+)\$\$\$\$/;
+
+async function loadKatex(): Promise<typeof katex> {
+  const mod = await import("katex");
+  return mod.default;
+}
 
 export const MathEquation = Node.create<MathEquationOptions>({
   name: "mathEquation",
@@ -61,7 +66,7 @@ export const MathEquation = Node.create<MathEquationOptions>({
       },
       {
         tag: "div[data-type=\"math-equation\"]",
-        getAttrs: (el) => ({
+        getAttrs: () => ({
           inline: false,
         }),
       },
@@ -84,12 +89,12 @@ export const MathEquation = Node.create<MathEquationOptions>({
     return ({ node, HTMLAttributes }) => {
       const { latex, inline } = node.attrs as MathEquationAttributes;
       const dom = document.createElement(inline ? "span" : "div");
-      
+
       // Apply attributes
       Object.entries(HTMLAttributes).forEach(([key, value]) => {
         dom.setAttribute(key, value as string);
       });
-      
+
       dom.style.display = inline ? "inline-block" : "block";
       dom.style.cursor = "default";
       if (!inline) {
@@ -97,15 +102,20 @@ export const MathEquation = Node.create<MathEquationOptions>({
         dom.style.margin = "1em 0";
       }
 
-      try {
-        katex.render(latex, dom, {
-          throwOnError: false,
-          displayMode: !inline,
-          ...(this.options.katexOptions ?? {}),
-        });
-      } catch {
+      // KaTeX is loaded asynchronously to avoid bundling it in the main chunk
+      loadKatex().then((katex) => {
+        try {
+          katex.render(latex, dom, {
+            throwOnError: false,
+            displayMode: !inline,
+            ...(this.options.katexOptions ?? {}),
+          });
+        } catch {
+          dom.textContent = latex;
+        }
+      }).catch(() => {
         dom.textContent = latex;
-      }
+      });
 
       return {
         dom,
@@ -113,15 +123,19 @@ export const MathEquation = Node.create<MathEquationOptions>({
           if (updatedNode.type.name !== this.name) return false;
           const next = updatedNode.attrs as MathEquationAttributes;
           if (next.latex !== node.attrs.latex || next.inline !== node.attrs.inline) {
-            try {
-              katex.render(next.latex, dom, {
-                throwOnError: false,
-                displayMode: !next.inline,
-                ...(this.options.katexOptions ?? {}),
-              });
-            } catch {
+            loadKatex().then((katex) => {
+              try {
+                katex.render(next.latex, dom, {
+                  throwOnError: false,
+                  displayMode: !next.inline,
+                  ...(this.options.katexOptions ?? {}),
+                });
+              } catch {
+                dom.textContent = next.latex;
+              }
+            }).catch(() => {
               dom.textContent = next.latex;
-            }
+            });
           }
           return true;
         },
