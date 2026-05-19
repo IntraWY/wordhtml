@@ -6,3 +6,11 @@ export const LETTER = { wMm: 215.9, hMm: 279.4 };
 export function mmToPx(mm: number): number {
   return (mm / 10) * PX_PER_CM;
 }
+
+export function pxToMm(px: number): number {
+  return (px / PX_PER_CM) * 10;
+}
+
+export function pxToCm(px: number): number {
+  return px / PX_PER_CM;
+}

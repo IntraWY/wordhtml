@@ -1,5 +1,6 @@
 import { createJSONStorage, type PersistStorage } from "zustand/middleware";
 import { useToastStore } from "@/store/toastStore";
+import type { DocumentSnapshot, PageSetup } from "@/types";
 
 const SCHEMA_VERSION = 1;
 
@@ -17,25 +18,23 @@ function isQuotaError(e: unknown): boolean {
 function migrateEditorData(parsed: unknown): unknown {
   if (!parsed || typeof parsed !== "object") return parsed;
   const data = parsed as Record<string, unknown>;
-  const version = (data["version"] as number) ?? 0;
+  const version = (data.version as number) ?? 0;
   if (version >= SCHEMA_VERSION) return data;
 
   // Future migrations go here
 
-  data["version"] = SCHEMA_VERSION;
-  return data;
+  return { ...data, version: SCHEMA_VERSION };
 }
 
 function migrateTemplateData(parsed: unknown): unknown {
   if (!parsed || typeof parsed !== "object") return parsed;
   const data = parsed as Record<string, unknown>;
-  const version = (data["version"] as number) ?? 0;
+  const version = (data.version as number) ?? 0;
   if (version >= SCHEMA_VERSION) return data;
 
   // Future migrations go here
 
-  data["version"] = SCHEMA_VERSION;
-  return data;
+  return { ...data, version: SCHEMA_VERSION };
 }
 
 function createSafeStorage<S>(
@@ -125,8 +124,8 @@ export function clearAllAppData(): void {
 export const editorStorage = createSafeStorage<{
   enabledCleaners: string[];
   imageMode: string;
-  history: unknown[];
-  pageSetup: unknown;
+  history: DocumentSnapshot[];
+  pageSetup: PageSetup;
   templateMode: boolean;
   variables: unknown[];
   dataSet: unknown | null;

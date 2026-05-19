@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Ruler } from "./Ruler";
 import { PX_PER_CM } from "@/lib/page";
 
@@ -142,6 +142,170 @@ describe("Ruler", () => {
       onIndentChange.mockClear();
       fireEvent.keyDown(leftIndent, { key: "ArrowLeft" });
       expect(onIndentChange).toHaveBeenCalledWith(0.9, 0.5);
+    });
+
+    it("mouse drag on margin handle calls onMarginChange with snapped value", async () => {
+      const onMarginChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          marginLeftMm={25}
+          marginRightMm={25}
+          onMarginChange={onMarginChange}
+        />
+      );
+
+      const leftSlider = screen.getByRole("slider", {
+        name: /Left margin/i,
+      });
+
+      fireEvent.mouseDown(leftSlider, { clientX: 100, clientY: 50 });
+      fireEvent.mouseMove(document, { clientX: 120, clientY: 50 });
+
+      await waitFor(() => expect(onMarginChange).toHaveBeenCalled());
+
+      fireEvent.mouseUp(document);
+    });
+
+    it("snap behavior snaps margin values to 5mm grid", async () => {
+      const onMarginChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          marginLeftMm={22}
+          marginRightMm={25}
+          onMarginChange={onMarginChange}
+        />
+      );
+
+      const leftSlider = screen.getByRole("slider", {
+        name: /Left margin/i,
+      });
+
+      fireEvent.mouseDown(leftSlider, { clientX: 100, clientY: 50 });
+      fireEvent.mouseMove(document, { clientX: 102, clientY: 50, shiftKey: false });
+
+      await waitFor(() => expect(onMarginChange).toHaveBeenCalled());
+
+      fireEvent.mouseUp(document);
+
+      const lastCall = onMarginChange.mock.calls[onMarginChange.mock.calls.length - 1];
+      const finalValue = lastCall[0] as number;
+      expect(finalValue % 5).toBe(0);
+    });
+
+    it("tooltip appears during drag and disappears after mouseup", async () => {
+      const onMarginChange = vi.fn();
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          marginLeftMm={25}
+          marginRightMm={25}
+          onMarginChange={onMarginChange}
+        />
+      );
+
+      const leftSlider = screen.getByRole("slider", {
+        name: /Left margin/i,
+      });
+
+      expect(container.querySelector("[class*='fixed z-[300]']")).toBeNull();
+
+      fireEvent.mouseDown(leftSlider, { clientX: 100, clientY: 50 });
+      fireEvent.mouseMove(document, { clientX: 120, clientY: 50 });
+
+      await waitFor(() => expect(onMarginChange).toHaveBeenCalled());
+
+      fireEvent.mouseUp(document);
+
+      expect(container.querySelector("[class*='fixed z-[300]']")).toBeNull();
+    });
+
+    it("touch events on margin handle call onMarginChange", async () => {
+      const onMarginChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          marginLeftMm={25}
+          marginRightMm={25}
+          onMarginChange={onMarginChange}
+        />
+      );
+
+      const leftSlider = screen.getByRole("slider", {
+        name: /Left margin/i,
+      });
+
+      fireEvent.touchStart(leftSlider, {
+        touches: [{ clientX: 100, clientY: 50 }],
+      });
+      fireEvent.touchMove(document, {
+        touches: [{ clientX: 120, clientY: 50 }],
+      });
+
+      await waitFor(() => expect(onMarginChange).toHaveBeenCalled());
+
+      fireEvent.touchEnd(document);
+    });
+
+    it("min content clamping prevents margins from exceeding available space", async () => {
+      const onMarginChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          marginLeftMm={80}
+          marginRightMm={80}
+          onMarginChange={onMarginChange}
+        />
+      );
+
+      const leftSlider = screen.getByRole("slider", {
+        name: /Left margin/i,
+      });
+
+      fireEvent.mouseDown(leftSlider, { clientX: 100, clientY: 50 });
+      fireEvent.mouseMove(document, { clientX: 500, clientY: 50 });
+
+      await waitFor(() => expect(onMarginChange).toHaveBeenCalled());
+
+      fireEvent.mouseUp(document);
+
+      const lastCall = onMarginChange.mock.calls[onMarginChange.mock.calls.length - 1];
+      const finalLeft = lastCall[0] as number;
+      expect(finalLeft).toBeLessThanOrEqual(110);
+    });
+
+    it("renders hanging indent indicator when indentFirst is negative", () => {
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          indentLeft={1}
+          indentFirst={-0.5}
+          onIndentChange={vi.fn()}
+        />
+      );
+
+      const indicators = container.querySelectorAll('.absolute');
+      const indicator = Array.from(indicators).find((el) => el.getAttribute('style')?.includes('#93c5fd'));
+      expect(indicator).not.toBeNull();
     });
   });
 

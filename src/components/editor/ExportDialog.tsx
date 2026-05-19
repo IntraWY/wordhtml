@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
+import { useToastStore } from "@/store/toastStore";
 import { applyCleaners } from "@/lib/cleaning/pipeline";
 import { downloadHtml } from "@/lib/export/exportHtml";
 import { downloadZip } from "@/lib/export/exportZip";
@@ -26,6 +27,7 @@ import { exportPdf } from "@/lib/export/exportPdf";
 import { generateGASFunction } from "@/lib/gasGenerator";
 import type { ExportFormat, ImageMode } from "@/types";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 type ExportKind = ExportFormat;
 
@@ -133,6 +135,9 @@ export function ExportDialog() {
       } else {
         await downloadDocx(cleanedHtml, opts);
       }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "ส่งออกไม่สำเร็จ";
+      useToastStore.getState().show(message, "error");
     } finally {
       setBusy(null);
     }
@@ -383,7 +388,7 @@ export function ExportDialog() {
                 <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-inner shadow-slate-200">
                   <div
                     className="prose prose-slate max-w-none"
-                    dangerouslySetInnerHTML={{ __html: cleanedHtml }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(cleanedHtml) }}
                   />
                 </div>
               </div>

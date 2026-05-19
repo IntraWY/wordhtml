@@ -290,7 +290,12 @@ export const useEditorStore = create<EditorState>()(
       name: "wordhtml-editor",
       version: 1,
       storage: editorStorage,
-      migrate: (persistedState) => persistedState as EditorState,
+      migrate: (persistedState: unknown) => {
+        if (!persistedState || typeof persistedState !== "object") {
+          return {} as EditorState;
+        }
+        return persistedState as EditorState;
+      },
       partialize: (state) => ({
         _v: 1,
         enabledCleaners: state.enabledCleaners,

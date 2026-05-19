@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload } from "lucide-react";
+import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload, Loader2 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import type { PageSetup } from "@/types";
@@ -10,6 +10,7 @@ import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/sto
 import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { cn } from "@/lib/utils";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
 
 function formatDate(iso: string): string {
@@ -24,6 +25,8 @@ export function TemplatePanel() {
   const open = useTemplateStore((s) => s.panelOpen);
   const closePanel = useTemplateStore((s) => s.closePanel);
   const templates = useTemplateStore((s) => s.templates);
+  const loading = useTemplateStore((s) => s.loading);
+  const error = useTemplateStore((s) => s.error);
   const saveTemplate = useTemplateStore((s) => s.saveTemplate);
   const renameTemplate = useTemplateStore((s) => s.renameTemplate);
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
@@ -39,8 +42,8 @@ export function TemplatePanel() {
 
   const [saveName, setSaveName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
-  // Single renameValue shared across rows — only one row renames at a time via renamingId.
   const [renameValue, setRenameValue] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +67,7 @@ export function TemplatePanel() {
   }
 
   function doLoad(template: typeof templates[0]) {
-    setHtml(template.html);
+    setHtml(sanitizeHtml(template.html));
     setPageSetup(template.pageSetup);
     setFileName(template.name);
     clearError();
@@ -73,12 +76,19 @@ export function TemplatePanel() {
     useToastStore.getState().show(`โหลด Template: ${template.name} แล้ว`);
   }
 
-  function handleSave() {
+  async function handleSave() {
     const name = saveName.trim();
     if (!name || !hasDoc) return;
-    saveTemplate(name, documentHtml, pageSetup);
-    setSaveName("");
-    useToastStore.getState().show(`บันทึก Template "${name}" แล้ว`);
+    setActionLoading("save");
+    try {
+      await saveTemplate(name, documentHtml, pageSetup);
+      setSaveName("");
+      useToastStore.getState().show(`บันทึก Template "${name}" แล้ว`);
+    } catch {
+      useToastStore.getState().show("บันทึก Template ไม่สำเร็จ", "error");
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   function handleRenameStart(id: string, currentName: string) {
@@ -86,10 +96,21 @@ export function TemplatePanel() {
     setRenameValue(currentName);
   }
 
-  function handleRenameCommit(id: string) {
+  async function handleRenameCommit(id: string) {
     const name = renameValue.trim();
-    if (name) renameTemplate(id, name);
-    setRenamingId(null);
+    if (!name) {
+      setRenamingId(null);
+      return;
+    }
+    setActionLoading(`rename-${id}`);
+    try {
+      await renameTemplate(id, name);
+    } catch {
+      useToastStore.getState().show("เปลี่ยนชื่อไม่สำเร็จ", "error");
+    } finally {
+      setActionLoading(null);
+      setRenamingId(null);
+    }
   }
 
   function handleRenameAbort() {
@@ -112,6 +133,7 @@ export function TemplatePanel() {
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setActionLoading("import");
     try {
       const text = await file.text();
       const items = parseTemplateExport(text);
@@ -119,19 +141,20 @@ export function TemplatePanel() {
         useToastStore.getState().show("ไฟล์ไม่ถูกต้องหรือไม่มี template", "error");
         return;
       }
-      const imported = importTemplates(items);
+      const imported = await importTemplates(items);
       useToastStore.getState().show(`นำเข้า template ${imported} รายการแล้ว`);
     } catch {
       useToastStore.getState().show("อ่านไฟล์ไม่สำเร็จ", "error");
     } finally {
-      // reset input so same file can be selected again
+      setActionLoading(null);
       e.target.value = "";
     }
   }
 
   async function handleBackup() {
+    setActionLoading("backup");
     try {
-      const blob = await exportAllSettings();
+      const blob = exportAllSettings();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -141,6 +164,8 @@ export function TemplatePanel() {
       useToastStore.getState().show("สำรองข้อมูลทั้งหมดแล้ว");
     } catch {
       useToastStore.getState().show("สำรองข้อมูลไม่สำเร็จ", "error");
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -151,13 +176,27 @@ export function TemplatePanel() {
   async function handleRestoreFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setActionLoading("restore");
     try {
       await importAllSettings(file);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "กู้คืนข้อมูลไม่สำเร็จ";
       useToastStore.getState().show(message, "error");
     } finally {
+      setActionLoading(null);
       e.target.value = "";
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    setActionLoading(`delete-${id}`);
+    try {
+      await deleteTemplate(id);
+      useToastStore.getState().show(`ลบ Template "${name}" แล้ว`);
+    } catch {
+      useToastStore.getState().show("ลบ Template ไม่สำเร็จ", "error");
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -191,18 +230,20 @@ export function TemplatePanel() {
               <button
                 type="button"
                 onClick={handleExport}
+                disabled={actionLoading === "export" || templates.length === 0}
                 title="ส่งออกทั้งหมดเป็นไฟล์ JSON"
-                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-40"
               >
-                <Download className="size-4" />
+                {actionLoading === "export" ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               </button>
               <button
                 type="button"
                 onClick={handleImportClick}
+                disabled={actionLoading === "import"}
                 title="นำเข้าจากไฟล์ JSON"
-                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+                className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-40"
               >
-                <Upload className="size-4" />
+                {actionLoading === "import" ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
               </button>
               <input
                 ref={fileInputRef}
@@ -221,7 +262,18 @@ export function TemplatePanel() {
           </header>
 
           <div className="flex-1 overflow-y-auto">
-            {templates.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <Loader2 className="size-8 animate-spin text-[color:var(--color-muted-foreground)]" />
+                <p className="text-sm text-[color:var(--color-muted-foreground)]">
+                  กำลังโหลด Templates...
+                </p>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <p className="text-sm text-red-500">{error}</p>
+              </div>
+            ) : templates.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <FileText className="size-10 text-[color:var(--color-border-strong)]" />
                 <p className="text-sm text-[color:var(--color-muted-foreground)]">
@@ -241,6 +293,7 @@ export function TemplatePanel() {
                     pageSize={t.pageSetup.size}
                     isRenaming={renamingId === t.id}
                     renameValue={renameValue}
+                    actionLoading={actionLoading}
                     onRenameValueChange={setRenameValue}
                     onLoad={() => handleLoad(t.id)}
                     onRenameStart={() => handleRenameStart(t.id, t.name)}
@@ -251,10 +304,7 @@ export function TemplatePanel() {
                       openConfirm(
                         "ลบ Template (Delete Template)",
                         `ลบ template "${t.name}" — ไม่สามารถกู้คืนได้?`,
-                        () => {
-                          deleteTemplate(t.id);
-                          useToastStore.getState().show(`ลบ Template "${t.name}" แล้ว`);
-                        }
+                        () => handleDelete(t.id, t.name)
                       );
                     }}
                   />
@@ -272,17 +322,19 @@ export function TemplatePanel() {
                 <button
                   type="button"
                   onClick={handleBackup}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                  disabled={actionLoading === "backup"}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)] disabled:opacity-40"
                 >
-                  <Download className="size-3.5" />
+                  {actionLoading === "backup" ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                   สำรองข้อมูลทั้งหมด
                 </button>
                 <button
                   type="button"
                   onClick={handleRestoreClick}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                  disabled={actionLoading === "restore"}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)] disabled:opacity-40"
                 >
-                  <Upload className="size-3.5" />
+                  {actionLoading === "restore" ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
                   กู้คืนข้อมูลทั้งหมด
                 </button>
                 <input
@@ -310,10 +362,10 @@ export function TemplatePanel() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!saveName.trim() || !hasDoc}
+                disabled={!saveName.trim() || !hasDoc || actionLoading === "save"}
                 className="inline-flex items-center gap-1.5 rounded-md bg-[color:var(--color-foreground)] px-4 py-2 text-sm font-medium text-[color:var(--color-background)] transition-colors disabled:opacity-40"
               >
-                <BookmarkPlus className="size-3.5" />
+                {actionLoading === "save" ? <Loader2 className="size-3.5 animate-spin" /> : <BookmarkPlus className="size-3.5" />}
                 บันทึก
               </button>
             </div>
@@ -336,6 +388,7 @@ interface TemplateRowProps {
   pageSize: PageSetup["size"];
   isRenaming: boolean;
   renameValue: string;
+  actionLoading: string | null;
   onRenameValueChange: (v: string) => void;
   onLoad: () => void;
   onRenameStart: () => void;
@@ -350,6 +403,7 @@ function TemplateRow({
   pageSize,
   isRenaming,
   renameValue,
+  actionLoading,
   onRenameValueChange,
   onLoad,
   onRenameStart,
@@ -357,6 +411,7 @@ function TemplateRow({
   onRenameAbort,
   onDelete,
 }: TemplateRowProps) {
+  const isLoading = actionLoading?.startsWith("delete-") || actionLoading?.startsWith("rename-");
 
   return (
     <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]">
@@ -385,7 +440,8 @@ function TemplateRow({
           <button
             type="button"
             onClick={onLoad}
-            className="block w-full truncate text-left text-sm font-medium hover:underline"
+            disabled={isLoading}
+            className="block w-full truncate text-left text-sm font-medium hover:underline disabled:opacity-50"
           >
             {name}
           </button>
@@ -433,4 +489,3 @@ function RowBtn({ label, onClick, danger, children }: RowBtnProps) {
     </button>
   );
 }
-// force rebuild 2026-05-04T16:56:07.9769045+07:00

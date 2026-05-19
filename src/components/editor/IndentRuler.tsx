@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { Ruler } from "./Ruler";
 
+function toNum(v: unknown): number {
+  return typeof v === "number" && !isNaN(v) ? v : 0;
+}
+
 interface IndentRulerProps {
   editor: Editor | null;
   cm: number;
@@ -27,6 +31,7 @@ export function IndentRuler({
 }: IndentRulerProps) {
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!editor) return;
     const update = () => {
@@ -37,8 +42,8 @@ export function IndentRuler({
           ? editor.getAttributes("heading")
           : editor.getAttributes("paragraph");
       setCurrentIndent({
-        marginLeft: (attrs.marginLeft as number) ?? 0,
-        textIndent: (attrs.textIndent as number) ?? 0,
+        marginLeft: toNum(attrs.marginLeft),
+        textIndent: toNum(attrs.textIndent),
       });
     };
     editor.on("selectionUpdate", update);

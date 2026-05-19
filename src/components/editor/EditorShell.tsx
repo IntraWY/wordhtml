@@ -137,9 +137,6 @@ export function EditorShell() {
       if (e.key === "wordhtml-editor") {
         (useEditorStore as unknown as { persist?: { rehydrate: () => void } }).persist?.rehydrate?.();
       }
-      if (e.key === "wordhtml-templates") {
-        (useTemplateStore as unknown as { persist?: { rehydrate: () => void } }).persist?.rehydrate?.();
-      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);

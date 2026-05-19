@@ -1,5 +1,6 @@
 import type { PageSetup } from "./wrap";
 import { deriveFileName } from "./wrap";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface ExportPdfOptions {
   /** Original source filename (if any) — used to derive the export filename */
@@ -41,7 +42,7 @@ export async function exportPdf(
     '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   container.style.lineHeight = "1.7";
   container.style.fontSize = "16px";
-  container.innerHTML = html;
+  container.innerHTML = sanitizeHtml(html);
 
   // Clone key stylesheet rules from the live document so images, tables,
   // alignment, KaTeX, etc. render correctly in the snapshot.

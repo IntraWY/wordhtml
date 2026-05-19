@@ -9,7 +9,7 @@ export function sanitizeHtml(raw: string): string {
     const doc = parser.parseFromString(raw, "text/html");
 
     // Remove <script> and <iframe> elements entirely
-    const dangerousTags = ["script", "iframe", "object", "embed", "form"];
+    const dangerousTags = ["script", "iframe", "object", "embed", "form", "link"];
     dangerousTags.forEach((tag) => {
       doc.querySelectorAll(tag).forEach((el) => el.remove());
     });
