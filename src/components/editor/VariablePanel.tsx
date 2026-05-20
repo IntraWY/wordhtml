@@ -14,13 +14,15 @@ import {
   Plus,
   GripVertical,
   MousePointerClick,
+  Upload,
 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { extractVariables } from "@/lib/templateEngine";
 import { cn } from "@/lib/utils";
-import type { TemplateVariable } from "@/types";
+import type { TemplateVariable, DataSet } from "@/types";
 import { PasteDataDialog } from "./PasteDataDialog";
+import { ImportDataDialog } from "./ImportDataDialog";
 import { DataTable } from "./DataTable";
 import { dispatchInsertVariable } from "@/lib/events";
 
@@ -76,6 +78,7 @@ export function VariablePanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteKey, setPasteKey] = useState(0);
+  const [importOpen, setImportOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newVarName, setNewVarName] = useState("");
   const [addError, setAddError] = useState("");
@@ -124,6 +127,14 @@ export function VariablePanel() {
   const handleInsertVariable = useCallback((name: string) => {
     dispatchInsertVariable(name);
   }, []);
+
+  const handleImport = useCallback(
+    (importedVars: TemplateVariable[], importedDataSet: DataSet) => {
+      setVariables(importedVars);
+      setDataSet(importedDataSet);
+    },
+    [setVariables, setDataSet]
+  );
 
   const validateVarName = useCallback((raw: string): string | null => {
     const sanitized = raw.trim().replace(/\s+/g, "_").replace(/[^\w\u0E00-\u0E7F_]/g, "");
@@ -309,6 +320,14 @@ export function VariablePanel() {
                   <Table className="size-3.5" />
                   วางจาก Sheets
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setImportOpen(true)}
+                  className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-muted)]"
+                >
+                  <Upload className="size-3.5" />
+                  นำเข้าไฟล์
+                </button>
               </div>
 
               {/* Data table */}
@@ -345,6 +364,12 @@ export function VariablePanel() {
       </aside>
 
       <PasteDataDialog key={pasteKey} open={pasteOpen} onClose={() => setPasteOpen(false)} />
+      <ImportDataDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        existingVariables={variables}
+        onImport={handleImport}
+      />
     </>
   );
 }
