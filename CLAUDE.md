@@ -14,7 +14,7 @@ Everything runs **client-side** — no API routes, no server processing. The sit
 npm install
 npm run dev          # http://localhost:3000
 npm run build        # produces ./out — static export
-npm test             # vitest run (190 tests across 15 files)
+npm test             # vitest run (268 tests across 19 files)
 npm run lint
 ```
 
@@ -87,6 +87,7 @@ src/
 │   │   ├── MathInputDialog.tsx   # KaTeX LaTeX equation editor (Ctrl+Shift+M)
 │   │   ├── SourcePane.tsx        # HTML source editor panel
 │   │   ├── TemplatePreview.tsx   # processed template preview for preview mode
+│   │   ├── ConditionDialog.tsx   # set data-condition on paragraph/heading/table
 │   │   └── IndentRuler.tsx       # horizontal ruler with indent handles (extracted from EditorShell)
 │   ├── landing/                  # Hero, Features, HowItWorks, Footer, Header
 │   ├── help/                     # FAQ, CleanerExplainers, PasteTips
@@ -117,10 +118,17 @@ src/
 │   │   ├── pageBreak.ts          # Block-level page break node
 │   │   ├── variableMark.ts       # Template variable {{name}} mark
 │   │   ├── repeatingRow.ts       # Table row with data-repeat attrs
+│   │   ├── conditionalBlock.ts   # condition attr on paragraph/heading/table for show/hide
 │   │   ├── headingWithId.ts      # Heading with preserved id attr
 │   │   ├── bulletListWithClass.ts# BulletList with preserved class attr
 │   │   ├── imageWithAlign.ts     # Image extension extended with align/width attrs
 │   │   └── mathEquation.ts       # KaTeX Node extension (inline + block LaTeX)
+│   ├── template/                 # Template engine (NEW)
+│   │   ├── templateEngine.ts     # Pipeline: expand rows → evaluate conditions → replace vars
+│   │   ├── formatters.ts         # currency, date, number, percent formatters
+│   │   ├── expressionEngine.ts   # Shunting-yard RPN evaluator for computed variables
+│   │   ├── conditionEngine.ts    # DOM-based conditional block evaluator
+│   │   └── importData.ts         # Excel/CSV parser via dynamic xlsx import
 │   ├── onboarding/
 │   │   └── Tour.tsx              # driver.js 5-step onboarding spotlight tour
 │   ├── images.ts                 # extract base64 <img> → File[] for ZIP
@@ -161,6 +169,7 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 - **UI toggles are session-scoped.** `sourceOpen` (HTML source pane) and `isFullscreen` reset on reload.
 - **History is local-only.** Up to 20 document snapshots in localStorage. Auto-snapshot fires after 2 min idle. Total serialized size is capped at 4MB; oldest snapshots are dropped first.
 - **Templates are local-only.** Up to 50 document templates in localStorage (`wordhtml-templates`). Each stores `id`, `name`, `createdAt`, `html`, `pageSetup`. Export downloads all as JSON; import reads JSON and merges (skips duplicate `id`).
+- **Template engine pipeline order matters.** `processTemplate()` runs: expand repeating rows → evaluate conditions → replace variables. Computed variables are pre-evaluated before all phases and merged into the data row context. Do not reverse this order.
 - **Cleaner order matters.** See `src/lib/cleaning/pipeline.ts` — comments → styles → classes → attributes → **unwrapDeprecatedTags** → unwrapSpans → empty tags → spaces → (terminal) plainText.
 - **Editor reactivity for menus.** Menu components that show active/disabled states based on cursor position (e.g., `FormatMenu`, `EditMenu`) use `useEditorState` from `@tiptap/react` to subscribe to selection changes. Without it, checkmarks go stale.
 - **Cross-component coordination via custom events.** Menu items dispatch `wordhtml:open-search`, `wordhtml:open-page-setup`, `wordhtml:open-file` on `window`. `EditorShell` and `UploadButton` listen. Avoids passing dialog state through props.
@@ -246,8 +255,15 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 3. **Insert Variable button** — Added to Insert ribbon tab (`InsertMenu.tsx`); inserts `{{variable}}` template mark.
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
+### Phase 4 — Enhanced Variable System (2026-05-20)
+10. **Variable types & formatting** — `TemplateVariable` now supports `type`: `currency` (THB), `date` (long/short), `number` (integer/decimal), `percent` (0-100 / 0.0-1.0). Formatters live in `src/lib/template/formatters.ts`.
+11. **Batch import Excel/CSV** — `importData.ts` dynamically imports `xlsx` to parse `.xlsx`/`.csv` files. Mapped to variable names in `VariablePanel` via drag-and-drop or paste.
+12. **Computed variables** — `expressionEngine.ts` implements shunting-yard → RPN evaluation with functions (`sum`, `count`, `avg`, `min`, `max`). `VariablePanel` shows live previews. Kahn's algorithm resolves dependency chains; cycles are reported as warnings.
+13. **Conditional blocks** — `ConditionalBlockExtension` adds `data-condition` attribute to paragraphs, headings, and tables. Syntax: `{{var}} == 'value'`, `!=`, `>`, `<`, `contains`. Evaluated via DOM in `conditionEngine.ts`. UI: ConditionDialog in ribbon + context menu.
+14. **Template engine pipeline** — `processTemplate()` runs 4 phases: expand repeating rows (`data-repeat`) → evaluate conditions → replace variables (with computed pre-evaluation). Used by `TemplatePreview` and export paths.
+
 ### Known Pending Issues
-- None at this time.
+- Computed variables inside expanded repeating rows are evaluated once before expansion; per-row computed values are not yet supported.
 
 ## Adding features
 
@@ -263,7 +279,7 @@ Before writing new code:
 
 ## Testing
 
-- Pure libs in `lib/cleaning/`, `lib/export/`, `lib/conversion/`, `lib/text.ts`, `lib/images.ts` are unit-tested with Vitest + jsdom (190 tests across 15 files).
+- Pure libs in `lib/cleaning/`, `lib/export/`, `lib/conversion/`, `lib/template/`, `lib/text.ts`, `lib/images.ts` are unit-tested with Vitest + jsdom (268 tests across 19 files).
 - E2E suite is wired up with Playwright (`tests/e2e/smoke.spec.ts`) covering app load, typing, export dialog, and .docx upload.
 - CI runs on GitHub Actions (`lint → unit test → build → e2e`).
 - TypeScript runs as part of `next build` — `npm run build` is your type-check.
