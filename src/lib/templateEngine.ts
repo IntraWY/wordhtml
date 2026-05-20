@@ -1,5 +1,6 @@
 import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
 import { formatValue } from "./formatters";
+import { evaluateComputeds } from "./expressionEngine";
 
 const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/;
 
@@ -163,11 +164,24 @@ export function processTemplate(
     warnings.push(`ตัวแปรที่ยังไม่มีค่า: ${missing.join(", ")}`);
   }
 
+  // Pre-evaluate computed variables with data row values as context
+  const varsForComputation = variables.map((v) =>
+    v.isComputed ? v : { ...v, value: dataRow[v.name] ?? v.value }
+  );
+  const { values: computedValues, errors: computedErrors } =
+    evaluateComputeds(varsForComputation);
+
+  for (const [name, err] of Object.entries(computedErrors)) {
+    warnings.push(`ตัวแปรคำนวณ {{${name}}}: ${err}`);
+  }
+
+  const enrichedDataRow = { ...dataRow, ...computedValues };
+
   // Step 1: expand repeating rows
   let html = expandRepeatingRows(templateHtml, variables);
 
   // Step 2: replace simple variables
-  html = replaceVariables(html, variables, dataRow);
+  html = replaceVariables(html, variables, enrichedDataRow);
 
   return { html, warnings };
 }

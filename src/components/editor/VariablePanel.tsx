@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Database,
   Table,
@@ -15,10 +15,12 @@ import {
   GripVertical,
   MousePointerClick,
   Upload,
+  Calculator,
 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { extractVariables } from "@/lib/templateEngine";
+import { evaluateComputeds } from "@/lib/expressionEngine";
 import { cn } from "@/lib/utils";
 import type { TemplateVariable, DataSet } from "@/types";
 import { PasteDataDialog } from "./PasteDataDialog";
@@ -82,6 +84,8 @@ export function VariablePanel() {
   const [isAdding, setIsAdding] = useState(false);
   const [newVarName, setNewVarName] = useState("");
   const [addError, setAddError] = useState("");
+
+  const computedResult = useMemo(() => evaluateComputeds(variables), [variables]);
 
   // Auto-detect variables when documentHtml changes — additive only:
   // preserves manually-added variables even if not yet in document
@@ -301,6 +305,8 @@ export function VariablePanel() {
                         onUpdate={(patch) => handleUpdateVariable(v.name, patch)}
                         onInsert={() => handleInsertVariable(v.name)}
                         onDragStart={(e) => handleDragStart(e, v.name)}
+                        computedValue={computedResult.values[v.name]}
+                        computedError={computedResult.errors[v.name]}
                       />
                     ))}
                   </div>
@@ -379,10 +385,19 @@ interface VariableRowProps {
   onUpdate: (patch: Partial<TemplateVariable>) => void;
   onInsert?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
+  computedValue?: string;
+  computedError?: string;
 }
 
-function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowProps) {
-  const { name, value, isList, delimiter, type, format } = variable;
+function VariableRow({
+  variable,
+  onUpdate,
+  onInsert,
+  onDragStart,
+  computedValue,
+  computedError,
+}: VariableRowProps) {
+  const { name, value, isList, delimiter, type, format, isComputed, expression } = variable;
 
   const activeDelimiter = delimiter || ",";
   const activeType = type || "text";
@@ -399,12 +414,29 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
   const handleToggleList = (checked: boolean) => {
     const patch: Partial<TemplateVariable> = { isList: checked };
     if (checked) {
+      patch.isComputed = false;
+      patch.expression = undefined;
       const delim = delimiter || ",";
       patch.delimiter = delim;
       patch.listValues = parseListValues(value, delim);
     } else {
       patch.delimiter = undefined;
       patch.listValues = undefined;
+    }
+    onUpdate(patch);
+  };
+
+  const handleToggleComputed = (checked: boolean) => {
+    const patch: Partial<TemplateVariable> = {};
+    if (checked) {
+      patch.isComputed = true;
+      patch.expression = expression || "";
+      patch.isList = false;
+      patch.delimiter = undefined;
+      patch.listValues = undefined;
+    } else {
+      patch.isComputed = false;
+      patch.expression = undefined;
     }
     onUpdate(patch);
   };
@@ -436,7 +468,7 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
       draggable
       onDragStart={onDragStart}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <GripVertical className="size-3 shrink-0 cursor-grab text-[color:var(--color-border-strong)] active:cursor-grabbing group-hover:text-[color:var(--color-muted-foreground)]" />
         <button
           type="button"
@@ -449,6 +481,12 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
           {name}
           {"}}"}
         </button>
+        {isComputed && (
+          <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 px-1 py-0.5 text-[10px] text-blue-700">
+            <Calculator className="size-2.5" />
+            คำนวณ
+          </span>
+        )}
         {isList && (
           <span className="inline-flex items-center gap-0.5 rounded bg-[color:var(--color-muted)] px-1 py-0.5 text-[10px] text-[color:var(--color-muted-foreground)]">
             <List className="size-2.5" />
@@ -484,36 +522,83 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
         )}
       </div>
 
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => handleValueChange(e.target.value)}
-        placeholder="ค่า (value)"
-        className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
-      />
+      {isComputed ? (
+        <>
+          <input
+            type="text"
+            value={expression || ""}
+            onChange={(e) => onUpdate({ expression: e.target.value })}
+            placeholder="เช่น {{amount}} * {{qty}}"
+            className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
+          />
+          {computedError ? (
+            <p className="text-[10px] text-red-600" role="alert">
+              {computedError}
+            </p>
+          ) : (
+            computedValue !== undefined && (
+              <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+                = {computedValue}
+              </p>
+            )
+          )}
+        </>
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => handleValueChange(e.target.value)}
+          placeholder="ค่า (value)"
+          className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-xs outline-none focus:border-[color:var(--color-foreground)] focus:ring-1 focus:ring-[color:var(--color-foreground)]"
+        />
+      )}
 
       <div className="flex items-center justify-between">
-        <label className="inline-flex cursor-pointer items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={isList}
-            onChange={(e) => handleToggleList(e.target.checked)}
-            className="sr-only"
-          />
-          <span
-            className={cn(
-              "grid h-3.5 w-3.5 place-items-center rounded border transition-colors",
-              isList
-                ? "border-[color:var(--color-accent)] bg-[color:var(--color-accent)]"
-                : "border-[color:var(--color-border-strong)] bg-[color:var(--color-background)]"
-            )}
-          >
-            {isList && <Check className="size-2.5 text-[color:var(--color-accent-foreground)]" />}
-          </span>
-          <span className="text-[11px] text-[color:var(--color-muted-foreground)]">
-            รายการ (List)
-          </span>
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={isList}
+              onChange={(e) => handleToggleList(e.target.checked)}
+              className="sr-only"
+            />
+            <span
+              className={cn(
+                "grid h-3.5 w-3.5 place-items-center rounded border transition-colors",
+                isList
+                  ? "border-[color:var(--color-accent)] bg-[color:var(--color-accent)]"
+                  : "border-[color:var(--color-border-strong)] bg-[color:var(--color-background)]"
+              )}
+            >
+              {isList && <Check className="size-2.5 text-[color:var(--color-accent-foreground)]" />}
+            </span>
+            <span className="text-[11px] text-[color:var(--color-muted-foreground)]">
+              รายการ
+            </span>
+          </label>
+
+          <label className="inline-flex cursor-pointer items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={isComputed}
+              onChange={(e) => handleToggleComputed(e.target.checked)}
+              className="sr-only"
+            />
+            <span
+              className={cn(
+                "grid h-3.5 w-3.5 place-items-center rounded border transition-colors",
+                isComputed
+                  ? "border-blue-500 bg-blue-500"
+                  : "border-[color:var(--color-border-strong)] bg-[color:var(--color-background)]"
+              )}
+            >
+              {isComputed && <Check className="size-2.5 text-white" />}
+            </span>
+            <span className="text-[11px] text-[color:var(--color-muted-foreground)]">
+              คำนวณ
+            </span>
+          </label>
+        </div>
 
         {isList && (
           <select

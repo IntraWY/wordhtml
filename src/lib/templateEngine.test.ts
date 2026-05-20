@@ -180,4 +180,52 @@ describe("processTemplate", () => {
     expect(result.html).toContain("<td>X</td>");
     expect(result.html).toContain("<td>Y</td>");
   });
+
+  it("evaluates computed variables in template", () => {
+    const html = "ราคา {{price}} จำนวน {{qty}} รวม {{total}}";
+    const vars: TemplateVariable[] = [
+      { name: "price", value: "100", isList: false, type: "number" },
+      { name: "qty", value: "3", isList: false, type: "number" },
+      { name: "total", value: "", isList: false, isComputed: true, expression: "{{price}} * {{qty}}" },
+    ];
+    const result = processTemplate(html, vars, {});
+    expect(result.html).toContain("ราคา 100");
+    expect(result.html).toContain("จำนวน 3");
+    expect(result.html).toContain("รวม 300");
+  });
+
+  it("uses data row values in computed expressions", () => {
+    const html = "รวม {{total}}";
+    const vars: TemplateVariable[] = [
+      { name: "price", value: "0", isList: false, type: "number" },
+      { name: "total", value: "", isList: false, isComputed: true, expression: "{{price}} * 2" },
+    ];
+    const result = processTemplate(html, vars, { price: "50" });
+    expect(result.html).toContain("รวม 100");
+  });
+
+  it("reports computed variable cycle errors as warnings", () => {
+    const html = "{{total}}";
+    const vars: TemplateVariable[] = [
+      { name: "a", value: "", isList: false, isComputed: true, expression: "{{b}}" },
+      { name: "b", value: "", isList: false, isComputed: true, expression: "{{a}}" },
+    ];
+    const result = processTemplate(html, vars, {});
+    expect(result.warnings.some((w) => w.includes("Cycle detected"))).toBe(true);
+  });
+
+  it("chains computed variables through dependencies", () => {
+    const html = "{{subtotal}} {{vat}} {{grand_total}}";
+    const vars: TemplateVariable[] = [
+      { name: "price", value: "1000", isList: false },
+      { name: "qty", value: "3", isList: false },
+      { name: "subtotal", value: "", isList: false, isComputed: true, expression: "{{price}} * {{qty}}" },
+      { name: "vat", value: "", isList: false, isComputed: true, expression: "{{subtotal}} * 0.07" },
+      { name: "grand_total", value: "", isList: false, isComputed: true, expression: "{{subtotal}} + {{vat}}" },
+    ];
+    const result = processTemplate(html, vars, {});
+    expect(result.html).toContain("3000");
+    expect(result.html).toContain("210");
+    expect(result.html).toContain("3210");
+  });
 });

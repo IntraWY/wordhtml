@@ -56,7 +56,7 @@ function tokenize(expression: string): Token[] {
     // Operator
     const opMatch = substr.match(OPERATOR_REGEX);
     if (opMatch) {
-      tokens.push({ type: "OPERATOR", op: opMatch[0] as Token["op"] });
+      tokens.push({ type: "OPERATOR", op: opMatch[0] as "+" | "-" | "*" | "/" });
       i += 1;
       continue;
     }
