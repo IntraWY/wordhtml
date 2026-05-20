@@ -155,6 +155,7 @@ export function processTemplate(
     const dataValue = dataRow[name];
     const hasDataValue = dataValue !== undefined && dataValue !== "";
     const v = variables.find((varDef) => varDef.name === name);
+    if (v?.isComputed) return false;
     const varValue = v?.value;
     const hasVarValue = v?.isList
       ? (v.listValues && v.listValues.length > 0)

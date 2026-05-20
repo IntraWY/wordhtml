@@ -267,4 +267,48 @@ describe("processTemplate", () => {
     expect(result.html).toContain("ยอดสูง");
     expect(result.html).not.toContain("ยอดต่ำ");
   });
+
+  it("runs full pipeline with all 4 phases", () => {
+    const html = `
+      <p>ลูกค้า: {{customer}}</p>
+      <p>ประเภท: {{type}}</p>
+      <p data-condition="{{type}} == 'จ้าง'">เอกสารจ้าง</p>
+      <table>
+        <tbody>
+          <tr data-repeat="true"><td>{{item}}</td><td>{{unit_price}}</td></tr>
+        </tbody>
+      </table>
+      <p>รวมเงิน: {{grand_total}}</p>
+    `;
+    const vars: TemplateVariable[] = [
+      { name: "customer", value: "บริษัท เอบีซี", isList: false },
+      { name: "type", value: "จ้าง", isList: false },
+      { name: "item", value: "A, B", isList: true, delimiter: ",", listValues: ["A", "B"] },
+      { name: "unit_price", value: "100, 200", isList: true, delimiter: ",", listValues: ["100", "200"] },
+      { name: "tax_rate", value: "0.07", isList: false, type: "percent", format: "0.0-1.0" },
+      { name: "subtotal", value: "", isList: false, isComputed: true, expression: "sum(100, 200)" },
+      { name: "vat", value: "", isList: false, isComputed: true, expression: "{{subtotal}} * {{tax_rate}}" },
+      { name: "grand_total", value: "", isList: false, isComputed: true, expression: "{{subtotal}} + {{vat}}" },
+    ];
+    const result = processTemplate(html, vars, {});
+
+    // Phase 1: variable replacement
+    expect(result.html).toContain("ลูกค้า: บริษัท เอบีซี");
+    expect(result.html).toContain("ประเภท: จ้าง");
+
+    // Phase 2: repeating rows expanded
+    expect(result.html).toContain("<td>A</td>");
+    expect(result.html).toContain("<td>B</td>");
+    expect(result.html).not.toContain("data-repeat");
+
+    // Phase 3: computed variables (subtotal=300, vat=21, grand_total=321)
+    expect(result.html).toContain("รวมเงิน: 321");
+
+    // Phase 4: conditional blocks
+    expect(result.html).toContain("เอกสารจ้าง");
+    expect(result.html).not.toContain("data-condition");
+
+    // No warnings
+    expect(result.warnings).toHaveLength(0);
+  });
 });
