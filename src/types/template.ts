@@ -6,6 +6,9 @@
  * which are just saved HTML snapshots.
  */
 
+/** Supported variable types for formatting and validation */
+export type VariableType = "text" | "number" | "currency" | "date" | "percent";
+
 /** A template variable such as {{customer_name}} */
 export interface TemplateVariable {
   name: string;
@@ -13,6 +16,14 @@ export interface TemplateVariable {
   isList: boolean;
   delimiter?: string; // ',' or '|' or '\n'
   listValues?: string[]; // parsed array when isList === true
+  /** Variable type for formatting and validation (defaults to "text") */
+  type?: VariableType;
+  /** Format string (e.g. "#,##0.00", "dd/MM/yyyy", "$#,##0.00") */
+  format?: string;
+  /** Whether this variable is computed from an expression */
+  isComputed?: boolean;
+  /** Expression to compute the value (e.g. "{{price}} * {{quantity}}") */
+  expression?: string;
 }
 
 /** A data set imported from Google Sheets / CSV paste */

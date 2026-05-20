@@ -15,6 +15,7 @@ import type {
   DocumentSnapshot,
   ExportFormat,
   TemplateVariable,
+  VariableType,
   DataSet,
   PageSetup,
 } from "@/types";
@@ -288,13 +289,26 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name: "wordhtml-editor",
-      version: 1,
+      version: 2,
       storage: editorStorage,
-      migrate: (persistedState: unknown) => {
+      migrate: (persistedState: unknown, version: number) => {
         if (!persistedState || typeof persistedState !== "object") {
           return {} as EditorState;
         }
-        return persistedState as EditorState;
+        const state = persistedState as Record<string, unknown>;
+
+        // Migration v1 → v2: default missing variable type to "text"
+        if (version < 2) {
+          const vars = state.variables;
+          if (Array.isArray(vars)) {
+            state.variables = vars.map((v: TemplateVariable) => ({
+              ...v,
+              type: (v.type ?? "text") as VariableType,
+            }));
+          }
+        }
+
+        return state as unknown as EditorState;
       },
       partialize: (state) => ({
         _v: 1,
