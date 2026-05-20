@@ -30,6 +30,39 @@ const DELIMITER_OPTIONS: { label: string; value: string }[] = [
   { label: "↵ (newline)", value: "\n" },
 ];
 
+const TYPE_OPTIONS: { label: string; value: string }[] = [
+  { label: "ข้อความ (Text)", value: "text" },
+  { label: "ตัวเลข (Number)", value: "number" },
+  { label: "เงิน (Currency)", value: "currency" },
+  { label: "วันที่ (Date)", value: "date" },
+  { label: "เปอร์เซ็นต์ (Percent)", value: "percent" },
+];
+
+const FORMAT_OPTIONS: Record<string, { label: string; value: string }[]> = {
+  number: [
+    { label: "จำนวนเต็ม (Integer)", value: "integer" },
+    { label: "ทศนิยม 2 ตำแหน่ง (Decimal)", value: "decimal(2)" },
+  ],
+  currency: [
+    { label: "บาท (THB)", value: "THB" },
+    { label: "ดอลลาร์ (USD)", value: "USD" },
+  ],
+  date: [
+    { label: "สั้น (Short)", value: "short" },
+    { label: "เต็ม (Long)", value: "long" },
+    { label: "ISO", value: "iso" },
+  ],
+  percent: [
+    { label: "0-100%", value: "0-100" },
+    { label: "0.0-1.0", value: "0.0-1.0" },
+  ],
+};
+
+function getDefaultFormat(type: string): string | undefined {
+  const opts = FORMAT_OPTIONS[type];
+  return opts ? opts[0].value : undefined;
+}
+
 export function VariablePanel() {
   const templateMode = useEditorStore((s) => s.templateMode);
   const documentHtml = useEditorStore((s) => s.documentHtml);
@@ -324,9 +357,11 @@ interface VariableRowProps {
 }
 
 function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowProps) {
-  const { name, value, isList, delimiter } = variable;
+  const { name, value, isList, delimiter, type, format } = variable;
 
   const activeDelimiter = delimiter || ",";
+  const activeType = type || "text";
+  const formatOpts = FORMAT_OPTIONS[activeType] || [];
 
   const handleValueChange = (newValue: string) => {
     const patch: Partial<TemplateVariable> = { value: newValue };
@@ -356,6 +391,20 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
     });
   };
 
+  const handleTypeChange = (newType: string) => {
+    const patch: Partial<TemplateVariable> = { type: newType as TemplateVariable["type"] };
+    if (newType === "text") {
+      patch.format = undefined;
+    } else {
+      patch.format = getDefaultFormat(newType);
+    }
+    onUpdate(patch);
+  };
+
+  const handleFormatChange = (newFormat: string) => {
+    onUpdate({ format: newFormat });
+  };
+
   return (
     <div
       className="group rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-2 space-y-1.5 transition-colors hover:border-[color:var(--color-foreground)]/30"
@@ -380,6 +429,33 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
             <List className="size-2.5" />
             รายการ
           </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <select
+          value={activeType}
+          onChange={(e) => handleTypeChange(e.target.value)}
+          className="flex-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-1.5 py-0.5 text-[10px] outline-none focus:border-[color:var(--color-foreground)]"
+        >
+          {TYPE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        {formatOpts.length > 0 && (
+          <select
+            value={format || formatOpts[0].value}
+            onChange={(e) => handleFormatChange(e.target.value)}
+            className="flex-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-1.5 py-0.5 text-[10px] outline-none focus:border-[color:var(--color-foreground)]"
+          >
+            {formatOpts.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         )}
       </div>
 
