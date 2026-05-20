@@ -1,6 +1,7 @@
 import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
 import { formatValue } from "./formatters";
 import { evaluateComputeds } from "./expressionEngine";
+import { evaluateConditions } from "./conditionEngine";
 
 const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/;
 
@@ -180,7 +181,10 @@ export function processTemplate(
   // Step 1: expand repeating rows
   let html = expandRepeatingRows(templateHtml, variables);
 
-  // Step 2: replace simple variables
+  // Step 2: evaluate conditional blocks
+  html = evaluateConditions(html, enrichedDataRow);
+
+  // Step 3: replace simple variables
   html = replaceVariables(html, variables, enrichedDataRow);
 
   return { html, warnings };

@@ -228,4 +228,43 @@ describe("processTemplate", () => {
     expect(result.html).toContain("210");
     expect(result.html).toContain("3210");
   });
+
+  it("removes conditional blocks with false conditions", () => {
+    const html = `
+      <p data-condition="{{type}} == 'จ้าง'">ข้อความจ้าง</p>
+      <p>ข้อความทั่วไป</p>
+    `;
+    const vars: TemplateVariable[] = [
+      { name: "type", value: "ซื้อ", isList: false },
+    ];
+    const result = processTemplate(html, vars, {});
+    expect(result.html).not.toContain("ข้อความจ้าง");
+    expect(result.html).toContain("ข้อความทั่วไป");
+    expect(result.html).not.toContain("data-condition");
+  });
+
+  it("keeps conditional blocks with true conditions", () => {
+    const html = `<p data-condition="{{type}} == 'จ้าง'">ข้อความจ้าง</p>`;
+    const vars: TemplateVariable[] = [
+      { name: "type", value: "จ้าง", isList: false },
+    ];
+    const result = processTemplate(html, vars, {});
+    expect(result.html).toContain("ข้อความจ้าง");
+    expect(result.html).not.toContain("data-condition");
+  });
+
+  it("evaluates conditions with computed variables", () => {
+    const html = `
+      <p data-condition="{{total}} > 500">ยอดสูง</p>
+      <p data-condition="{{total}} <= 500">ยอดต่ำ</p>
+    `;
+    const vars: TemplateVariable[] = [
+      { name: "price", value: "200", isList: false },
+      { name: "qty", value: "3", isList: false },
+      { name: "total", value: "", isList: false, isComputed: true, expression: "{{price}} * {{qty}}" },
+    ];
+    const result = processTemplate(html, vars, {});
+    expect(result.html).toContain("ยอดสูง");
+    expect(result.html).not.toContain("ยอดต่ำ");
+  });
 });

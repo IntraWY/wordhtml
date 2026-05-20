@@ -32,6 +32,7 @@ import { Upload, FileText, Keyboard, Braces } from "lucide-react";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { ParagraphFormatExtension } from "@/lib/tiptap/paragraphFormat";
+import { ConditionalBlockExtension } from "@/lib/tiptap/conditionalBlock";
 import { FontSize } from "@/lib/tiptap/fontSize";
 import { createImageWithAlign } from "@/lib/tiptap/imageWithAlign";
 import { HeadingWithId } from "@/lib/tiptap/headingWithId";
@@ -84,6 +85,7 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
       Highlight.configure({ multicolor: true }),
       FontSize,
       ParagraphFormatExtension,
+      ConditionalBlockExtension,
       Table.configure({ resizable: true }),
       RepeatingRow,
       TableHeader,

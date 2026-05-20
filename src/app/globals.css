@@ -363,6 +363,41 @@ html[data-theme="dark"] .variable-badge {
   border-color: #9a3412;
 }
 
+/* ── Conditional block indicator ── */
+.prose-editor [data-condition],
+.paper [data-condition] {
+  border-left: 3px solid #eab308;
+  padding-left: 8px;
+  position: relative;
+}
+
+.prose-editor [data-condition]::before,
+.paper [data-condition]::before {
+  content: attr(data-condition);
+  position: absolute;
+  top: -14px;
+  left: 0;
+  font-size: 10px;
+  color: #a16207;
+  background: #fef9c3;
+  padding: 0 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1;
+}
+
+html[data-theme="dark"] .prose-editor [data-condition],
+html[data-theme="dark"] .paper [data-condition] {
+  border-left-color: #ca8a04;
+}
+
+html[data-theme="dark"] .prose-editor [data-condition]::before,
+html[data-theme="dark"] .paper [data-condition]::before {
+  color: #fef08a;
+  background: #422006;
+}
+
 /* ── Page break in editor preview ── */
 .page-break {
   page-break-after: always;

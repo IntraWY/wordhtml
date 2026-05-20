@@ -31,6 +31,7 @@ import { useVirtualScroll } from "@/hooks/useVirtualScroll";
 import { DialogManager } from "./DialogManager";
 import { ParagraphDialog } from "./ParagraphDialog";
 import { MathInputDialog } from "./MathInputDialog";
+import { ConditionDialog } from "./ConditionDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
@@ -70,6 +71,8 @@ export function EditorShell() {
   const openHeaderFooter = useUiStore((s) => s.openHeaderFooter);
   const paragraphOpen = useUiStore((s) => s.paragraphOpen);
   const closeParagraph = useUiStore((s) => s.closeParagraph);
+  const conditionOpen = useUiStore((s) => s.conditionOpen);
+  const closeCondition = useUiStore((s) => s.closeCondition);
   const [mathOpen, setMathOpen] = useState(false);
 
   /* consolidated hooks */
@@ -379,6 +382,9 @@ export function EditorShell() {
         )}
         {mathOpen && (
           <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />
+        )}
+        {conditionOpen && (
+          <ConditionDialog open={conditionOpen} onClose={closeCondition} editor={editor} />
         )}
         <EditorContextMenu editor={editor} containerRef={articleRef} />
         <MobileBlock />

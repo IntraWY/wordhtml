@@ -16,7 +16,8 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Filter,
 } from "lucide-react";
 
 interface EditorContextMenuProps {
@@ -39,6 +40,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const openParagraph = useUiStore((s) => s.openParagraph);
+  const openCondition = useUiStore((s) => s.openCondition);
 
   const handleContextMenu = useCallback(
     (event: MouseEvent) => {
@@ -294,6 +296,16 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
         icon: <Settings className="size-4" />,
         action: () => {
           openParagraph();
+          setOpen(false);
+        },
+        disabled: !editor,
+      },
+      {
+        id: "set-condition",
+        label: "ตั้งเงื่อนไข… (Set Condition…)",
+        icon: <Filter className="size-4" />,
+        action: () => {
+          openCondition();
           setOpen(false);
         },
         disabled: !editor,

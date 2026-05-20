@@ -37,6 +37,7 @@ import {
   Minus,
   ArrowLeftToLine,
   ArrowRightToLine,
+  Filter,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -383,6 +384,9 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         </div>
         <RibbonButton label="ย่อหน้า…" onClick={() => handleFormat("paragraph")} disabled={!hasEditor}>
           <Type className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="เงื่อนไข (Condition)" onClick={() => useUiStore.getState().openCondition()} disabled={!hasEditor}>
+          <Filter className="size-3.5" />
         </RibbonButton>
         <RibbonButton label="รายการจุด" onClick={() => handleFormat("bulletList")} active={editor?.isActive("bulletList")} disabled={!hasEditor}>
           <List className="size-3.5" />
