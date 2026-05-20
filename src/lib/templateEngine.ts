@@ -1,4 +1,5 @@
 import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
+import { formatValue } from "./formatters";
 
 const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/;
 
@@ -23,6 +24,7 @@ export function extractVariables(html: string): string[] {
 
 /**
  * Replace {{variableName}} with actual values from a data row.
+ * Applies type formatting if the variable defines a type/format.
  * Missing variables are replaced with a red placeholder span.
  */
 export function replaceVariables(
@@ -32,11 +34,17 @@ export function replaceVariables(
 ): string {
   const regex = new RegExp(VAR_REGEX.source, "g");
   return html.replace(regex, (match, name) => {
-    const value = dataRow[name] ?? variables.find((v) => v.name === name)?.value;
-    if (value === undefined || value === null) {
+    const variable = variables.find((v) => v.name === name);
+    const rawValue = dataRow[name] ?? variable?.value;
+    if (rawValue === undefined || rawValue === null) {
       return `<span style="color:#dc2626;background:#fee2e2;padding:0 4px;border-radius:2px;font-size:12px;">[${name}]</span>`;
     }
-    return escapeHtml(value);
+    const formatted = formatValue(
+      String(rawValue),
+      variable?.type,
+      variable?.format
+    );
+    return escapeHtml(formatted);
   });
 }
 

@@ -63,6 +63,51 @@ describe("replaceVariables", () => {
     expect(result).not.toContain("<script>");
     expect(result).toContain("&lt;script&gt;");
   });
+
+  it("formats currency variables", () => {
+    const html = "ราคา {{price}}";
+    const vars: TemplateVariable[] = [
+      { name: "price", value: "1234.5", isList: false, type: "currency", format: "THB" },
+    ];
+    const result = replaceVariables(html, vars, {});
+    expect(result).toContain("1,234.50 บาท");
+  });
+
+  it("formats date variables", () => {
+    const html = "วันที่ {{date}}";
+    const vars: TemplateVariable[] = [
+      { name: "date", value: "2026-05-20", isList: false, type: "date", format: "long" },
+    ];
+    const result = replaceVariables(html, vars, {});
+    expect(result).toContain("20 พฤษภาคม 2569");
+  });
+
+  it("formats number variables", () => {
+    const html = "จำนวน {{qty}}";
+    const vars: TemplateVariable[] = [
+      { name: "qty", value: "1234.5", isList: false, type: "number", format: "integer" },
+    ];
+    const result = replaceVariables(html, vars, {});
+    expect(result).toContain("1,235");
+  });
+
+  it("formats percent variables", () => {
+    const html = "ส่วนลด {{discount}}";
+    const vars: TemplateVariable[] = [
+      { name: "discount", value: "0.15", isList: false, type: "percent", format: "0-100" },
+    ];
+    const result = replaceVariables(html, vars, {});
+    expect(result).toContain("15%");
+  });
+
+  it("formats data row values using variable type definition", () => {
+    const html = "ราคา {{price}}";
+    const vars: TemplateVariable[] = [
+      { name: "price", value: "0", isList: false, type: "currency", format: "THB" },
+    ];
+    const result = replaceVariables(html, vars, { price: "999.5" });
+    expect(result).toContain("999.50 บาท");
+  });
 });
 
 describe("expandRepeatingRows", () => {
