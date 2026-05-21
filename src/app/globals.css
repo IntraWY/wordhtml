@@ -376,44 +376,6 @@ html[data-theme="dark"] .variable-badge {
 }
 
 /* ── Pagination integration styles ── */
-/* Page break indicator — dashed line between virtual pages (Word-style) */
-.page-break-indicator {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 0;
-  margin-top: 0;
-  border-top: 1px dashed var(--color-border-strong);
-  pointer-events: none;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-html[data-theme="dark"] .page-break-indicator {
-  border-top: 1px dashed var(--color-border-strong);
-}
-
-.page-break-indicator-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-muted-foreground);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  padding: 2px 10px;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-html[data-theme="dark"] .page-break-indicator-label {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
 /* Pagination controls */
 .pagination-manager {
   display: flex;
@@ -503,10 +465,6 @@ html[data-theme="dark"] .paper {
   .search-panel,
   .error-banner,
   .warning-banner,
-  .page-break-indicator,
-  .page-break-indicator-label {
-    display: none !important;
-  }
 
   /* Hide everything except printable content */
   body * { visibility: hidden; }
@@ -537,8 +495,15 @@ html[data-theme="dark"] .paper {
     background: #fff !important;
     box-shadow: none !important;
     border-radius: 0 !important;
+    margin: 0 auto !important;
     page-break-after: always;
     break-after: page;
+  }
+
+  .page-canvas {
+    padding: 0 !important;
+    gap: 0 !important;
+    background: transparent !important;
   }
 
   .page-node:last-child {
@@ -565,15 +530,13 @@ html[data-theme="dark"] .paper {
 
 .page-node {
   position: relative;
-  background: var(--color-paper);
+  background: #fff;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.04),
-    0 1px 3px rgba(0, 0, 0, 0.08),
-    0 4px 12px rgba(0, 0, 0, 0.06),
-    0 12px 28px rgba(0, 0, 0, 0.04);
-  border-radius: var(--radius-sm);
+    0 1px 3px rgba(0, 0, 0, 0.10),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin: 0 auto 20px;
 }
 
 .page-node:last-child {
@@ -581,11 +544,9 @@ html[data-theme="dark"] .paper {
 }
 
 html[data-theme="dark"] .page-node {
+  background: #fff;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.10),
-    0 1px 3px rgba(0, 0, 0, 0.35),
-    0 4px 12px rgba(0, 0, 0, 0.40),
-    0 12px 28px rgba(0, 0, 0, 0.30);
+    0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 .page-body {
@@ -605,7 +566,7 @@ html[data-theme="dark"] .page-node {
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-muted-foreground);
   pointer-events: none;
   user-select: none;
