@@ -288,16 +288,22 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name: "wordhtml-editor",
-      version: 1,
+      version: 2,
       storage: editorStorage,
-      migrate: (persistedState: unknown) => {
+      migrate: (persistedState: unknown, version) => {
         if (!persistedState || typeof persistedState !== "object") {
           return {} as EditorState;
         }
-        return persistedState as EditorState;
+        const state = persistedState as Record<string, unknown>;
+        if (version < 2 && Array.isArray(state.variables)) {
+          state.variables = (state.variables as TemplateVariable[]).map((v) =>
+            v.type === undefined ? { ...v, type: "text" as const } : v
+          );
+        }
+        return state as unknown as EditorState;
       },
       partialize: (state) => ({
-        _v: 1,
+        _v: 2,
         enabledCleaners: state.enabledCleaners,
         imageMode: state.imageMode,
         history: state.history,
