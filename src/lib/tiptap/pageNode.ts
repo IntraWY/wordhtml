@@ -33,7 +33,7 @@ export const PageNode = Node.create<PageNodeOptions>({
 
   group: "page",
 
-  content: "pageHeader? pageBody pageFooter?",
+  content: "pageBody",
 
   defining: true,
 
