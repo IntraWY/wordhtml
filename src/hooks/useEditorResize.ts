@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 export function useEditorResize() {
-  const articleRef = useRef<HTMLElement>(null);
+  const articleRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(0);
 
   useEffect(() => {
