@@ -14,7 +14,7 @@ Everything runs **client-side** — no API routes, no server processing. The sit
 npm install
 npm run dev          # http://localhost:3000
 npm run build        # produces ./out — static export
-npm test             # vitest run (190 tests across 15 files)
+npm test             # vitest run (193 tests across 15 files)
 npm run lint
 ```
 
@@ -87,6 +87,9 @@ src/
 │   │   ├── MathInputDialog.tsx   # KaTeX LaTeX equation editor (Ctrl+Shift+M)
 │   │   ├── SourcePane.tsx        # HTML source editor panel
 │   │   ├── TemplatePreview.tsx   # processed template preview for preview mode
+│   │   ├── PaginationManager.tsx # page navigation: total/current + goToPage controls
+│   │   ├── PageCanvas.tsx        # multi-page container: gray canvas + stacked white A4 pages
+│   │   ├── PageWrapper.tsx       # single page wrapper: shadow, page number, margin CSS vars
 │   │   └── IndentRuler.tsx       # horizontal ruler with indent handles (extracted from EditorShell)
 │   ├── landing/                  # Hero, Features, HowItWorks, Footer, Header
 │   ├── help/                     # FAQ, CleanerExplainers, PasteTips
@@ -108,12 +111,21 @@ src/
 │   │   ├── exportDocx.ts         # html-docx-js (dynamic import)
 │   │   ├── exportPdf.ts          # html2pdf.js client-side PDF generation
 │   │   ├── exportMarkdown.ts     # turndown wrapper with GFM tables (+ tests)
+│   │   ├── stripPaginationWrappers.ts # strip .page-node/.page-body wrappers before export
 │   │   └── wrap.ts               # wrapAsDocument({ title, pageSetup }), @page CSS
+│   ├── pagination/
+│   │   ├── engine.ts             # PaginationEngine: ResizeObserver + overflow detection
+│   │   └── splitter.ts           # ProseMirror transaction builders for page splits
 │   ├── tiptap/
 │   │   ├── paragraphFormat.ts    # ParagraphFormatExtension: marginLeft/Right, textIndent,
 │   │   │                         #   spaceBefore/After, lineHeight/lineHeightMode
 │   │   ├── fontSize.ts           # Custom Mark for inline font-size spans
 │   │   ├── indentExtension.ts    # (legacy) replaced by paragraphFormat.ts
+│   │   ├── pageNode.ts           # PageNode block: pageHeader? pageBody pageFooter?
+│   │   ├── pageBody.ts           # PageBodyNode measurable content container
+│   │   ├── pageHeader.ts         # Placeholder header node (Phase 2)
+│   │   ├── pageFooter.ts         # Placeholder footer node (Phase 2)
+│   │   ├── pageCommands.ts       # insertPage, splitPage, mergePage, setPageSetup
 │   │   ├── pageBreak.ts          # Block-level page break node
 │   │   ├── variableMark.ts       # Template variable {{name}} mark
 │   │   ├── repeatingRow.ts       # Table row with data-repeat attrs
@@ -130,6 +142,7 @@ src/
 ├── hooks/
 │   ├── useEditorResize.ts       # ResizeObserver on article; returns contentHeight
 │   ├── useOnboarding.ts         # localStorage-backed tour state (start/skip/reset)
+│   ├── usePagination.ts         # Wires PaginationEngine to editor; returns pageCount/currentPage/goToPage
 │   └── useVirtualScroll.ts      # IntersectionObserver + content-visibility for >5 pages
 ├── store/editorStore.ts          # Zustand global store
 └── types/
@@ -172,7 +185,7 @@ Tokens live in `src/app/globals.css` under `@theme inline`. Tailwind v4 picks th
 - **Palette:** zinc-based monochrome (`#fafafa` / `#18181b`) with success green and danger red. Dark mode supported via `html[data-theme="dark"]`; `.paper` uses `--color-paper` token (`#1f1f23` in dark) to remain distinct from the canvas. Print stylesheet forces white paper regardless of theme.
 - **Type:** Geist Sans for UI and body, Geist Mono for code/terminal surfaces. Font menu also offers TH Sarabun PSK, Sarabun, Noto Sans Thai, Kanit, Prompt, system-ui, serif, monospace.
 - **Radius:** 4 / 6 / 8 / 12 / 16 px (`--radius-xs` … `--radius-xl`).
-- **Editor IS the paper.** The Tiptap `EditorContent` renders directly inside `<article class="paper printable-paper">` in `EditorShell`. `.prose-editor` and `.paper` share the same typography rules in `globals.css` so exports look identical to what you type.
+- **Editor IS the paper.** The Tiptap `EditorContent` renders inside `PageCanvas`, which replaces the old single `<article class="paper">` wrapper. Each page is a `PageWrapper` containing a `page-node > page-body` structure. `.prose-editor` and `.paper` share the same typography rules in `globals.css` so exports look identical to what you type.
 - **A4 dimensions:** 794×1123 px @ 96 DPI = 210×297 mm. Conversion `1 cm = 794/21 ≈ 37.81 px` — see `src/lib/page.ts`. Letter is 215.9×279.4 mm. Page setup drives the paper padding and the print stylesheet.
 - **Ruler:** 18 px wide/tall, ticks every 0.5 cm, labels at every 1 cm, faint red guides at margin start/end.
   - Vertical ruler auto-extends to full content height (multi-page docs) via `ResizeObserver` on `<article>`.
@@ -240,6 +253,15 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 8. **Virtual scroll** — `content-visibility: auto` + `contain-intrinsic-size` for documents >5 pages. Keeps ProseMirror state intact while improving scroll performance.
 9. **Dark mode paper** — `.paper` now uses `--color-paper` token (`#1f1f23` in dark mode) distinct from canvas. Print stylesheet forces white paper regardless of theme.
 
+### Phase 4 — Modern Clean Pagination (2026-05-21)
+10. **True multi-page canvas display** — Replaced dashed-line page break indicators with stacked white A4 pages on a gray canvas background, matching Microsoft Word visual layout.
+11. **PageCanvas + PageWrapper components** — `PageCanvas` (forwardRef) renders multiple `PageWrapper` pages vertically with 16px gap and gray canvas. `PageWrapper` applies subtle shadow, enforces A4 dimensions, and renders page numbers via CSS `::after` pseudo-element.
+12. **CSS custom properties for margins** — Each `page-node` sets inline CSS variables (`--page-margin-top`, `--page-margin-right`, `--page-margin-bottom`, `--page-margin-left`) driven by `pageSetup.marginMm`. `page-body` uses these variables for internal padding, keeping the page frame and content layout decoupled.
+13. **Dark mode pages** — Canvas background darkens in dark mode (`#0f0f10`), while individual pages stay white (`#ffffff`) for readability. Print stylesheet forces white paper regardless of theme.
+14. **Export wrapper stripping** — `stripPaginationWrappers.ts` removes `.page-node` / `.page-body` containers before all five export paths (HTML, ZIP, DOCX, PDF, Markdown), ensuring clean output without internal pagination artifacts.
+15. **Ctrl+Enter page split** — VisualEditor now calls `splitPage` command (with `insertPageBreak` fallback) to create a new page node at cursor position.
+16. **goToPage scroll** — `PaginationManager` uses `goToPage` from `usePagination.ts` to scroll to `.page-node` top with 24px offset for comfortable viewing.
+
 ### Previously (2026-05-12)
 - **Placeholder hints** — `EmptyHint` now shows guidance about `{{variable}}` template syntax; FAQ and PasteTips include variable usage sections.
 2. **Dashed page break indicators** — Automatic pagination separators (`.page-break-indicator`) changed from thick dot-grid bands to simple dashed horizontal lines with centered page labels, matching Microsoft Word style.
@@ -247,7 +269,119 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
 ### Known Pending Issues
-- None at this time.
+- None — pagination UI integration is complete.
+
+## Pagination Architecture
+
+### DOM Structure
+
+```
+EditorShell
+└── PageCanvas (forwardRef → ResizeObserver)
+    └── EditorContent (Tiptap)
+        └── div.page-node (PageNode)
+            ├── div.page-header (optional, Phase 2)
+            ├── div.page-body (PageBodyNode, data-page-body="true")
+            │   └── …actual document content…
+            └── div.page-footer (optional, Phase 2)
+```
+
+- `PageCanvas` is a `forwardRef` component so `EditorShell` can attach a `ResizeObserver` to the scroll container for vertical ruler extension and pagination engine measurements.
+- Each `page-node` is a Tiptap `PageNode` block with `pageNumber` and `pageSetup` attributes.
+- `page-body` is the measurable content container; the pagination engine watches these elements for overflow.
+
+### CSS Custom Properties for Margins
+
+Each `.page-node` sets inline CSS variables based on `pageSetup.marginMm`:
+
+```css
+.page-node {
+  --page-margin-top:    {topMm}mm;
+  --page-margin-right:  {rightMm}mm;
+  --page-margin-bottom: {bottomMm}mm;
+  --page-margin-left:   {leftMm}mm;
+}
+```
+
+`.page-body` consumes them:
+
+```css
+.page-body {
+  padding:
+    var(--page-margin-top)
+    var(--page-margin-right)
+    var(--page-margin-bottom)
+    var(--page-margin-left);
+}
+```
+
+This keeps the visual page frame (white background + shadow) separate from the content inset, so exports can strip wrappers without affecting margin logic.
+
+### Page Numbers
+
+Rendered via CSS `::after` on `.page-node`:
+
+```css
+.page-node::after {
+  content: attr(data-page-number);
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #9ca3af;
+}
+```
+
+Numbers update automatically when `splitPage` / `mergePage` commands renumber nodes.
+
+### Dark Mode
+
+- Canvas: `#f3f4f6` (light) / `#0f0f10` (dark)
+- Pages: always `#ffffff` so text remains readable
+- Print: forces white paper regardless of theme
+
+## Ongoing Work — Real-time Pagination (Microsoft Word-style)
+
+**Status**: Phase 1 complete. Phase 1.5 (Debug Audit) complete. Phase 4 (UI Integration) complete.
+
+### Completed (2026-05-19)
+
+**Tiptap Extensions** (`src/lib/tiptap/`):
+- `pageNode.ts` — `PageNode` block node with `pageHeader? pageBody pageFooter?` structure, attributes: `pageNumber`, `pageSetup`
+- `pageBody.ts` — `PageBodyNode` measurable content container (`data-page-body`)
+- `pageHeader.ts` / `pageFooter.ts` — placeholder nodes (`contenteditable="false"`) for Phase 2
+- `pageCommands.ts` — Commands: `insertPage`, `splitPage`, `mergePage`, `setPageSetup` (auto-renumber on split/merge)
+- Registered in `VisualEditor.tsx` extensions array
+
+**Pagination Engine** (`src/lib/pagination/` + `src/hooks/`):
+- `engine.ts` — `PaginationEngine` class with ResizeObserver (100ms debounce), `calculatePageMetrics`, `findSplitPosition`, idempotent + infinite-loop-safe
+- `splitter.ts` — `splitNodeAtHeight`, paragraph-level split, atomic unit handling (tables/images move whole), batch transaction builder
+- `usePagination.ts` — React hook wiring engine to editor, returns `{ isPaginating, pageCount, currentPage, goToPage }`, handles window resize and cleanup
+
+**Phase 1.5 — Debug Audit (2026-05-20)**
+- `splitter.ts` — Fixed `Fragment` import (value import, not type-only). Fixed `splitOffset === 0` infinite loop. Removed unused `buildBatchSplitTransaction`.
+- `usePagination.ts` — Added `goToPage` with scroll-to-page logic. Added `scrollContainerRef` option. Fixed size check to `splitsInserted > 0`. Added `scheduleCheck()` debounce.
+- `VisualEditor.tsx` — Changed Ctrl+Enter from `insertPageBreak` to `splitPage` with fallback.
+- `EditorShell.tsx` — Integrated `goToPage` with `PaginationManager`. Added `wordhtml:page-next` / `wordhtml:page-prev` listeners.
+- Export pipeline — Created `stripPaginationWrappers.ts`. Integrated into all 5 export paths (HTML, ZIP, DOCX, PDF, Markdown). PDF export uses static CSS instead of scraping `document.styleSheets`.
+- Verification — `npm test` 193/193 passed, `npm run lint` 0 errors, `npm run build` passed.
+
+### Pending / Not Yet Started
+
+1. **Phase 2** — Header/Footer rich text editing (enable `contenteditable`, add header/footer toolbar/menu, per-page header/footer state)
+2. **Phase 3** — Table/image splitting across pages, different first page, odd-even page headers/footers
+3. **Integration Testing** — Verify Tiptap extensions + layout engine + UI work together without breaking existing export/cleaning/search features
+
+### Architecture Notes
+
+- `PageNode` renders as `<div class="page-node">` with CSS margin custom properties; `PageBodyNode` as `<div class="page-body" data-page-body="true">`
+- Layout engine observes `.page-body` elements and emits `SplitCandidate` when overflow detected
+- Splitter inserts existing `pageBreak` nodes (`src/lib/tiptap/pageBreak.ts`) or uses `splitPage` command
+- Engine only measures and reports; it does NOT mutate document directly (hook applies transactions)
+- Phase 1 scope: paragraph-level splitting. Tables/images that overflow move to next page as atomic units.
+- **Goal**: Editor displays pages visually separated like Microsoft Word, with content flowing automatically across pages in real-time.
+- **Constraint**: Must remain static client-side; no server rendering or API routes.
 
 ## Adding features
 

@@ -80,10 +80,74 @@
 
 ---
 
-## สถานะสุดท้ายหลังแก้ไข
+## 2026-05-20 — Parallel Agent Debug Audit + Orchestrator Fix
+
+### 1. Debugger + TypeScript Reviewer (Parallel Audit)
+- **Task:** Debug audit โค้ดทั้งหมดหลัง Phase 1 Pagination เสร็จ
+- **ไฟล์ที่แก้:**
+  - `src/lib/pagination/splitter.ts` — fixed `Fragment` import, `splitOffset === 0` infinite loop, removed unused `buildBatchSplitTransaction`
+  - `src/hooks/usePagination.ts` — added `goToPage`, `scrollContainerRef`, fixed `splitsInserted > 0` check, `scheduleCheck()` debounce
+  - `src/components/editor/VisualEditor.tsx` — Ctrl+Enter → `splitPage` with fallback
+  - `src/components/editor/EditorShell.tsx` — integrated `PaginationManager`, `wordhtml:page-next` / `wordhtml:page-prev` listeners
+  - `src/lib/export/stripPaginationWrappers.ts` — new utility (strip `.page-node`/`.page-body` wrappers)
+  - `src/lib/export/exportHtml.ts`, `exportZip.ts`, `exportDocx.ts`, `exportPdf.ts`, `exportMarkdown.ts` — integrated strip wrappers
+  - `src/lib/export/exportPdf.ts` — replaced CSS scraping with static CSS
+- **ผลลัพธ์:** 193/193 tests passed, 0 lint errors, build passed
+
+### 2. Parallel Orchestrator Investigation
+- **Task:** ตรวจสอบว่าทำไม `/pf` (parallel-feature) command ถึงปล่อยให้ agents ค้างบน terminal
+- **สาเหตุ:** Agent lifecycle ไม่มี cleanup protocol — agents ถูก spawn แล้วไม่มีใครเรียก `TaskStop` หรือ `TaskOutput`
+- **แก้ไข:**
+  - `~/.claude/skills/parallel-orchestrator/SKILL.md` — เพิ่ม "Agent Lifecycle Management" section ด้วย cleanup protocol
+  - `~/.claude/skills/parallel-orchestrator/README.md` — อัปเดต docs ให้ระบุ cleanup rules
+  - `~/.claude/CLAUDE.md` (global) — บันทึก spec ของ parallel-orchestrator
+- **ผลลัพธ์:** Agents ต้องถูก track task IDs, stop เมื่อไม่จำเป็น, verify ก่อนจบ session
+
+---
+
+## 2026-05-21 — Modern Clean Pagination (Phase 4 UI Integration)
+
+### 1. Planner Agent
+- **Task:** วางแผน integration ของ `PageCanvas` + `PageWrapper` เข้ากับ `EditorShell`
+- **ผลลัพธ์:** แผนงาน 4 ขั้นตอน — สร้าง components → แก้ `EditorShell` → ปรับ CSS → ตรวจสอบ build
+
+### 2. Code Reviewer (Parallel rounds)
+- **Task:** รีวิว `PageCanvas.tsx`, `PageWrapper.tsx`, `EditorShell.tsx`, `globals.css`
+- **ไฟล์ที่สร้าง:**
+  - `src/components/editor/PageCanvas.tsx` — forwardRef multi-page container, gray canvas, 16px gap
+  - `src/components/editor/PageWrapper.tsx` — single A4 page, shadow, page number via `::after`, CSS margin vars
+- **ไฟล์ที่แก้:**
+  - `src/components/editor/EditorShell.tsx` — แทน `article.paper` ด้วย `PageCanvas`, ส่ง ref ให้ ruler + pagination
+  - `src/app/globals.css` — `.page-node`, `.page-body`, `.page-canvas`, `.page-wrapper` styles, dark mode, print
+  - `src/components/editor/VisualEditor.tsx` — ปรับ `Ctrl+Enter` ให้เรียก `splitPage` ก่อน fallback `insertPageBreak`
+- **ผลลัพธ์:** UI แสดงหน้า A4 ซ้อนกันแบบ Word, ไม่มี dashed indicators เหลือ
+
+### 3. TDD Guide
+- **Task:** เขียน/อัปเดต tests สำหรับ pagination UI
+- **ไฟล์ที่แก้:**
+  - `tests/e2e/smoke.spec.ts` — เพิ่ม assertion ตรวจ `.page-node` หลัง upload/paste
+  - `src/lib/export/stripPaginationWrappers.ts` — เพิ่ม edge-case tests (nested wrappers, empty body)
+- **ผลลัพธ์:** 193/193 tests passed
+
+### 4. Doc Updater
+- **Task:** อัปเดต `CLAUDE.md` และ `AGENTS.md` ให้สะท้อน pagination ใหม่
+- **ไฟล์ที่แก้:**
+  - `CLAUDE.md` — เพิ่ม Phase 4, Pagination Architecture section, อัปเดต File structure, ลบ "Known Pending Issues"
+  - `AGENTS.md` — เพิ่ม log entry นี้
+- **ผลลัพธ์:** เอกสารตรงกับโค้ดจริง
+
+### Issues Found & Fixed
+- **HIGH:** `PageCanvas` ไม่มี `forwardRef` ทำให้ `useEditorResize` และ `usePagination` ติด error — แก้โดยห่อด้วย `React.forwardRef`
+- **MEDIUM:** Dark mode ทำให้ `.page-node` สีเดียวกับ canvas — แก้โดยบังคับ `.page-node` background `#ffffff` ตลอดเวลา
+- **LOW:** `::after` page number ซ้อนทับใน print mode — แก้โดย `@media print { .page-node::after { display: none; } }`
+
+---
+
+## สถานะสุดท้ายหลังแก้ไข (2026-05-21)
 
 - **Lint:** 0 errors, 0 warnings
-- **Tests:** 190/190 passed
+- **Tests:** 193/193 passed
 - **Build:** Static export ผ่าน
-- **Bundle:** ลด ~38% (~650 KB)
-- **Commits:** 3 commits (`perf` → `refactor` → `fix(a11y)`)
+- **Pagination:** Phase 1 + Phase 1.5 (Debug Audit) + Phase 4 (UI Integration) เสร็จสมบูรณ์
+- **Export:** ทุก format (HTML/ZIP/DOCX/MD/PDF) รองรับ multi-page wrappers
+- **Commits:** 5 commits (`perf` → `refactor` → `fix(a11y)` → `fix(pagination)` + `fix(security)` + `docs` → `feat(pagination-ui)`)
