@@ -11,6 +11,12 @@ import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
 import { PaginationAware } from "@/lib/tiptap/paginationAware";
 import { MathEquation } from "@/lib/tiptap/mathEquation";
+import { PagedDocument } from "@/lib/tiptap/pagedDocument";
+import { PageNode } from "@/lib/tiptap/pageNode";
+import { PageBodyNode } from "@/lib/tiptap/pageBody";
+import { PageHeaderNode } from "@/lib/tiptap/pageHeader";
+import { PageFooterNode } from "@/lib/tiptap/pageFooter";
+import { PageCommands } from "@/lib/tiptap/pageCommands";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -27,7 +33,6 @@ import FontFamily from "@tiptap/extension-font-family";
 import { VariableSuggestion } from "@/lib/tiptap/variableSuggestionExtension";
 
 import { useEditorStore } from "@/store/editorStore";
-import { usePaginationStore } from "@/store/paginationStore";
 import { Upload, FileText, Keyboard, Braces } from "lucide-react";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
@@ -41,11 +46,40 @@ import { ImageResizeView } from "./ImageResizeView";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
-  visiblePages?: Set<number>;
-  virtualScrollActive?: boolean;
 }
 
-export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive }: VisualEditorProps) {
+function defaultPageSetup() {
+  return {
+    size: "A4" as const,
+    orientation: "portrait" as const,
+    marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
+  };
+}
+
+function wrapInPageNode(html: string): string {
+  if (html.includes('class="page-node"')) return html;
+  if (html.trim() === "") {
+    return `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'><div class="page-body" data-page-body="true"><p></p></div></div>`;
+  }
+  return `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'><div class="page-body" data-page-body="true">${html}</div></div>`;
+}
+
+function unwrapPageNode(html: string): string {
+  // Only unwrap single-page documents. Multi-page HTML preserves its structure.
+  if (!html.includes('class="page-node"')) return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const nodes = doc.querySelectorAll(".page-node");
+  if (nodes.length !== 1) return html;
+
+  const body = nodes[0].querySelector(".page-body");
+  if (!body) return html;
+
+  return body.innerHTML;
+}
+
+export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const setHtml = useEditorStore((s) => s.setHtml);
   const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
@@ -61,6 +95,7 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
   const extensions = useMemo(
     () => [
       StarterKit.configure({
+        document: false,
         heading: false,
         bulletList: false,
         link: false,
@@ -102,13 +137,19 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
       VariableSuggestion,
       PaginationAware,
       MathEquation,
+      PagedDocument,
+      PageNode,
+      PageBodyNode,
+      PageHeaderNode,
+      PageFooterNode,
+      PageCommands,
     ],
     []
   );
 
   const onUpdate = useCallback(
     ({ editor }: { editor: Editor }) => {
-      const html = editor.getHTML();
+      const html = unwrapPageNode(editor.getHTML());
       lastWrittenHtml.current = html;
       setHtml(html);
     },
@@ -136,7 +177,8 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
         // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
           event.preventDefault();
-          ed.chain().focus().insertPageBreak().run();
+          const ok = ed.chain().focus().splitPage().run();
+          if (!ok) ed.chain().focus().insertPageBreak().run();
           return true;
         }
 
@@ -238,7 +280,7 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
   const editor = useEditor({
     immediatelyRender: false,
     extensions,
-    content: documentHtml,
+    content: wrapInPageNode(documentHtml),
     editorProps,
     onUpdate,
   });
@@ -250,8 +292,9 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
   useEffect(() => {
     if (!editor) return;
     if (documentHtml === lastWrittenHtml.current) return;
-    if (documentHtml === editor.getHTML()) return;
-    editor.commands.setContent(documentHtml || "", { emitUpdate: false });
+    const editorHtml = unwrapPageNode(editor.getHTML());
+    if (documentHtml === editorHtml) return;
+    editor.commands.setContent(wrapInPageNode(documentHtml || ""), { emitUpdate: false });
     lastWrittenHtml.current = documentHtml;
   }, [documentHtml, editor]);
 
@@ -263,7 +306,8 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
     const handler = () => {
       const ed = editorRef.current;
       if (ed) {
-        ed.chain().focus().insertPageBreak().run();
+        const ok = ed.chain().focus().splitPage().run();
+        if (!ok) ed.chain().focus().insertPageBreak().run();
       }
     };
     addEventListener(EVENT_NAMES.insertPageBreak, handler);
@@ -271,46 +315,6 @@ export function VisualEditor({ onEditorReady, visiblePages, virtualScrollActive 
       removeEventListener(EVENT_NAMES.insertPageBreak, handler);
     };
   }, []);
-
-  useEffect(() => {
-    if (!virtualScrollActive || !editor) return;
-    if (!visiblePages || visiblePages.size === 0) return;
-
-    const prose = editor.view.dom as HTMLElement;
-    if (!prose) return;
-
-    const children = Array.from(prose.children) as HTMLElement[];
-    if (children.length === 0) return;
-
-    // Map each child element to its page index based on offsetTop relative to article.
-    const article = prose.closest("article.paper") as HTMLElement | null;
-    const articleTop = article?.getBoundingClientRect().top ?? 0;
-
-    const pageBreaks = usePaginationStore.getState().pageBreaks;
-
-    for (const el of children) {
-      const elTop = el.getBoundingClientRect().top - articleTop;
-      let pageIdx = 0;
-      for (let i = 1; i < pageBreaks.length; i++) {
-        if (pageBreaks[i] <= elTop + 1) {
-          pageIdx = i;
-        } else {
-          break;
-        }
-      }
-
-      const isVisible = visiblePages.has(pageIdx);
-      if (isVisible) {
-        el.style.contentVisibility = "";
-        el.style.containIntrinsicSize = "";
-      } else {
-        el.style.contentVisibility = "auto";
-        // Approximate intrinsic height to preserve scroll thumb size.
-        const rect = el.getBoundingClientRect();
-        el.style.containIntrinsicSize = `${rect.width}px ${rect.height}px`;
-      }
-    }
-  }, [editor, visiblePages, virtualScrollActive]);
 
   if (!editor) {
     return (
