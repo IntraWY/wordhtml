@@ -414,18 +414,6 @@ html[data-theme="dark"] .paper {
   margin-bottom: 0;
 }
 
-/* Page number overlay on preview pages */
-.page-number-overlay {
-  position: absolute;
-  bottom: 8px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 11px;
-  color: var(--color-muted-foreground);
-  pointer-events: none;
-}
-
 /* ── Page header/footer styles ── */
 .page-header {
   min-height: 30px;
