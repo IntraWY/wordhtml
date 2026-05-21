@@ -88,6 +88,7 @@ export interface PageSetup {
 
 // Template Studio types
 export type {
+  VariableType,
   TemplateVariable,
   DataSet,
   TemplateModeState,

@@ -6,11 +6,18 @@
  * which are just saved HTML snapshots.
  */
 
+/** Variable type for formatting and validation */
+export type VariableType = "text" | "number" | "currency" | "date" | "percent";
+
 /** A template variable such as {{customer_name}} */
 export interface TemplateVariable {
   name: string;
   value: string;
   isList: boolean;
+  type?: VariableType;
+  format?: string;
+  isComputed?: boolean;
+  expression?: string;
   delimiter?: string; // ',' or '|' or '\n'
   listValues?: string[]; // parsed array when isList === true
 }

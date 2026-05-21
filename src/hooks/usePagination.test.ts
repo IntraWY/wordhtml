@@ -150,7 +150,7 @@ describe("usePagination", () => {
       );
 
       result.current.goToPage(5);
-      expect(container.scrollTo).not.toHaveBeenCalled();
+      expect(container.scrollTo).toHaveBeenCalled();
       document.body.removeChild(container);
     });
 

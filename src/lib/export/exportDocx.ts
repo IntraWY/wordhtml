@@ -1,4 +1,5 @@
 import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
+import { stripPaginationWrappers } from "./stripPaginationWrappers";
 
 interface DownloadDocxOptions {
   sourceName?: string | null;
@@ -19,7 +20,8 @@ export async function downloadDocx(
 
   try {
     const { asBlob } = await import("html-docx-js/dist/html-docx");
-    const document = wrapAsDocument(html, title);
+    const cleanHtml = stripPaginationWrappers(html);
+    const document = wrapAsDocument(cleanHtml, title);
     const blob = asBlob(document);
     triggerDownload(blob, deriveFileName(sourceName, "docx"));
   } catch (error: unknown) {

@@ -1,6 +1,7 @@
 import type TurndownService from "turndown";
 
 import { triggerDownload, deriveFileName } from "./wrap";
+import { stripPaginationWrappers } from "./stripPaginationWrappers";
 
 let cachedTurndown: TurndownService | null = null;
 
@@ -71,7 +72,8 @@ async function getTurndown(): Promise<TurndownService> {
 
 export async function htmlToMarkdown(html: string): Promise<string> {
   const td = await getTurndown();
-  return td.turndown(html);
+  const cleanHtml = stripPaginationWrappers(html);
+  return td.turndown(cleanHtml);
 }
 
 export async function exportMarkdown(

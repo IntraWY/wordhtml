@@ -94,8 +94,8 @@ EditorShell
 
 **Tiptap `pageNode.ts`**
 - Already renders `<div class="page-node">` with inline width/height styles
-- Change `height:` to `min-height:` in inline styles so pages can grow temporarily before the pagination engine splits them
 - Must be updated to set CSS custom properties for margins instead of applying padding directly to `.page-node`
+- Keep `height:` (not `min-height:`) so `.page-body { height: 100% }` continues to resolve correctly
 - Current inline padding on `.page-node` causes `.page-body { height: 100% }` to overflow the padded parent
 
 **Tiptap `pageBody.ts`**

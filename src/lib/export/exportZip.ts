@@ -1,5 +1,6 @@
 import { extractImages } from "@/lib/images";
 import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
+import { stripPaginationWrappers } from "./stripPaginationWrappers";
 
 interface DownloadZipOptions {
   sourceName?: string | null;
@@ -17,7 +18,8 @@ export async function downloadZip(
   const { sourceName = null, title = "Document" } = options;
 
   const JSZip = (await import("jszip")).default;
-  const { html: rewrittenHtml, images } = extractImages(html, "img");
+  const cleanHtml = stripPaginationWrappers(html);
+  const { html: rewrittenHtml, images } = extractImages(cleanHtml, "img");
   const zip = new JSZip();
   zip.file("index.html", wrapAsDocument(rewrittenHtml, title));
 

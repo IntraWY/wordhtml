@@ -1,4 +1,5 @@
 import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
+import { stripPaginationWrappers } from "./stripPaginationWrappers";
 
 interface DownloadHtmlOptions {
   /** Original source filename (if any) — used to derive the export filename */
@@ -12,7 +13,8 @@ interface DownloadHtmlOptions {
  */
 export function downloadHtml(html: string, options: DownloadHtmlOptions = {}): void {
   const { sourceName = null, title = "Document" } = options;
-  const document = wrapAsDocument(html, title);
+  const cleanHtml = stripPaginationWrappers(html);
+  const document = wrapAsDocument(cleanHtml, title);
   const blob = new Blob([document], { type: "text/html;charset=utf-8" });
   triggerDownload(blob, deriveFileName(sourceName, "html"));
 }
