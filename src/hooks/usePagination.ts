@@ -47,6 +47,7 @@ export interface UsePaginationOptions {
 
 const DEFAULT_DEBOUNCE_MS = 100;
 const STABLE_DELAY_MS = 150;
+const PAGE_SCROLL_OFFSET_PX = 24;
 
 /* ------------------------------------------------------------------ */
 /* Hook                                                                */
@@ -258,7 +259,7 @@ export function usePagination(
       const containerRect = container.getBoundingClientRect();
       const nodeRect = targetNode.getBoundingClientRect();
       const relativeTop =
-        nodeRect.top - containerRect.top + container.scrollTop - 24;
+        nodeRect.top - containerRect.top + container.scrollTop - PAGE_SCROLL_OFFSET_PX;
 
       container.scrollTo({ top: Math.max(0, relativeTop), behavior: "smooth" });
       setCurrentPage(pageNumber);
