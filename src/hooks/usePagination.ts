@@ -253,7 +253,10 @@ export function usePagination(
       if (!container) return;
 
       const nodes = document.querySelectorAll(".page-node");
-      const targetNode = nodes[pageNumber - 1];
+      if (nodes.length === 0) return;
+
+      const clamped = Math.max(1, Math.min(pageNumber, nodes.length));
+      const targetNode = nodes[clamped - 1];
       if (!targetNode) return;
 
       const containerRect = container.getBoundingClientRect();
@@ -262,7 +265,7 @@ export function usePagination(
         nodeRect.top - containerRect.top + container.scrollTop - PAGE_SCROLL_OFFSET_PX;
 
       container.scrollTo({ top: Math.max(0, relativeTop), behavior: "smooth" });
-      setCurrentPage(pageNumber);
+      setCurrentPage(clamped);
     },
     [scrollContainerRef]
   );
