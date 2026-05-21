@@ -532,10 +532,87 @@ html[data-theme="dark"] .paper {
     break-after: auto;
   }
 
+  /* Real-time pagination nodes */
+  .page-node {
+    background: #fff !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .page-node:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .page-number-label,
+  .page-node[data-page-number]::after {
+    display: none !important;
+  }
+
   @page {
     size: A4;
     margin: 0;
   }
+}
+
+/* ── Real-time pagination (Word-style page display) ── */
+.page-canvas {
+  background-color: var(--color-muted);
+  min-height: 100%;
+}
+
+.page-node {
+  position: relative;
+  background: var(--color-paper);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.page-node:last-child {
+  margin-bottom: 0;
+}
+
+html[data-theme="dark"] .page-node {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.40),
+    0 12px 28px rgba(0, 0, 0, 0.30);
+}
+
+.page-body {
+  padding-top: var(--page-margin-top, 0);
+  padding-right: var(--page-margin-right, 0);
+  padding-bottom: var(--page-margin-bottom, 0);
+  padding-left: var(--page-margin-left, 0);
+  overflow: hidden;
+  height: 100%;
+}
+
+.page-number-label,
+.page-node[data-page-number]::after {
+  content: attr(data-page-number);
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-number-label {
+  content: none;
 }
 
 /* Virtual scrolling optimization */
