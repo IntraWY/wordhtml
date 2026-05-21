@@ -548,7 +548,6 @@ html[data-theme="dark"] .page-node {
   height: 100%;
 }
 
-.page-number-label,
 .page-node[data-page-number]::after {
   content: attr(data-page-number);
   position: absolute;
@@ -560,10 +559,6 @@ html[data-theme="dark"] .page-node {
   color: var(--color-muted-foreground);
   pointer-events: none;
   user-select: none;
-}
-
-.page-number-label {
-  content: none;
 }
 
 /* Virtual scrolling optimization */
