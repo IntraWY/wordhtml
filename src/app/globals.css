@@ -452,7 +452,9 @@ html[data-theme="dark"] .paper {
   .toast,
   .search-panel,
   .error-banner,
-  .warning-banner
+  .warning-banner {
+    display: none !important;
+  }
 
   /* Hide everything except printable content */
   body * { visibility: hidden; }
