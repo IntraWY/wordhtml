@@ -10,12 +10,12 @@ import { Ribbon } from "./ribbon/Ribbon";
 import { MobileToolbar } from "./MobileToolbar";
 import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
+import { PageCanvas } from "./PageCanvas";
 import { PreviewToggle } from "./PreviewToggle";
 import { VariablePanel } from "./VariablePanel";
 import { IndentRuler } from "./IndentRuler";
 import { TemplatePreview } from "./TemplatePreview";
 import { SourcePane } from "./SourcePane";
-import { usePaginationStore } from "@/store/paginationStore";
 import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
 import { useUiStore } from "@/store/uiStore";
@@ -26,15 +26,13 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useDragAndDrop } from "@/hooks/useDragAndDrop";
 import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { useEditorResize } from "@/hooks/useEditorResize";
-import { useAutoPagination } from "@/hooks/useAutoPagination";
-import { useVirtualScroll } from "@/hooks/useVirtualScroll";
+import { usePagination } from "@/hooks/usePagination";
 import { DialogManager } from "./DialogManager";
 import { ParagraphDialog } from "./ParagraphDialog";
 import { MathInputDialog } from "./MathInputDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
-import { PageBreakIndicator } from "./PageBreakIndicator";
 import { EditorContextMenu } from "./EditorContextMenu";
 import { Tour } from "@/components/onboarding/Tour";
 
@@ -76,13 +74,12 @@ export function EditorShell() {
   useKeyboardShortcuts(editor);
   useBeforeUnload();
   const { articleRef, contentHeight } = useEditorResize();
-  const { totalPages, currentPage, setCurrentPage, pageBreaks } = useAutoPagination(
-    articleRef,
-    pageSetup,
-    undefined,
-    [documentHtml, pageSetup]
-  );
-  const { visiblePages, isActive: virtualScrollActive, containerRef: virtualScrollContainerRef } = useVirtualScroll(pageBreaks, { overscan: 1, threshold: 5 });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { pageCount, currentPage, goToPage } = usePagination(editor, pageSetup, {
+    scrollContainerRef,
+  });
+  const currentPageRef = useRef(currentPage);
+  useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
   const { onDragOver, onDragLeave, onDrop } = useDragAndDrop(editor, setIsDragging);
 
   /* custom-event bridge between menu components and shell */
@@ -93,8 +90,6 @@ export function EditorShell() {
     const onToc = () => openToc();
     const onHeaderFooter = () => openHeaderFooter();
     const onTemplates = () => useTemplateStore.getState().openPanel();
-    const onPageNext = () => usePaginationStore.getState().nextPage();
-    const onPagePrev = () => usePaginationStore.getState().prevPage();
     const onInsertVariable = (e: CustomEvent) => {
       const name = e.detail as string;
       const ed = editorRef.current;
@@ -107,15 +102,17 @@ export function EditorShell() {
       ed.commands.focus();
     };
     const onOpenMath = () => setMathOpen(true);
+    const onPageNext = () => goToPage(currentPageRef.current + 1);
+    const onPagePrev = () => goToPage(currentPageRef.current - 1);
     addEventListener("wordhtml:open-search", onSearch);
     addEventListener("wordhtml:open-page-setup", onPageSetup);
     addEventListener("wordhtml:open-shortcuts", onShortcuts);
     addEventListener("wordhtml:open-toc", onToc);
     addEventListener("wordhtml:open-header-footer", onHeaderFooter);
     addEventListener("wordhtml:open-templates", onTemplates);
+    addEventListener("wordhtml:insert-variable", onInsertVariable);
     addEventListener("wordhtml:page-next", onPageNext);
     addEventListener("wordhtml:page-prev", onPagePrev);
-    addEventListener("wordhtml:insert-variable", onInsertVariable);
     window.addEventListener("wordhtml:open-math-dialog", onOpenMath);
     return () => {
       removeEventListener("wordhtml:open-search", onSearch);
@@ -124,12 +121,12 @@ export function EditorShell() {
       removeEventListener("wordhtml:open-toc", onToc);
       removeEventListener("wordhtml:open-header-footer", onHeaderFooter);
       removeEventListener("wordhtml:open-templates", onTemplates);
+      removeEventListener("wordhtml:insert-variable", onInsertVariable);
       removeEventListener("wordhtml:page-next", onPageNext);
       removeEventListener("wordhtml:page-prev", onPagePrev);
-      removeEventListener("wordhtml:insert-variable", onInsertVariable);
       window.removeEventListener("wordhtml:open-math-dialog", onOpenMath);
     };
-  }, [openSearch, openPageSetup, openShortcuts, openToc, openHeaderFooter]);
+  }, [openSearch, openPageSetup, openShortcuts, openToc, openHeaderFooter, goToPage]);
 
   /* cross-tab sync: rehydrate stores when localStorage changes in another tab */
   useEffect(() => {
@@ -265,7 +262,7 @@ export function EditorShell() {
                   <PreviewToggle />
                 </div>
               )}
-              <div ref={virtualScrollContainerRef} className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
+              <div ref={scrollContainerRef} className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
                 {previewMode === "preview" && templateMode ? (
                   <TemplatePreview widthPx={widthPx} />
                 ) : (
@@ -300,26 +297,13 @@ export function EditorShell() {
                         contentHeight={contentHeight > 0 ? contentHeight : undefined}
                       />
                       <div className="relative" data-tour="editor">
-                        <PageBreakIndicator pageBreaks={pageBreaks} />
-                        <article
+                        <PageCanvas
+                          ref={articleRef as React.RefObject<HTMLDivElement>}
                           id="editor-content"
-                          ref={articleRef}
-                          className={cn("paper printable-paper", virtualScrollActive && "page-virtual")}
-                          style={{
-                            minHeight: heightPx,
-                            width: widthPx,
-                            paddingTop: marginTopPx,
-                            paddingRight: marginRightPx,
-                            paddingBottom: marginBottomPx,
-                            paddingLeft: marginLeftPx,
-                            /* dynamic intrinsic size per page when virtual scroll is active */
-                            containIntrinsicSize: virtualScrollActive
-                              ? `${widthPx}px ${heightPx}px`
-                              : undefined,
-                          }}
+                          className="printable-paper"
                         >
-                          <VisualEditor onEditorReady={onEditorReady} visiblePages={visiblePages} virtualScrollActive={virtualScrollActive} />
-                        </article>
+                          <VisualEditor onEditorReady={onEditorReady} />
+                        </PageCanvas>
                       </div>
                     </div>
                   </div>
@@ -327,7 +311,7 @@ export function EditorShell() {
               </div>
               <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
                 <StatusBar rulerInfo={rulerInfo} />
-                <PaginationManager totalPages={totalPages} currentPage={currentPage} onPageChange={setCurrentPage} />
+                <PaginationManager totalPages={pageCount} currentPage={currentPage} onPageChange={goToPage} />
               </div>
             </div>
             {sourceOpen && <SourcePane />}
