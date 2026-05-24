@@ -31,7 +31,6 @@ export function IndentRuler({
 }: IndentRulerProps) {
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!editor) return;
     const update = () => {

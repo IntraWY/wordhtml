@@ -96,7 +96,10 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
 
   const callCmd = (name: SearchCommandKey) => {
     if (!editor) return;
-    (editor.commands as unknown as Record<string, (() => void) | undefined>)[name]?.();
+    const cmds = editor.commands as unknown as Partial<
+      Record<SearchCommandKey, () => boolean>
+    >;
+    cmds[name]?.();
   };
 
   return (

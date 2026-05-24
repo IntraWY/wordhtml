@@ -1,6 +1,9 @@
 /**
  * Replace header/footer template variables with actual values.
  * Supported variables: {page}, {total}, {date}
+ *
+ * Replacement values are HTML-escaped to prevent XSS if the result is
+ * rendered without additional sanitization.
  */
 export function replaceVariables(
   html: string,
@@ -10,7 +13,16 @@ export function replaceVariables(
   if (!html) return "";
   const date = new Date().toLocaleDateString("th-TH");
   return html
-    .replace(/\{page\}/g, String(pageNumber))
-    .replace(/\{total\}/g, String(totalPages))
-    .replace(/\{date\}/g, date);
+    .replace(/\{page\}/g, escapeHtml(String(pageNumber)))
+    .replace(/\{total\}/g, escapeHtml(String(totalPages)))
+    .replace(/\{date\}/g, escapeHtml(date));
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

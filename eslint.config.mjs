@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Node scripts at project root
     "check-deploy.js",
     "ruler-test.js",
+    // Temporary worktrees and coverage
+    ".claude/**",
+    "coverage/**",
   ]),
 ]);
 

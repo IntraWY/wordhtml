@@ -40,10 +40,6 @@ const DEFAULT_PAGE_SETUP: PageSetup = {
   },
 };
 
-// Module-scoped debounce timer for auto-snapshot. Lives outside the store
-// factory so it isn't recreated on each set() and persists across calls.
-let autoSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
-
 interface EditorState {
   // document
   documentHtml: string;
@@ -72,6 +68,8 @@ interface EditorState {
   autoCompressImages: boolean;
   // spellcheck
   spellcheckEnabled: boolean;
+  /** Internal auto-snapshot timer (not persisted). */
+  _autoSnapshotTimer: ReturnType<typeof setTimeout> | null;
   // actions
   setHtml: (html: string) => void;
   setFileName: (name: string | null) => void;
@@ -123,17 +121,20 @@ export const useEditorStore = create<EditorState>()(
       previewMode: "edit",
       autoCompressImages: true,
       spellcheckEnabled: true,
+      _autoSnapshotTimer: null,
 
       setHtml: (html) => {
         set({ documentHtml: html, lastEditAt: Date.now() });
-        if (autoSnapshotTimer) clearTimeout(autoSnapshotTimer);
-        autoSnapshotTimer = setTimeout(() => {
+        const timer = get()._autoSnapshotTimer;
+        if (timer) clearTimeout(timer);
+        const newTimer = setTimeout(() => {
           const state = get();
           if (!state.documentHtml.trim()) return;
           const last = state.history[0];
           if (last && last.html === state.documentHtml) return; // no change
           state.saveSnapshot();
         }, AUTO_SNAPSHOT_IDLE_MS);
+        set({ _autoSnapshotTimer: newTimer });
       },
       setFileName: (fileName) => set({ fileName }),
       toggleCleaner: (key) =>

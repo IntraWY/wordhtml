@@ -114,23 +114,23 @@ export function usePagination(
     isApplyingRef.current = true;
     setIsPaginating(true);
 
-    // Process one candidate at a time to avoid position drift.
-    // In practice Phase 1 usually produces one candidate per check.
-    const candidate = candidates[0];
-    pendingSplitsRef.current = [];
-
     try {
-      const result = buildSplitTransaction(
-        {
-          state: editor.state,
-          schema: editor.state.schema,
-          pageBreakNodeName: "pageBreak",
-        },
-        candidate
-      );
-
-      if (result.splitsInserted > 0) {
-        editor.view.dispatch(result.tr);
+      // Process all pending candidates one by one, rebuilding the transaction
+      // from the latest editor state after each dispatch to avoid position drift.
+      while (pendingSplitsRef.current.length > 0) {
+        const candidate = pendingSplitsRef.current.shift();
+        if (!candidate) break;
+        const result = buildSplitTransaction(
+          {
+            state: editor.state,
+            schema: editor.state.schema,
+            pageBreakNodeName: "pageBreak",
+          },
+          candidate
+        );
+        if (result.splitsInserted > 0) {
+          editor.view.dispatch(result.tr);
+        }
       }
     } catch (e) {
       if (process.env.NODE_ENV !== "production") {

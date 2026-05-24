@@ -120,7 +120,6 @@ export function useRulerDrag({
   // Update ref in an effect to avoid mutating during render.
   // Intentionally omit deps: we need the ref fresh on every render
   // so callbacks reading optsRef.current see latest values.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     optsRef.current = {
       maxIndentCm,

@@ -11,10 +11,6 @@ const PRESERVE_ATTRS_BY_TAG: Record<string, ReadonlyArray<string>> = {
   td: ["colspan", "rowspan"],
   th: ["colspan", "rowspan"],
   ol: ["start", "type"],
-  iframe: ["src", "title"],
-  source: ["src", "srcset", "type"],
-  video: ["src", "poster", "controls"],
-  audio: ["src", "controls"],
 };
 
 const VOID_ELEMENTS = new Set([
@@ -173,11 +169,22 @@ export function unwrapDeprecatedTags(html: string): string {
 }
 
 // ---------- 7. Unwrap <span> tags ----------
+/**
+ * Unwrap <span> tags that carry no meaningful attributes.
+ * Spans with inline styles or other attributes are preserved so Tiptap
+ * marks (font size, text colour, highlight, etc.) survive export.
+ */
 export function unwrapSpans(html: string): string {
   if (!html) return html;
   const doc = parse(html);
   const spans = Array.from(doc.body.querySelectorAll("span"));
   for (const span of spans) {
+    // Preserve spans that have any attribute other than class (e.g. style, id)
+    const hasMeaningfulAttr = Array.from(span.attributes).some(
+      (a) => a.name !== "class"
+    );
+    if (hasMeaningfulAttr) continue;
+
     const parent = span.parentNode;
     if (!parent) continue;
     while (span.firstChild) {

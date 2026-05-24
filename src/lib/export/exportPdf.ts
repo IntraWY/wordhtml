@@ -2,6 +2,7 @@ import type { PageSetup } from "./wrap";
 import { deriveFileName } from "./wrap";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
+import { A4, LETTER, mmToPx } from "@/lib/page";
 
 interface ExportPdfOptions {
   /** Original source filename (if any) — used to derive the export filename */
@@ -36,7 +37,11 @@ export async function exportPdf(
   container.style.position = "fixed";
   container.style.top = "-9999px";
   container.style.left = "-9999px";
-  container.style.width = "794px"; // A4 width in px @ 96 DPI
+  const base = pageSetup?.size === "Letter" ? LETTER : A4;
+  const isLandscape = pageSetup?.orientation === "landscape";
+  const widthMm = isLandscape ? base.hMm : base.wMm;
+  const widthPx = Math.round(mmToPx(widthMm));
+  container.style.width = `${widthPx}px`;
   container.style.background = "#ffffff";
   container.style.color = "#18181b";
   container.style.fontFamily =

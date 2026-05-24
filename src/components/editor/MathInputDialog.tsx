@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import katex from "katex";
 
 import { Button } from "@/components/ui/Button";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import type { Editor } from "@tiptap/react";
 
 interface MathInputDialogProps {
@@ -172,7 +173,7 @@ export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps)
                 aria-live="polite"
                 className="min-h-[48px] rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-3 text-[color:var(--color-foreground)]"
                 dangerouslySetInnerHTML={{
-                  __html: previewHtml || '<span class="text-[color:var(--color-muted-foreground)] text-sm">พิมพ์ LaTeX เพื่อดูตัวอย่าง...</span>',
+                  __html: sanitizeHtml(previewHtml) || '<span class="text-[color:var(--color-muted-foreground)] text-sm">พิมพ์ LaTeX เพื่อดูตัวอย่าง...</span>',
                 }}
               />
             </div>

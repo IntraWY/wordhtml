@@ -47,11 +47,11 @@ export function ProcessedContent({
   const sanitizedHtml = useMemo(() => sanitizeHtml(html), [html]);
 
   const replacedHeader = useMemo(
-    () => (headerHtml ? replaceVariables(headerHtml, pageNumber, totalPages) : ""),
+    () => sanitizeHtml(headerHtml ? replaceVariables(headerHtml, pageNumber, totalPages) : ""),
     [headerHtml, pageNumber, totalPages]
   );
   const replacedFooter = useMemo(
-    () => (footerHtml ? replaceVariables(footerHtml, pageNumber, totalPages) : ""),
+    () => sanitizeHtml(footerHtml ? replaceVariables(footerHtml, pageNumber, totalPages) : ""),
     [footerHtml, pageNumber, totalPages]
   );
 

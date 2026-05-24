@@ -58,7 +58,6 @@ export function EditorShell() {
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const templateMode = useEditorStore((s) => s.templateMode);
   const previewMode = useEditorStore((s) => s.previewMode);
-  const documentHtml = useEditorStore((s) => s.documentHtml);
 
   const isFullscreen = useUiStore((s) => s.fullscreen);
   const openSearch = useUiStore((s) => s.openSearch);
@@ -179,7 +178,6 @@ export function EditorShell() {
   const widthMm = isLandscape ? base.hMm : base.wMm;
   const heightMm = isLandscape ? base.wMm : base.hMm;
   const widthPx = Math.round(mmToPx(widthMm));
-  const heightPx = Math.round(mmToPx(heightMm));
   const marginTopPx = Math.round(mmToPx(pageSetup.marginMm.top));
   const marginRightPx = Math.round(mmToPx(pageSetup.marginMm.right));
   const marginBottomPx = Math.round(mmToPx(pageSetup.marginMm.bottom));
