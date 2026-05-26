@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { APP_VERSION, APP_VERSION_LABEL, BUILD_ID } from "@/lib/version";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.ico",
+  },
+  generator: APP_VERSION_LABEL,
+  other: {
+    "app-version": APP_VERSION,
+    "build-id": BUILD_ID,
   },
 };
 

@@ -1,7 +1,7 @@
 import { useToastStore } from "@/store/toastStore";
+import { APP_VERSION } from "@/lib/version";
 
 const APP_NAME = "wordhtml";
-const APP_VERSION = "0.1.0";
 const EDITOR_KEY = "wordhtml-editor";
 
 interface BackupData {

@@ -5,9 +5,9 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Cache bust: force rebuild on 2026-05-04
+  // Cache bust + HTML meta build stamp (see src/lib/version.ts)
   env: {
-    BUILD_ID: "v20260504-001",
+    BUILD_ID: "v20260526-001",
   },
 };
 
