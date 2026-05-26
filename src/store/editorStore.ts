@@ -17,11 +17,13 @@ import type {
   TemplateVariable,
   DataSet,
   PageSetup,
+  AutoSaveSettings,
 } from "@/types";
+import { DEFAULT_AUTO_SAVE } from "@/types";
+import { debugPerfLog } from "@/lib/debugPerfLog";
 import type { ExportMissingPolicy } from "@/lib/placeholders";
 
 const MAX_HISTORY = 20;
-const AUTO_SNAPSHOT_IDLE_MS = 120_000; // 2 minutes idle
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
 
 const DEFAULT_PAGE_SETUP: PageSetup = {
@@ -73,10 +75,16 @@ interface EditorState {
   autoCompressImages: boolean;
   // spellcheck
   spellcheckEnabled: boolean;
+  // auto-save
+  autoSave: AutoSaveSettings;
   /** Internal auto-snapshot timer (not persisted). */
   _autoSnapshotTimer: ReturnType<typeof setTimeout> | null;
   // actions
-  setHtml: (html: string) => void;
+  setHtml: (html: string, options?: { debounce?: boolean }) => void;
+  /** Commit any debounced HTML before save/export/unload. */
+  flushDocumentHtml: () => void;
+  /** Latest HTML including not-yet-committed editor content. */
+  getDocumentHtml: () => string;
   setFileName: (name: string | null) => void;
   toggleCleaner: (key: CleanerKey) => void;
   setImageMode: (mode: ImageMode) => void;
@@ -91,7 +99,7 @@ interface EditorState {
   clearLoadWarnings: () => void;
   reset: () => void;
   // history actions
-  saveSnapshot: () => void;
+  saveSnapshot: (options?: { source?: "manual" | "auto" }) => void;
   loadSnapshot: (id: string) => void;
   duplicateSnapshot: (id: string) => void;
   deleteSnapshot: (id: string) => void;
@@ -104,13 +112,38 @@ interface EditorState {
   setPreviewMode: (mode: "edit" | "preview") => void;
   setFieldValue: (fieldId: string, value: string) => void;
   setExportMissingPolicy: (policy: ExportMissingPolicy) => void;
+  setAutoSave: (partial: Partial<AutoSaveSettings>) => void;
+  scheduleAutoSnapshot: () => void;
 }
 
 const DEFAULT_CLEANERS: CleanerKey[] = ["removeInlineStyles", "removeEmptyTags"];
+/** Debounce editor → store HTML sync to avoid full getHTML() fan-out every keystroke. */
+const HTML_SYNC_DEBOUNCE_MS = 300;
 
 export const useEditorStore = create<EditorState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      let pendingDocumentHtml: string | null = null;
+      let htmlDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const clearHtmlDebounce = () => {
+        if (htmlDebounceTimer) {
+          clearTimeout(htmlDebounceTimer);
+          htmlDebounceTimer = null;
+        }
+      };
+
+      const commitDocumentHtml = (html: string) => {
+        set({ documentHtml: html, lastEditAt: Date.now() });
+        get().scheduleAutoSnapshot();
+        // #region agent log
+        debugPerfLog("A", "editorStore.ts:commitDocumentHtml", "store html commit", {
+          htmlLen: html.length,
+        });
+        // #endregion
+      };
+
+      return {
       documentHtml: "",
       fileName: null,
       enabledCleaners: DEFAULT_CLEANERS,
@@ -130,20 +163,65 @@ export const useEditorStore = create<EditorState>()(
       exportMissingPolicy: "bracket",
       autoCompressImages: true,
       spellcheckEnabled: true,
+      autoSave: DEFAULT_AUTO_SAVE,
       _autoSnapshotTimer: null,
 
-      setHtml: (html) => {
-        set({ documentHtml: html, lastEditAt: Date.now() });
-        const timer = get()._autoSnapshotTimer;
-        if (timer) clearTimeout(timer);
+      scheduleAutoSnapshot: () => {
+        const state = get();
+        const existing = state._autoSnapshotTimer;
+        if (existing) clearTimeout(existing);
+
+        const liveHtml = get().getDocumentHtml();
+        if (!state.autoSave.enabled || !liveHtml.trim()) {
+          set({ _autoSnapshotTimer: null });
+          return;
+        }
+
         const newTimer = setTimeout(() => {
-          const state = get();
-          if (!state.documentHtml.trim()) return;
-          const last = state.history[0];
-          if (last && last.html === state.documentHtml) return; // no change
-          state.saveSnapshot();
-        }, AUTO_SNAPSHOT_IDLE_MS);
+          const current = get();
+          const html = current.getDocumentHtml();
+          if (!current.autoSave.enabled || !html.trim()) return;
+          const last = current.history[0];
+          if (last && last.html === html) return;
+          current.saveSnapshot({ source: "auto" });
+        }, state.autoSave.idleMs);
+
         set({ _autoSnapshotTimer: newTimer });
+      },
+
+      setHtml: (html, options) => {
+        if (options?.debounce) {
+          pendingDocumentHtml = html;
+          clearHtmlDebounce();
+          htmlDebounceTimer = setTimeout(() => {
+            htmlDebounceTimer = null;
+            const next = pendingDocumentHtml;
+            pendingDocumentHtml = null;
+            if (next === null || next === get().documentHtml) return;
+            commitDocumentHtml(next);
+          }, HTML_SYNC_DEBOUNCE_MS);
+          return;
+        }
+        clearHtmlDebounce();
+        pendingDocumentHtml = null;
+        if (html === get().documentHtml) return;
+        commitDocumentHtml(html);
+      },
+
+      flushDocumentHtml: () => {
+        clearHtmlDebounce();
+        const next = pendingDocumentHtml;
+        pendingDocumentHtml = null;
+        if (next !== null && next !== get().documentHtml) {
+          commitDocumentHtml(next);
+        }
+      },
+
+      getDocumentHtml: () => pendingDocumentHtml ?? get().documentHtml,
+
+      setAutoSave: (partial) => {
+        set((s) => ({ autoSave: { ...s.autoSave, ...partial } }));
+        get().scheduleAutoSnapshot();
       },
       setFileName: (fileName) => set({ fileName }),
       toggleCleaner: (key) =>
@@ -225,7 +303,9 @@ export const useEditorStore = create<EditorState>()(
           set({ isLoadingFile: false, loadError: message });
         }
       },
-      reset: () =>
+      reset: () => {
+        clearHtmlDebounce();
+        pendingDocumentHtml = null;
         set({
           documentHtml: "",
           fileName: null,
@@ -236,10 +316,13 @@ export const useEditorStore = create<EditorState>()(
           fieldValues: {},
           dataSet: null,
           previewMode: "edit",
-        }),
+        });
+      },
 
-      saveSnapshot: () => {
-        const { documentHtml, fileName, history } = get();
+      saveSnapshot: (options) => {
+        get().flushDocumentHtml();
+        const source = options?.source ?? "manual";
+        const { documentHtml, fileName, history, autoSave } = get();
         if (!documentHtml.trim()) return;
         if (history[0]?.html === documentHtml) return;
         const snapshot: DocumentSnapshot = {
@@ -259,14 +342,24 @@ export const useEditorStore = create<EditorState>()(
         }
 
         set({ history: updated });
-        useToastStore.getState().show("บันทึก Snapshot แล้ว");
-        useUiStore.getState().setLastAction(`Snapshot บันทึก — ${new Date().toLocaleTimeString()}`);
+
+        const showFeedback = source === "manual" || autoSave.notifyOnSave;
+        if (showFeedback) {
+          const label =
+            source === "auto" ? "บันทึกอัตโนมัติแล้ว" : "บันทึก Snapshot แล้ว";
+          useToastStore.getState().show(label);
+          useUiStore
+            .getState()
+            .setLastAction(`${label} — ${new Date().toLocaleTimeString()}`);
+        }
       },
 
       loadSnapshot: (id) => {
         const { history } = get();
         const snap = history.find((s) => s.id === id);
         if (!snap) return;
+        clearHtmlDebounce();
+        pendingDocumentHtml = null;
         set({
           documentHtml: snap.html,
           fileName: snap.fileName,
@@ -317,10 +410,11 @@ export const useEditorStore = create<EditorState>()(
           fieldValues: { ...state.fieldValues, [fieldId]: value },
         })),
       setExportMissingPolicy: (exportMissingPolicy) => set({ exportMissingPolicy }),
-    }),
+    };
+    },
     {
       name: "wordhtml-editor",
-      version: 3,
+      version: 4,
       storage: editorStorage,
       migrate: (persistedState: unknown, version) => {
         if (!persistedState || typeof persistedState !== "object") {
@@ -339,10 +433,16 @@ export const useEditorStore = create<EditorState>()(
           const { dataSet: _removed, ...rest } = state;
           return rest as unknown as EditorState;
         }
+        if (version < 4) {
+          return {
+            ...state,
+            autoSave: DEFAULT_AUTO_SAVE,
+          } as unknown as EditorState;
+        }
         return state as unknown as EditorState;
       },
       partialize: (state) => ({
-        _v: 3,
+        _v: 4,
         enabledCleaners: state.enabledCleaners,
         imageMode: state.imageMode,
         history: state.history,
@@ -352,6 +452,7 @@ export const useEditorStore = create<EditorState>()(
         autoCompressImages: state.autoCompressImages,
         spellcheckEnabled: state.spellcheckEnabled,
         exportMissingPolicy: state.exportMissingPolicy,
+        autoSave: state.autoSave,
       }),
     }
   )

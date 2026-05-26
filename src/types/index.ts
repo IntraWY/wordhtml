@@ -106,3 +106,26 @@ export interface DocumentSnapshot {
   html: string;
   wordCount: number;
 }
+
+/** Auto-save snapshot preferences (persisted in editor store). */
+export interface AutoSaveSettings {
+  enabled: boolean;
+  /** Idle delay before creating a snapshot after the last edit. */
+  idleMs: number;
+  /** Show toast + status bar message when an auto-save snapshot is created. */
+  notifyOnSave: boolean;
+}
+
+export const AUTO_SAVE_IDLE_OPTIONS = [
+  { value: 30_000, label: "30 วินาที (30s)" },
+  { value: 60_000, label: "1 นาที (1m)" },
+  { value: 120_000, label: "2 นาที (2m)" },
+  { value: 300_000, label: "5 นาที (5m)" },
+  { value: 600_000, label: "10 นาที (10m)" },
+] as const;
+
+export const DEFAULT_AUTO_SAVE: AutoSaveSettings = {
+  enabled: true,
+  idleMs: 120_000,
+  notifyOnSave: false,
+};

@@ -11,6 +11,7 @@ import {
 } from "@/lib/pagination/engine";
 import { buildSplitTransaction } from "@/lib/pagination/splitter";
 import { isLiveEditor } from "@/lib/editorLive";
+import { debugPerfLog } from "@/lib/debugPerfLog";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -49,6 +50,9 @@ export interface UsePaginationOptions {
 const DEFAULT_DEBOUNCE_MS = 100;
 const STABLE_DELAY_MS = 150;
 const PAGE_SCROLL_OFFSET_PX = 24;
+/** Wait for typing to pause before measuring/splitting pages. */
+const PAGINATION_TYPING_IDLE_MS = 450;
+const RESIZE_DEBOUNCE_MS = 150;
 
 /* ------------------------------------------------------------------ */
 /* Hook                                                                */
@@ -69,6 +73,8 @@ export function usePagination(
   const engineRef = useRef<PaginationEngine | null>(null);
   const pendingSplitsRef = useRef<SplitCandidate[]>([]);
   const stableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isApplyingRef = useRef(false);
 
   /* -- helpers -- */
@@ -221,22 +227,56 @@ export function usePagination(
     if (!editor) return;
     const handler = () => {
       engineRef.current?.reobserve();
-      engineRef.current?.scheduleCheck();
+      if (typingIdleTimerRef.current) {
+        clearTimeout(typingIdleTimerRef.current);
+      }
+      typingIdleTimerRef.current = setTimeout(() => {
+        typingIdleTimerRef.current = null;
+        if (!isApplyingRef.current) {
+          engineRef.current?.scheduleCheck();
+          // #region agent log
+          debugPerfLog(
+            "B",
+            "usePagination.ts:typingIdle",
+            "pagination scheduled after typing idle",
+            { idleMs: PAGINATION_TYPING_IDLE_MS }
+          );
+          // #endregion
+        }
+      }, PAGINATION_TYPING_IDLE_MS);
     };
     editor.on("update", handler);
-    return () => { editor.off("update", handler); };
+    return () => {
+      editor.off("update", handler);
+      if (typingIdleTimerRef.current) {
+        clearTimeout(typingIdleTimerRef.current);
+        typingIdleTimerRef.current = null;
+      }
+    };
   }, [editor]);
 
   /* -- window resize -- */
 
   useEffect(() => {
     const handleResize = () => {
-      engineRef.current?.reobserve();
-      engineRef.current?.checkAllPages();
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+      }
+      resizeTimerRef.current = setTimeout(() => {
+        resizeTimerRef.current = null;
+        engineRef.current?.reobserve();
+        engineRef.current?.scheduleCheck();
+      }, RESIZE_DEBOUNCE_MS);
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+        resizeTimerRef.current = null;
+      }
+    };
   }, []);
 
   /* -- page setup change explicit re-check -- */
@@ -259,6 +299,12 @@ export function usePagination(
     return () => {
       if (stableTimerRef.current) {
         clearTimeout(stableTimerRef.current);
+      }
+      if (typingIdleTimerRef.current) {
+        clearTimeout(typingIdleTimerRef.current);
+      }
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
       }
     };
   }, []);

@@ -54,6 +54,7 @@ import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompressio
 import { ImageResizeView } from "./ImageResizeView";
 import { isLiveEditor } from "@/lib/editorLive";
 import { useToastStore } from "@/store/toastStore";
+import { debugPerfLog } from "@/lib/debugPerfLog";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -176,9 +177,18 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
   const onUpdate = useCallback(
     ({ editor }: { editor: Editor }) => {
+      const t0 = performance.now();
       const html = unwrapPageNode(editor.getHTML());
+      const getHtmlMs = performance.now() - t0;
       lastWrittenHtml.current = html;
-      setHtml(html);
+      setHtml(html, { debounce: true });
+      // #region agent log
+      debugPerfLog("A", "VisualEditor.tsx:onUpdate", "editor onUpdate", {
+        getHtmlMs: Math.round(getHtmlMs * 100) / 100,
+        htmlLen: html.length,
+        pageNodes: (html.match(/class="page-node"/g) ?? []).length,
+      });
+      // #endregion
     },
     [setHtml]
   );
@@ -340,6 +350,17 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       onEditorReady?.(null);
     };
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    if (!isLiveEditor(editor)) return;
+    const onBlur = () => {
+      useEditorStore.getState().flushDocumentHtml();
+    };
+    editor.on("blur", onBlur);
+    return () => {
+      editor.off("blur", onBlur);
+    };
+  }, [editor]);
 
   useEffect(() => {
     const handler = () => {

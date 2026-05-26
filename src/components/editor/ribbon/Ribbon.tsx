@@ -8,12 +8,14 @@ import { RibbonTabInsert } from "./RibbonTabInsert";
 import { RibbonTabLayout } from "./RibbonTabLayout";
 import { RibbonTabClean } from "./RibbonTabClean";
 import { RibbonTabView } from "./RibbonTabView";
+import { RibbonTabSettings } from "./RibbonTabSettings";
 
 const MemoizedRibbonTabHome = memo(RibbonTabHome);
 const MemoizedRibbonTabInsert = memo(RibbonTabInsert);
 const MemoizedRibbonTabLayout = memo(RibbonTabLayout);
 const MemoizedRibbonTabClean = memo(RibbonTabClean);
 const MemoizedRibbonTabView = memo(RibbonTabView);
+const MemoizedRibbonTabSettings = memo(RibbonTabSettings);
 
 const TABS = [
   { key: "home" as const, label: "หน้าแรก (Home)" },
@@ -21,6 +23,7 @@ const TABS = [
   { key: "layout" as const, label: "เค้าโครง (Layout)" },
   { key: "clean" as const, label: "ล้าง (Clean)" },
   { key: "view" as const, label: "มุมมอง (View)" },
+  { key: "settings" as const, label: "ตั้งค่า (Settings)" },
 ];
 
 export const Ribbon = memo(function Ribbon({ editor }: { editor: Editor | null }) {
@@ -58,6 +61,7 @@ export const Ribbon = memo(function Ribbon({ editor }: { editor: Editor | null }
           {activeTab === "layout" && <MemoizedRibbonTabLayout editor={editor} />}
           {activeTab === "clean" && <MemoizedRibbonTabClean />}
           {activeTab === "view" && <MemoizedRibbonTabView editor={editor} />}
+          {activeTab === "settings" && <MemoizedRibbonTabSettings />}
         </div>
       </div>
     </div>

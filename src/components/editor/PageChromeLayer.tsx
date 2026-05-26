@@ -1,10 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useState, useCallback, type RefObject } from "react";
+import { useLayoutEffect, useState, useCallback, useRef, type RefObject } from "react";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { resolveHeaderFooter } from "./PageHeaderFooter";
 import { replacePageTokens } from "@/lib/placeholders";
 import type { HeaderFooterConfig, PageSetup } from "@/types";
+import { debugPerfLog } from "@/lib/debugPerfLog";
 
 interface PageChromeLayerProps {
   /** Element that contains `.page-node` elements (usually PageCanvas). */
@@ -58,6 +59,7 @@ export function PageChromeLayer({
   onReserveHeightChange,
 }: PageChromeLayerProps) {
   const [boxes, setBoxes] = useState<PageChromeBox[]>([]);
+  const lastReserveRef = useRef(0);
   const hf = pageSetup.headerFooter;
   const enabled = Boolean(hf?.enabled);
 
@@ -93,6 +95,13 @@ export function PageChromeLayer({
 
     setBoxes(next);
 
+    // #region agent log
+    debugPerfLog("D", "PageChromeLayer.tsx:measure", "header/footer measure", {
+      pageCount: pages.length,
+      enabled,
+    });
+    // #endregion
+
     const probe = document.createElement("div");
     probe.className = "page-chrome-header";
     probe.style.cssText = "visibility:hidden;position:fixed;top:-9999px;left:-9999px";
@@ -101,7 +110,10 @@ export function PageChromeLayer({
     const measured = probe.offsetHeight;
     document.body.removeChild(probe);
     const reserve = Math.min(120, Math.max(24, measured * 2));
-    onReserveHeightChange?.(reserve);
+    if (reserve !== lastReserveRef.current) {
+      lastReserveRef.current = reserve;
+      onReserveHeightChange?.(reserve);
+    }
   }, [pagesRootRef, scrollContainerRef, enabled, hf, pageCount, onReserveHeightChange]);
 
   useLayoutEffect(() => {
@@ -115,7 +127,14 @@ export function PageChromeLayer({
     if (scrollEl) ro.observe(scrollEl);
     pagesRoot.querySelectorAll(".page-node").forEach((el) => ro.observe(el));
 
-    const onScroll = () => measure();
+    let scrollRaf = 0;
+    const onScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        measure();
+      });
+    };
     scrollEl?.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", measure);
 
@@ -123,6 +142,7 @@ export function PageChromeLayer({
       ro.disconnect();
       scrollEl?.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", measure);
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
     };
   }, [pagesRootRef, scrollContainerRef, measure, pageSetup, pageCount, enabled]);
 

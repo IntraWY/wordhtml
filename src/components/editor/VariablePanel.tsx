@@ -51,17 +51,23 @@ export function VariablePanel() {
   // preserves manually-added variables even if not yet in document
   useEffect(() => {
     if (!templateMode) return;
-    const detected = extractVariables(documentHtml);
-    const currentNames = new Set(variables.map((v) => v.name));
+    const timer = setTimeout(() => {
+      const html = useEditorStore.getState().getDocumentHtml();
+      const detected = extractVariables(html);
+      const currentNames = new Set(
+        useEditorStore.getState().variables.map((v) => v.name)
+      );
 
-    const newVars = detected
-      .filter((name) => !currentNames.has(name))
-      .map((name) => ({ name, value: "", isList: false } as TemplateVariable));
+      const newVars = detected
+        .filter((name) => !currentNames.has(name))
+        .map((name) => ({ name, value: "", isList: false } as TemplateVariable));
 
-    if (newVars.length > 0) {
-      setVariables([...variables, ...newVars]);
-    }
-  }, [documentHtml, templateMode, variables, setVariables]);
+      if (newVars.length > 0) {
+        setVariables((prev) => [...prev, ...newVars]);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [documentHtml, templateMode, setVariables]);
 
   const handleUpdateVariable = useCallback(
     (name: string, patch: Partial<TemplateVariable>) => {

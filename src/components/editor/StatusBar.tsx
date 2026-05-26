@@ -6,7 +6,8 @@ import { useUiStore } from "@/store/uiStore";
 import { countWords, plainTextFromHtml } from "@/lib/text";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
-import { FileText, Type, Sparkles, AlignLeft, Ruler, Save, AlertTriangle } from "lucide-react";
+import { FileText, Type, Sparkles, AlignLeft, Ruler, Save, AlertTriangle, Timer } from "lucide-react";
+import { AUTO_SAVE_IDLE_OPTIONS } from "@/types";
 import { countMissingFields, getMergeFieldStatuses } from "@/lib/placeholders";
 
 function useDebouncedMemo<T>(factory: () => T, deps: React.DependencyList, delay = 300): T {
@@ -61,6 +62,7 @@ export function StatusBar({
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const history = useEditorStore((s) => s.history);
+  const autoSave = useEditorStore((s) => s.autoSave);
   const lastAction = useUiStore((s) => s.lastAction);
   const templateMode = useEditorStore((s) => s.templateMode);
   const previewMode = useEditorStore((s) => s.previewMode);
@@ -85,9 +87,22 @@ export function StatusBar({
 
   const cleanersLabel = `${enabledCleaners.length}/${CLEANERS.length} ตัวทำความสะอาด`;
 
+  const autoSaveLabel = autoSave.enabled
+    ? AUTO_SAVE_IDLE_OPTIONS.find((o) => o.value === autoSave.idleMs)?.label ??
+      `${Math.round(autoSave.idleMs / 1000)}s`
+    : null;
+
   const lastSnapshotHtml = history[0]?.html ?? "";
-  const isModified = documentHtml.trim().length > 0 && documentHtml !== lastSnapshotHtml;
-  const isSaved = documentHtml.trim().length > 0 && !isModified;
+  const modifiedCheck = useDebouncedMemo(
+    () => ({
+      hasContent: documentHtml.trim().length > 0,
+      isModified: documentHtml.trim().length > 0 && documentHtml !== lastSnapshotHtml,
+    }),
+    [documentHtml, lastSnapshotHtml],
+    300
+  );
+  const isModified = modifiedCheck.isModified;
+  const isSaved = modifiedCheck.hasContent && !isModified;
 
   return (
     <div
@@ -121,6 +136,15 @@ export function StatusBar({
           value={cleanersLabel}
           className={enabledCleaners.length > 0 ? "text-[color:var(--color-accent)]" : ""}
         />
+        {autoSave.enabled && autoSaveLabel && (
+          <span
+            className="inline-flex items-center gap-1 text-[color:var(--color-muted-foreground)]"
+            title={`บันทึก Snapshot อัตโนมัติหลังหยุดพิมพ์ ${autoSaveLabel}`}
+          >
+            <Timer className="size-3 opacity-60" />
+            Auto-save · {autoSaveLabel}
+          </span>
+        )}
         {lastAction && (
           <span className="inline-flex items-center gap-1 text-[color:var(--color-muted-foreground)]">
             <Save className="size-3 opacity-60" />

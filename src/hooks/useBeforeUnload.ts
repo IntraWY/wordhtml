@@ -7,6 +7,7 @@ export function useBeforeUnload() {
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       const state = useEditorStore.getState();
+      state.flushDocumentHtml();
       const html = state.documentHtml.trim();
       if (!html) return;
       const lastHistory = state.history[0];
