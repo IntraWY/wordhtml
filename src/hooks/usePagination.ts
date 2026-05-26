@@ -78,6 +78,11 @@ export function usePagination(
     return Math.max(1, bodies.length);
   }, []);
 
+  const currentPageRef = useRef(currentPage);
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
+
   const detectCurrentPage = useCallback((): number => {
     if (typeof document === "undefined") return 1;
     const bodies = Array.from(document.querySelectorAll(".page-body"));
@@ -87,13 +92,20 @@ export function usePagination(
     const view = editor?.view;
     if (!view) return 1;
 
+    // Guard: if the editor is not focused, coordsAtPos can throw or return
+    // stale coordinates. Return the last known page to avoid spurious state
+    // updates during tab switching.
+    if (typeof view.hasFocus === "function" && !view.hasFocus()) {
+      return currentPageRef.current;
+    }
+
     const anchor = view.state.selection.anchor;
     let anchorY: number;
     try {
       const coords = view.coordsAtPos(anchor);
       anchorY = coords.top;
     } catch {
-      return bodies.length;
+      return currentPageRef.current;
     }
 
     for (let i = 0; i < bodies.length; i++) {

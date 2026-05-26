@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import type { Editor } from "@tiptap/react";
 import { cn } from "@/lib/utils";
 import { RibbonTabHome } from "./RibbonTabHome";
@@ -8,6 +8,12 @@ import { RibbonTabInsert } from "./RibbonTabInsert";
 import { RibbonTabLayout } from "./RibbonTabLayout";
 import { RibbonTabClean } from "./RibbonTabClean";
 import { RibbonTabView } from "./RibbonTabView";
+
+const MemoizedRibbonTabHome = memo(RibbonTabHome);
+const MemoizedRibbonTabInsert = memo(RibbonTabInsert);
+const MemoizedRibbonTabLayout = memo(RibbonTabLayout);
+const MemoizedRibbonTabClean = memo(RibbonTabClean);
+const MemoizedRibbonTabView = memo(RibbonTabView);
 
 const TABS = [
   { key: "home" as const, label: "หน้าแรก (Home)" },
@@ -17,7 +23,7 @@ const TABS = [
   { key: "view" as const, label: "มุมมอง (View)" },
 ];
 
-export function Ribbon({ editor }: { editor: Editor | null }) {
+export const Ribbon = memo(function Ribbon({ editor }: { editor: Editor | null }) {
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]["key"]>("home");
 
   return (
@@ -47,13 +53,13 @@ export function Ribbon({ editor }: { editor: Editor | null }) {
       {/* Tab content */}
       <div className="flex min-h-[72px] items-stretch overflow-x-auto scrollbar-hide">
         <div className="flex min-w-full divide-x divide-[color:var(--color-border)]/40">
-          {activeTab === "home" && <RibbonTabHome editor={editor} />}
-          {activeTab === "insert" && <RibbonTabInsert editor={editor} />}
-          {activeTab === "layout" && <RibbonTabLayout editor={editor} />}
-          {activeTab === "clean" && <RibbonTabClean />}
-          {activeTab === "view" && <RibbonTabView editor={editor} />}
+          {activeTab === "home" && <MemoizedRibbonTabHome editor={editor} />}
+          {activeTab === "insert" && <MemoizedRibbonTabInsert editor={editor} />}
+          {activeTab === "layout" && <MemoizedRibbonTabLayout editor={editor} />}
+          {activeTab === "clean" && <MemoizedRibbonTabClean />}
+          {activeTab === "view" && <MemoizedRibbonTabView editor={editor} />}
         </div>
       </div>
     </div>
   );
-}
+});

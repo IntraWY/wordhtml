@@ -63,28 +63,45 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
   const textColorRef = useRef<HTMLInputElement>(null);
   const highlightColorRef = useRef<HTMLInputElement>(null);
 
-  const state = useEditorState({
+  const currentTextColor = useEditorState({
     editor,
-    selector: ({ editor: e }) => ({
-      textColor: (e?.getAttributes("textStyle").color as string | undefined) ?? undefined,
-      highlightColor: (e?.getAttributes("highlight").color as string | undefined) ?? undefined,
-      fontFamily: (e?.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
-      isImage: e?.isActive("image") ?? false,
-      imageAlign: (e?.getAttributes("image").align as string | undefined) ?? undefined,
-      lineHeightMode: (e?.getAttributes("paragraph").lineHeightMode as string | undefined) ?? "single",
-      spaceBefore: (e?.getAttributes("paragraph").spaceBefore as number | undefined) ?? 0,
-      spaceAfter: (e?.getAttributes("paragraph").spaceAfter as number | undefined) ?? 0,
-    }),
-  });
-
-  const currentTextColor = state?.textColor;
-  const currentHighlight = state?.highlightColor;
-  const currentFont = state?.fontFamily ?? "";
-  const isImage = state?.isImage ?? false;
-  const imageAlign = state?.imageAlign;
-  const currentLineHeightMode = state?.lineHeightMode ?? "single";
-  const currentSpaceBefore = state?.spaceBefore ?? 0;
-  const currentSpaceAfter = state?.spaceAfter ?? 0;
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("textStyle").color as string | undefined) ?? undefined,
+  }) ?? undefined;
+  const currentHighlight = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("highlight").color as string | undefined) ?? undefined,
+  }) ?? undefined;
+  const currentFont = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
+  }) ?? "";
+  const isImage = useEditorState({
+    editor,
+    selector: ({ editor: e }) => e?.isActive("image") ?? false,
+  }) ?? false;
+  const imageAlign = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("image").align as string | undefined) ?? undefined,
+  }) ?? undefined;
+  const currentLineHeightMode = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("paragraph").lineHeightMode as string | undefined) ?? "single",
+  }) ?? "single";
+  const currentSpaceBefore = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("paragraph").spaceBefore as number | undefined) ?? 0,
+  }) ?? 0;
+  const currentSpaceAfter = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      (e?.getAttributes("paragraph").spaceAfter as number | undefined) ?? 0,
+  }) ?? 0;
 
   const setImageAlign = useCallback((align: "left" | "center" | "right") => {
     editor?.chain().focus().updateAttributes("image", { align }).run();

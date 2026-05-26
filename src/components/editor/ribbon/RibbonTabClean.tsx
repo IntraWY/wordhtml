@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Sparkles, RotateCcw, Eye, Check } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -18,20 +18,33 @@ const DEFAULT_CLEANERS = ["removeInlineStyles", "removeEmptyTags"] as const;
 export function RibbonTabClean() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const toggleCleaner = useEditorStore((s) => s.toggleCleaner);
-  const documentHtml = useEditorStore((s) => s.documentHtml);
+  const hasDoc = useEditorStore((s) => s.documentHtml.trim().length > 0);
 
   const [isCleaning, setIsCleaning] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
 
   const { cleanNow: handleCleanNowBase } = useCleanDocument();
 
-  const previewHtml = useMemo(() => {
-    if (!showPreview) return "";
-    return applyCleaners(documentHtml, enabledCleaners);
-  }, [documentHtml, enabledCleaners, showPreview]);
+  // Debounced preview computation — only runs when preview is visible,
+  // and reads documentHtml from the store directly to avoid subscribing
+  // to the full string (which changes on every keystroke).
+  useEffect(() => {
+    if (!showPreview) {
+      const id = setTimeout(() => setPreviewHtml(""), 0);
+      return () => clearTimeout(id);
+    }
+    const timer = setTimeout(() => {
+      const html = useEditorStore.getState().documentHtml;
+      const cleaners = useEditorStore.getState().enabledCleaners;
+      setPreviewHtml(applyCleaners(html, cleaners));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [showPreview, enabledCleaners]);
 
   const handleCleanNow = useCallback(async () => {
-    if (!documentHtml.trim()) {
+    const html = useEditorStore.getState().documentHtml;
+    if (!html.trim()) {
       useToastStore.getState().show("ไม่มีเนื้อหาที่จะล้าง", "error");
       return;
     }
@@ -50,7 +63,7 @@ export function RibbonTabClean() {
     });
 
     setIsCleaning(false);
-  }, [documentHtml, enabledCleaners, handleCleanNowBase]);
+  }, [enabledCleaners, handleCleanNowBase]);
 
   const handleReset = useCallback(() => {
     DEFAULT_CLEANERS.forEach((key) => {
@@ -66,8 +79,6 @@ export function RibbonTabClean() {
     });
     useToastStore.getState().show("รีเซ็ตตัวเลือกเป็นค่าเริ่มต้นแล้ว");
   }, [enabledCleaners]);
-
-  const hasDoc = documentHtml.trim().length > 0;
 
   return (
     <>
@@ -132,7 +143,7 @@ export function RibbonTabClean() {
           <div className="flex max-h-14 flex-1 gap-2 overflow-hidden">
             <div className="flex-1 overflow-auto rounded border border-[color:var(--color-border)] bg-white px-2 py-1 text-[10px] text-[color:var(--color-muted-foreground)]">
               <div className="font-semibold text-[color:var(--color-foreground)]">ก่อน:</div>
-              <div className="line-clamp-2">{documentHtml.slice(0, 300)}</div>
+              <div className="line-clamp-2">{useEditorStore.getState().documentHtml.slice(0, 300)}</div>
             </div>
             <div className="flex-1 overflow-auto rounded border border-[color:var(--color-border)] bg-white px-2 py-1 text-[10px] text-[color:var(--color-muted-foreground)]">
               <div className="font-semibold text-[color:var(--color-foreground)]">หลัง:</div>
