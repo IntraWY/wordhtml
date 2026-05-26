@@ -3,7 +3,10 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useRulerDrag } from "@/hooks/useRulerDrag";
-import { PX_PER_CM } from "@/lib/page";
+import {
+  PAGE_STACK_GAP_PX,
+  PX_PER_CM,
+} from "@/lib/page";
 
 interface RulerProps {
   orientation: "horizontal" | "vertical";
@@ -20,9 +23,15 @@ interface RulerProps {
   marginTopMm?: number;
   marginBottomMm?: number;
   onMarginChange?: (aMm: number, bMm: number) => void;
-  // Actual content height in px (vertical only). When provided the ruler
-  // extends to cover the full scrollable content, not just one page.
+  // Legacy vertical canvas height (avoid for ruler length when pageHeightPx is set).
   contentHeight?: number;
+  /** One page height in px — matches `.page-node` (see getPageDimensionsPx). */
+  pageHeightPx?: number;
+  /** Distance from ruler top to first page top (PageCanvas padding). */
+  contentOffsetPx?: number;
+  pageCount?: number;
+  /** Horizontal ruler length in px (rounded page width). */
+  pageWidthPx?: number;
   // Called when a handle is hovered or dragged; null when interaction ends.
   onRulerActive?: (info: { label: string } | null) => void;
 }
@@ -72,31 +81,100 @@ function RulerInner({
   marginBottomMm = 0,
   onMarginChange,
   contentHeight,
+  pageHeightPx,
+  contentOffsetPx = 0,
+  pageCount = 1,
+  pageWidthPx,
   onRulerActive,
 }: RulerProps) {
   const isH = orientation === "horizontal";
-  const totalPx = cm * PX_PER_CM;
-  const rulerLengthPx = !isH && contentHeight ? contentHeight : totalPx;
+  const totalPx = isH
+    ? (pageWidthPx ?? Math.round(cm * PX_PER_CM))
+    : (pageHeightPx ?? Math.round(cm * PX_PER_CM));
+  const pages = Math.max(1, pageCount);
+  const pageGapPx = PAGE_STACK_GAP_PX;
+
+  const rulerLengthPx = useMemo(() => {
+    if (isH) return totalPx;
+    if (pageHeightPx != null) {
+      return (
+        contentOffsetPx +
+        pages * pageHeightPx +
+        (pages - 1) * pageGapPx
+      );
+    }
+    return contentHeight ?? totalPx;
+  }, [
+    isH,
+    totalPx,
+    pageHeightPx,
+    contentOffsetPx,
+    pages,
+    pageGapPx,
+    contentHeight,
+  ]);
+
   const indentInteractive = isH && !!onIndentChange;
   const marginInteractive = !!onMarginChange;
-  
-  // Generate tick positions — ensure we cover the full length, not just integer cm
+
+  const pageSpanPx = totalPx;
+
+  // Generate tick positions — per page segment for vertical, full width for horizontal
   const ticks: Tick[] = useMemo(() => {
     const result: Tick[] = [];
-    const maxPos = rulerLengthPx;
-    let i = 0;
-    while (i * PX_PER_CM <= maxPos + 0.001) {
-      result.push({ pos: i * PX_PER_CM, major: true, label: i });
-      if ((i + 0.5) * PX_PER_CM <= maxPos + 0.001) {
-        result.push({ pos: (i + 0.5) * PX_PER_CM, major: false, label: null });
+    if (isH) {
+      let i = 0;
+      while (i * PX_PER_CM <= rulerLengthPx + 0.001) {
+        result.push({ pos: i * PX_PER_CM, major: true, label: i });
+        if ((i + 0.5) * PX_PER_CM <= rulerLengthPx + 0.001) {
+          result.push({ pos: (i + 0.5) * PX_PER_CM, major: false, label: null });
+        }
+        i++;
       }
-      i++;
+      return result;
+    }
+
+    const usePageLayout = pageHeightPx != null;
+    const pageSegments = usePageLayout ? pages : 1;
+    for (let p = 0; p < pageSegments; p++) {
+      const pageStart = usePageLayout
+        ? contentOffsetPx + p * (pageSpanPx + pageGapPx)
+        : 0;
+      const maxInPage = usePageLayout ? pageSpanPx : rulerLengthPx;
+      let i = 0;
+      while (i * PX_PER_CM <= maxInPage + 0.001) {
+        result.push({
+          pos: pageStart + i * PX_PER_CM,
+          major: true,
+          label: i,
+        });
+        if ((i + 0.5) * PX_PER_CM <= maxInPage + 0.001) {
+          result.push({
+            pos: pageStart + (i + 0.5) * PX_PER_CM,
+            major: false,
+            label: null,
+          });
+        }
+        i++;
+      }
     }
     return result;
-  }, [rulerLengthPx]);
+  }, [
+    isH,
+    rulerLengthPx,
+    pageHeightPx,
+    pages,
+    contentOffsetPx,
+    pageSpanPx,
+    pageGapPx,
+  ]);
 
-  const marginGuideStart = marginStart;
-  const marginGuideEnd = totalPx - marginEnd;
+  const marginGuideStart = isH ? marginStart : contentOffsetPx + marginStart;
+  const marginGuideEnd = isH
+    ? totalPx - marginEnd
+    : contentOffsetPx + pageSpanPx - marginEnd;
+
+  const verticalPageCount = !isH && pageHeightPx != null ? pages : Math.max(1, Math.ceil((contentHeight ?? totalPx) / totalPx));
 
   // Pixel positions of indent handles
   const leftPx = marginStart + indentLeft * PX_PER_CM;
@@ -144,7 +222,7 @@ function RulerInner({
         isH ? "ruler-h" : "ruler-v",
         "relative bg-[color:var(--color-muted)] select-none",
         "border-[color:var(--color-border)]",
-        isH ? "h-[18px] border-b" : "w-[18px] border-r"
+        isH ? "h-[18px] border-b" : "w-[18px] overflow-hidden border-r"
       )}
       style={{ [isH ? "width" : "height"]: `${rulerLengthPx}px` }}
     >
@@ -204,20 +282,25 @@ function RulerInner({
           }}
         />
       ) : (
-        // For vertical ruler, render bottom margin guides at the end of every page
-        Array.from({ length: Math.max(1, Math.ceil((contentHeight ?? totalPx) / totalPx)) }, (_, i) => (
-          <div
-            key={`margin-guide-end-${i}`}
-            className="absolute"
-            style={{
-              background: "oklch(70% 0.15 25 / 0.5)",
-              top: `${(i + 1) * totalPx - marginEnd}px`,
-              left: 0,
-              right: 0,
-              height: "1px",
-            }}
-          />
-        ))
+        Array.from({ length: verticalPageCount }, (_, i) => {
+          const pageBottom =
+            pageHeightPx != null
+              ? contentOffsetPx + (i + 1) * pageSpanPx + i * pageGapPx
+              : (i + 1) * totalPx;
+          return (
+            <div
+              key={`margin-guide-end-${i}`}
+              className="absolute"
+              style={{
+                background: "oklch(70% 0.15 25 / 0.5)",
+                top: `${pageBottom - marginEnd}px`,
+                left: 0,
+                right: 0,
+                height: "1px",
+              }}
+            />
+          );
+        })
       )}
 
       {/* Margin handles */}
@@ -343,7 +426,12 @@ function RulerInner({
                 />
               </div>
               {/* Bottom margin handles — one at the end of every page */}
-              {Array.from({ length: Math.max(1, Math.ceil((contentHeight ?? totalPx) / totalPx)) }, (_, i) => (
+              {Array.from({ length: verticalPageCount }, (_, i) => {
+                const pageBottom =
+                  pageHeightPx != null
+                    ? contentOffsetPx + (i + 1) * pageSpanPx + i * pageGapPx
+                    : (i + 1) * totalPx;
+                return (
                 <div
                   key={`margin-bottom-handle-${i}`}
                   role="slider"
@@ -365,7 +453,7 @@ function RulerInner({
                     hovered === "marginBottom" && "z-20"
                   )}
                   style={{
-                    top: `${(i + 1) * totalPx - marginEnd}px`,
+                    top: `${pageBottom - marginEnd}px`,
                     left: "50%",
                     transform: "translate(-50%, -50%)",
                     width: "20px",
@@ -379,10 +467,11 @@ function RulerInner({
                         ? "scale-125 bg-gray-800 shadow-md"
                         : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
                     )}
-                    style={{ width: "14px", height: "8px" }}
-                  />
-                </div>
-              ))}
+                  style={{ width: "14px", height: "8px" }}
+                />
+              </div>
+              );
+              })}
             </>
           )}
         </>

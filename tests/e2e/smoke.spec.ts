@@ -19,6 +19,37 @@ test.describe("Smoke", () => {
     await expect(page.locator(".page-body")).toHaveCount(1);
   });
 
+  test("vertical ruler aligns with single page paper", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".page-node")).toBeVisible();
+    await expect(page.locator(".ruler-v")).toBeVisible();
+
+    const alignment = await page.evaluate(() => {
+      const page = document.querySelector(".page-node");
+      const ruler = document.querySelector(".ruler-v");
+      if (!page || !ruler) return null;
+      const pageRect = page.getBoundingClientRect();
+      const rulerRect = ruler.getBoundingClientRect();
+      return {
+        topDeltaPx: Math.round(pageRect.top - rulerRect.top),
+        bottomDeltaPx: Math.round(
+          rulerRect.bottom - (pageRect.top + pageRect.height)
+        ),
+        rulerHeight: Math.round(rulerRect.height),
+        pageHeight: Math.round(pageRect.height),
+      };
+    });
+
+    expect(alignment).not.toBeNull();
+    expect(alignment!.topDeltaPx).toBeGreaterThanOrEqual(20);
+    expect(alignment!.topDeltaPx).toBeLessThanOrEqual(28);
+    expect(alignment!.bottomDeltaPx).toBeGreaterThanOrEqual(-2);
+    expect(alignment!.bottomDeltaPx).toBeLessThanOrEqual(2);
+    expect(alignment!.rulerHeight - alignment!.pageHeight).toBe(
+      alignment!.topDeltaPx
+    );
+  });
+
   test("can type into the editor", async ({ page }) => {
     await page.goto("/");
     const editor = page.locator("[contenteditable='true']").first();

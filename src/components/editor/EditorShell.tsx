@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AlertTriangle, X, Loader2, FileUp, Image as ImageIcon, FileText } from "lucide-react";
 import { StatusBar } from "./StatusBar";
 import type { Editor } from "@tiptap/react";
@@ -20,7 +20,11 @@ import { useEditorStore } from "@/store/editorStore";
 import { useTemplateStore } from "@/store/templateStore";
 import { useUiStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
-import { A4, LETTER, mmToPx } from "@/lib/page";
+import {
+  getPageDimensionsPx,
+  mmToPx,
+  PAGE_CANVAS_PADDING_PX,
+} from "@/lib/page";
 
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useDragAndDrop } from "@/hooks/useDragAndDrop";
@@ -80,6 +84,7 @@ export function EditorShell() {
   useBeforeUnload();
   const { articleRef, contentHeight } = useEditorResize();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [contentOffsetPx, setContentOffsetPx] = useState(PAGE_CANVAS_PADDING_PX);
   const [headerFooterReservePx, setHeaderFooterReservePx] = useState(0);
   const placeholderPanelOpen = useUiStore((s) => s.placeholderPanelOpen);
   const { pageCount, currentPage, goToPage } = usePagination(editor, pageSetup, {
@@ -193,15 +198,22 @@ export function EditorShell() {
     []
   );
 
-  const base = pageSetup.size === "Letter" ? LETTER : A4;
-  const isLandscape = pageSetup.orientation === "landscape";
-  const widthMm = isLandscape ? base.hMm : base.wMm;
-  const heightMm = isLandscape ? base.wMm : base.hMm;
-  const widthPx = Math.round(mmToPx(widthMm));
+  const { widthPx, heightPx: pageHeightPx, widthMm, heightMm } =
+    getPageDimensionsPx(pageSetup);
   const marginTopPx = Math.round(mmToPx(pageSetup.marginMm.top));
   const marginRightPx = Math.round(mmToPx(pageSetup.marginMm.right));
   const marginBottomPx = Math.round(mmToPx(pageSetup.marginMm.bottom));
   const marginLeftPx = Math.round(mmToPx(pageSetup.marginMm.left));
+
+  useLayoutEffect(() => {
+    const canvas = articleRef.current;
+    const pageNode = canvas?.querySelector(".page-node");
+    if (!canvas || !pageNode) return;
+    const measured = Math.round(
+      pageNode.getBoundingClientRect().top - canvas.getBoundingClientRect().top
+    );
+    if (measured > 0) setContentOffsetPx(measured);
+  }, [contentHeight, pageCount, pageHeightPx]);
 
   return (
     <>
@@ -312,7 +324,9 @@ export function EditorShell() {
                         marginBottomMm={pageSetup.marginMm.bottom}
                         onMarginChange={handleVerticalMarginChange}
                         onRulerActive={handleRulerActive}
-                        contentHeight={contentHeight > 0 ? contentHeight : undefined}
+                        pageHeightPx={pageHeightPx}
+                        pageCount={pageCount}
+                        contentOffsetPx={contentOffsetPx}
                       />
                       <div className="relative" data-tour="editor">
                         <PageCanvas

@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Ruler } from "./Ruler";
-import { PX_PER_CM } from "@/lib/page";
+import {
+  PAGE_CANVAS_PADDING_PX,
+  PAGE_STACK_GAP_PX,
+  PX_PER_CM,
+} from "@/lib/page";
 
 const A4_HEIGHT_MM = 297;
 const A4_HEIGHT_PX = (A4_HEIGHT_MM / 10) * PX_PER_CM;
@@ -366,7 +370,7 @@ describe("Ruler", () => {
     });
 
     it("multi-page vertical ruler renders multiple bottom margin guides", () => {
-      const contentHeight = A4_HEIGHT_PX * 3; // 3 pages
+      const pageHeightPx = Math.round(A4_HEIGHT_PX);
       const { container } = render(
         <Ruler
           orientation="vertical"
@@ -375,17 +379,72 @@ describe("Ruler", () => {
           marginEnd={cmToPx(2.54)}
           marginTopMm={25.4}
           marginBottomMm={25.4}
-          contentHeight={contentHeight}
+          pageHeightPx={pageHeightPx}
+          pageCount={3}
+          contentOffsetPx={PAGE_CANVAS_PADDING_PX}
           onMarginChange={vi.fn()}
         />
       );
 
-      // Each page gets a bottom margin guide, so 3 pages = 3 bottom guides
-      // plus 1 top guide = 4 total
       const guides = container.querySelectorAll<HTMLElement>(
         ".absolute[style*='oklch']"
       );
       expect(guides.length).toBe(4);
+    });
+
+    it("single-page vertical ruler keeps bottom guide within paper bounds", () => {
+      const pageHeightPx = 1123;
+      const marginStart = 95;
+      const marginEnd = 95;
+      const offset = PAGE_CANVAS_PADDING_PX;
+      const { container } = render(
+        <Ruler
+          orientation="vertical"
+          cm={29.7}
+          marginStart={marginStart}
+          marginEnd={marginEnd}
+          pageHeightPx={pageHeightPx}
+          pageCount={1}
+          contentOffsetPx={offset}
+          onMarginChange={vi.fn()}
+        />
+      );
+
+      const ruler = container.querySelector(".ruler-v") as HTMLElement;
+      expect(ruler.style.height).toBe(
+        `${offset + pageHeightPx}px`
+      );
+
+      const bottomGuide = Array.from(
+        container.querySelectorAll<HTMLElement>(".absolute[style*='oklch']")
+      ).find((el) => {
+        const top = parseFloat(el.style.top);
+        return top > offset + marginStart;
+      });
+      expect(bottomGuide).toBeDefined();
+      const bottomTop = parseFloat(bottomGuide!.style.top);
+      expect(bottomTop).toBeGreaterThanOrEqual(offset + marginStart);
+      expect(bottomTop).toBeLessThanOrEqual(offset + pageHeightPx);
+    });
+
+    it("three-page vertical ruler height includes stack gaps", () => {
+      const pageHeightPx = 1123;
+      const offset = PAGE_CANVAS_PADDING_PX;
+      const { container } = render(
+        <Ruler
+          orientation="vertical"
+          cm={29.7}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          pageHeightPx={pageHeightPx}
+          pageCount={3}
+          contentOffsetPx={offset}
+        />
+      );
+      const ruler = container.querySelector(".ruler-v") as HTMLElement;
+      const expected =
+        offset + 3 * pageHeightPx + 2 * PAGE_STACK_GAP_PX;
+      expect(ruler.style.height).toBe(`${expected}px`);
     });
 
     it("keyboard arrow keys on vertical margin handle call onMarginChange with correct values", () => {
