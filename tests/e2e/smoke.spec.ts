@@ -1,11 +1,22 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "wordhtml-onboarding",
+      JSON.stringify({ hasSeenTour: true })
+    );
+  });
+});
+
 test.describe("Smoke", () => {
   test("app loads and editor is visible", async ({ page }) => {
     await page.goto("/");
     const editor = page.locator("[contenteditable='true']").first();
     await expect(editor).toBeVisible();
+    await expect(page.locator(".page-node")).toHaveCount(1);
+    await expect(page.locator(".page-body")).toHaveCount(1);
   });
 
   test("can type into the editor", async ({ page }) => {
@@ -45,5 +56,6 @@ test.describe("Smoke", () => {
 
     // Assert converted content appears in the editor
     await expect(editor).toContainText("Hello from docx", { timeout: 10000 });
+    await expect(page.locator(".page-node").first()).toBeVisible();
   });
 });
