@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
 import { dispatchOpenTemplates, dispatchInsertPageBreak } from "@/lib/events";
+import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
 
 export function TopBar() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
@@ -30,6 +31,13 @@ export function TopBar() {
               wh
             </span>
             <span className="text-sm font-semibold tracking-tight">wordhtml</span>
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-mono font-medium text-[color:var(--color-muted-foreground)] bg-[color:var(--color-muted)]"
+              title={APP_VERSION_LABEL}
+              aria-label={`เวอร์ชัน (Version) ${APP_VERSION}`}
+            >
+              v{APP_VERSION}
+            </span>
           </Link>
           {fileName && (
             <>
