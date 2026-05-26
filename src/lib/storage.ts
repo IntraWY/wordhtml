@@ -125,14 +125,16 @@ export function clearAllAppData(): void {
 }
 
 export const editorStorage = createSafeStorage<{
+  _v?: number;
   enabledCleaners: string[];
   imageMode: string;
   history: DocumentSnapshot[];
   pageSetup: PageSetup;
   templateMode: boolean;
   variables: unknown[];
-  dataSet: unknown | null;
   autoCompressImages: boolean;
+  spellcheckEnabled?: boolean;
+  exportMissingPolicy?: string;
 }>(migrateEditorData);
 
 export const templateStorage = createSafeStorage<{
