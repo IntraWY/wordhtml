@@ -359,7 +359,7 @@ export function splitHtmlIntoPages(
 /**
  * Calculates only the pixel positions of page breaks from the top of the
  * document, without duplicating HTML strings. This is useful for the
- * `useAutoPagination` hook which stores break positions rather than full page
+ * Legacy HTML-measurement pagination used by MultiPagePreview (`splitHtmlIntoPages`).
  * HTML to conserve memory.
  *
  * @returns Array of pixel offsets where each new page starts (page 1 starts

@@ -1,13 +1,34 @@
 "use client";
 
-import { useMemo, type ElementType } from "react";
+import { useRef, useEffect, useState, type ElementType } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
-import { usePaginationStore } from "@/store/paginationStore";
 import { countWords, plainTextFromHtml } from "@/lib/text";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
 import { FileText, Type, Sparkles, AlignLeft, Ruler, Save } from "lucide-react";
+
+function useDebouncedMemo<T>(factory: () => T, deps: React.DependencyList, delay = 300): T {
+  const [value, setValue] = useState<T>(factory);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setValue(factory());
+    }, delay);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+
+  return value;
+}
 
 interface StatusItemProps {
   icon: ElementType;
@@ -28,24 +49,23 @@ function StatusItem({ icon: Icon, label, value, className }: StatusItemProps) {
   );
 }
 
-export function StatusBar({ rulerInfo }: { rulerInfo?: { label: string } | null }) {
+export function StatusBar({
+  rulerInfo,
+  pageCount: pageCountProp = 1,
+}: {
+  rulerInfo?: { label: string } | null;
+  pageCount?: number;
+}) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const history = useEditorStore((s) => s.history);
   const lastAction = useUiStore((s) => s.lastAction);
 
-  const words = useMemo(() => countWords(documentHtml), [documentHtml]);
-  const chars = useMemo(() => plainTextFromHtml(documentHtml).length, [documentHtml]);
+  const words = useDebouncedMemo(() => countWords(documentHtml), [documentHtml], 300);
+  const chars = useDebouncedMemo(() => plainTextFromHtml(documentHtml).length, [documentHtml], 300);
 
-  // Use pagination store when available; fall back to manual page-break counting.
-  const storeTotalPages = usePaginationStore((s) => s.totalPages);
-  const manualBreaks = useMemo(() => {
-    if (!documentHtml) return 0;
-    return (documentHtml.match(/<div[^>]*\sclass=["'][^"']*\bpage-break\b[^"']*["'][^>]*>/gi) || []).length;
-  }, [documentHtml]);
-  const manualPageCount = manualBreaks + 1;
-  const pageCount = storeTotalPages > 1 ? storeTotalPages : manualPageCount;
+  const pageCount = Math.max(1, pageCountProp);
   const sizeLabel = pageSetup.size === "Letter" ? "Letter" : "A4";
   const orientationLabel =
     pageSetup.orientation === "landscape" ? "แนวนอน" : "แนวตั้ง";

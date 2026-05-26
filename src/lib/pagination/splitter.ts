@@ -327,6 +327,17 @@ export function applyPageNodeSplit(
   let contentBefore: Fragment;
   let contentAfter: Fragment;
   if (splitOffset === 0) {
+    // Avoid infinite page creation when the body is empty or a single empty
+    // paragraph still measures as overflow (min-height / placeholder).
+    const isEmptyBody =
+      pageBodyNode.textContent.trim() === "" ||
+      (pageBodyNode.childCount === 1 &&
+        pageBodyNode.firstChild?.type.name === "paragraph" &&
+        pageBodyNode.firstChild.textContent.trim() === "");
+    if (isEmptyBody) {
+      return { tr, splitsInserted: 0 };
+    }
+
     // Only child overflows. Leave an empty paragraph placeholder in the
     // current page and move all content to the next page.
     const emptyParagraph = ctx.schema.nodes.paragraph.create();

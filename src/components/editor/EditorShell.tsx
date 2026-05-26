@@ -308,7 +308,7 @@ export function EditorShell() {
                 )}
               </div>
               <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-                <StatusBar rulerInfo={rulerInfo} />
+                <StatusBar rulerInfo={rulerInfo} pageCount={pageCount} />
                 <PaginationManager totalPages={pageCount} currentPage={currentPage} onPageChange={goToPage} />
               </div>
             </div>
