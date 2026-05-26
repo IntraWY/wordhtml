@@ -95,12 +95,11 @@ export function PageChromeLayer({
 
     const probe = document.createElement("div");
     probe.className = "page-chrome-header";
-    probe.style.visibility = "hidden";
-    probe.style.position = "absolute";
+    probe.style.cssText = "visibility:hidden;position:fixed;top:-9999px;left:-9999px";
     probe.innerHTML = sanitizeHtml(hf.headerHtml || hf.footerHtml || "X");
-    pagesRoot.appendChild(probe);
+    document.body.appendChild(probe);
     const measured = probe.offsetHeight;
-    pagesRoot.removeChild(probe);
+    document.body.removeChild(probe);
     const reserve = Math.min(120, Math.max(24, measured * 2));
     onReserveHeightChange?.(reserve);
   }, [pagesRootRef, scrollContainerRef, enabled, hf, pageCount, onReserveHeightChange]);

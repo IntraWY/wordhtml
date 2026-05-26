@@ -17,6 +17,9 @@ function extractBody(input: string): string {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(input, "text/html");
+    if (doc.querySelector("parsererror")) {
+      throw new Error("ไฟล์ HTML ไม่ถูกต้อง — ไม่สามารถ parse ได้");
+    }
     if (doc.body) {
       return doc.body.innerHTML.trim();
     }

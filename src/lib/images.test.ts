@@ -84,6 +84,13 @@ describe("extractImages", () => {
     expect(result.images[0].filename).toBe("image1.jpg");
   });
 
+  it("skips images with invalid base64 without creating empty blobs", () => {
+    const input = makeImgHtml(`data:image/png;base64,${TINY_PNG_BASE64.slice(0, 10)}!!!`);
+    const result = extractImages(input);
+    expect(result.images).toHaveLength(0);
+    expect(result.html).toContain("data:image/png");
+  });
+
   it("extracted blob has correct size (non-zero)", () => {
     const input = makeImgHtml(`data:image/png;base64,${TINY_PNG_BASE64}`);
     const result = extractImages(input);

@@ -61,7 +61,9 @@ export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[]
     const names = extractMergeFieldNames(documentHtml);
     const unset = names.filter((n) => {
       const v = variables.find((x) => x.name === n);
-      return !v?.value?.trim();
+      if (!v) return true;
+      if (v.isList) return !v.listValues?.length;
+      return !v.value?.trim();
     });
     if (unset.length > 0) {
       issues.push({
@@ -90,7 +92,12 @@ export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[]
   }
 
   const tableCount = (documentHtml.match(/<table\b/gi) ?? []).length;
-  const pageCount = (documentHtml.match(/class="page-node"/g) ?? []).length;
+  const pageCount =
+    typeof DOMParser !== "undefined"
+      ? new DOMParser()
+          .parseFromString(documentHtml, "text/html")
+          .querySelectorAll(".page-node, [data-page-body]").length
+      : (documentHtml.match(/\bpage-node\b/g) ?? []).length;
   if (tableCount > 0 && pageCount <= 1 && documentHtml.length > 12_000) {
     issues.push({
       severity: "info",

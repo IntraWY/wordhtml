@@ -1,10 +1,12 @@
 import { extractImages } from "@/lib/images";
-import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
+import { wrapAsDocument, triggerDownload, deriveFileName, type PageSetup } from "./wrap";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface DownloadZipOptions {
   sourceName?: string | null;
   title?: string;
+  pageSetup?: PageSetup;
 }
 
 /**
@@ -15,13 +17,13 @@ export async function downloadZip(
   html: string,
   options: DownloadZipOptions = {}
 ): Promise<void> {
-  const { sourceName = null, title = "Document" } = options;
+  const { sourceName = null, title = "Document", pageSetup } = options;
 
   const JSZip = (await import("jszip")).default;
-  const cleanHtml = stripPaginationWrappers(html);
+  const cleanHtml = sanitizeHtml(stripPaginationWrappers(html));
   const { html: rewrittenHtml, images } = extractImages(cleanHtml, "img");
   const zip = new JSZip();
-  zip.file("index.html", wrapAsDocument(rewrittenHtml, title));
+  zip.file("index.html", wrapAsDocument(rewrittenHtml, { title, pageSetup }));
 
   if (images.length > 0) {
     const folder = zip.folder("img");
@@ -31,5 +33,8 @@ export async function downloadZip(
   }
 
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-  triggerDownload(blob, deriveFileName(sourceName, "zip"));
+  if (blob.size === 0) {
+    throw new Error("ZIP export failed: empty archive");
+  }
+  triggerDownload(blob, deriveFileName(sourceName, "zip", title));
 }

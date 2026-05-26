@@ -18,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown
 } from "lucide-react";
+import { editorCan } from "@/lib/editorLive";
 
 interface EditorContextMenuProps {
   editor: Editor | null;
@@ -223,7 +224,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
           editor?.chain().focus().mergeCells().run();
           setOpen(false);
         },
-        disabled: !editor?.can().mergeCells(),
+        disabled: !editorCan(editor, (c) => c.mergeCells()),
       },
       {
         id: "split-cell",
@@ -233,7 +234,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
           editor?.chain().focus().splitCell().run();
           setOpen(false);
         },
-        disabled: !editor?.can().splitCell(),
+        disabled: !editorCan(editor, (c) => c.splitCell()),
       },
       { id: "div-table-3", label: "", divider: true },
       {

@@ -190,10 +190,23 @@ export const useEditorStore = create<EditorState>()(
           let html: string;
           let warnings: MammothMessage[] = [];
           if (lower.endsWith(".docx")) {
+            if (file.size > 50 * 1024 * 1024) {
+              throw new Error("ไฟล์ .docx ใหญ่เกิน 50MB");
+            }
             const result = await docxToHtml(file);
+            const errors = result.warnings.filter((w) => w.type === "error");
+            if (!result.html.trim() && errors.length > 0) {
+              throw new Error(errors.map((e) => e.message).join("; "));
+            }
             html = result.html;
             warnings = result.warnings;
           } else if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+            if (file.size > 5 * 1024 * 1024) {
+              useToastStore.getState().show(
+                "ไฟล์ HTML ใหญ่มาก — เนื้อหาอาจถูกตัดบางส่วน",
+                "warning"
+              );
+            }
             html = await loadHtmlFile(file);
           } else if (lower.endsWith(".md")) {
             html = await markdownToHtml(file);
@@ -221,11 +234,14 @@ export const useEditorStore = create<EditorState>()(
           pendingExportFormat: null,
           lastEditAt: 0,
           fieldValues: {},
+          dataSet: null,
+          previewMode: "edit",
         }),
 
       saveSnapshot: () => {
         const { documentHtml, fileName, history } = get();
         if (!documentHtml.trim()) return;
+        if (history[0]?.html === documentHtml) return;
         const snapshot: DocumentSnapshot = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           fileName,
@@ -312,9 +328,12 @@ export const useEditorStore = create<EditorState>()(
         }
         const state = persistedState as Record<string, unknown>;
         if (version < 2 && Array.isArray(state.variables)) {
-          state.variables = (state.variables as TemplateVariable[]).map((v) =>
-            v.type === undefined ? { ...v, type: "text" as const } : v
-          );
+          return {
+            ...state,
+            variables: (state.variables as TemplateVariable[]).map((v) =>
+              v.type === undefined ? { ...v, type: "text" as const } : v
+            ),
+          } as unknown as EditorState;
         }
         return state as unknown as EditorState;
       },
@@ -326,7 +345,6 @@ export const useEditorStore = create<EditorState>()(
         pageSetup: state.pageSetup,
         templateMode: state.templateMode,
         variables: state.variables,
-        dataSet: state.dataSet,
         autoCompressImages: state.autoCompressImages,
         spellcheckEnabled: state.spellcheckEnabled,
         exportMissingPolicy: state.exportMissingPolicy,

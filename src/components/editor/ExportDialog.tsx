@@ -60,6 +60,8 @@ export function ExportDialog() {
   const [copied, setCopied] = useState(false);
   const [gasCopied, setGasCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<ExportTab>("file");
+  const effectiveTab: ExportTab =
+    activeTab === "gas" && !templateMode ? "file" : activeTab;
   const [gasFunctionName, setGasFunctionName] = useState("generateDocument");
   const [includeSheetIntegration, setIncludeSheetIntegration] = useState(true);
 
@@ -127,26 +129,25 @@ export function ExportDialog() {
       await navigator.clipboard.writeText(cleanedHtml);
       setCopied(true);
     } catch {
-      // ignore clipboard rejection
+      useToastStore.getState().show("ไม่สามารถคัดลอกได้ — เบราว์เซอร์ไม่อนุญาต", "error");
     }
   };
 
   const gasCode = useMemo(() => {
     if (!open || !templateMode) return "";
-    const s = useEditorStore.getState();
-    return generateGASFunction(s.documentHtml, s.variables, {
+    return generateGASFunction(documentHtml, variables, {
       functionName: gasFunctionName,
       includeGenerateFunction: true,
       includeSheetIntegration,
     }).code;
-  }, [open, templateMode, gasFunctionName, includeSheetIntegration]);
+  }, [open, templateMode, gasFunctionName, includeSheetIntegration, documentHtml, variables]);
 
   const handleCopyGAS = async () => {
     try {
       await navigator.clipboard.writeText(gasCode);
       setGasCopied(true);
     } catch {
-      // ignore clipboard rejection
+      useToastStore.getState().show("ไม่สามารถคัดลอกได้ — เบราว์เซอร์ไม่อนุญาต", "error");
     }
   };
 
@@ -161,15 +162,19 @@ export function ExportDialog() {
     }
     setBusy(kind);
     try {
-      const opts = { sourceName: fileName };
+      const exportOpts = {
+        sourceName: fileName,
+        title: fileName?.replace(/\.[^.]+$/, "") ?? "Document",
+        pageSetup,
+      };
       if (kind === "html") {
         if (imageMode === "separate") {
-          await downloadZip(cleanedHtml, opts);
+          await downloadZip(cleanedHtml, exportOpts);
         } else {
-          downloadHtml(cleanedHtml, opts);
+          downloadHtml(cleanedHtml, exportOpts);
         }
       } else if (kind === "zip") {
-        await downloadZip(cleanedHtml, opts);
+        await downloadZip(cleanedHtml, exportOpts);
       } else if (kind === "md") {
         await exportMarkdown(cleanedHtml, fileName);
       } else if (kind === "pdf") {
@@ -178,7 +183,7 @@ export function ExportDialog() {
           pageSetup,
         });
       } else {
-        await downloadDocx(cleanedHtml, opts);
+        await downloadDocx(cleanedHtml, exportOpts);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "ส่งออกไม่สำเร็จ";
@@ -222,18 +227,18 @@ export function ExportDialog() {
               type="button"
               id="export-tab-btn-file"
               role="tab"
-              aria-selected={activeTab === "file"}
-              tabIndex={activeTab === "file" ? 0 : -1}
+              aria-selected={effectiveTab === "file"}
+              tabIndex={effectiveTab === "file" ? 0 : -1}
               onClick={() => setActiveTab("file")}
               className={cn(
                 "relative px-4 py-2.5 text-xs font-medium transition-colors",
-                activeTab === "file"
+                effectiveTab === "file"
                   ? "text-[color:var(--color-foreground)]"
                   : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
               )}
             >
               ไฟล์ (File)
-              {activeTab === "file" && (
+              {effectiveTab === "file" && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
               )}
             </button>
@@ -241,18 +246,18 @@ export function ExportDialog() {
               type="button"
               id="export-tab-btn-preview"
               role="tab"
-              aria-selected={activeTab === "preview"}
-              tabIndex={activeTab === "preview" ? 0 : -1}
+              aria-selected={effectiveTab === "preview"}
+              tabIndex={effectiveTab === "preview" ? 0 : -1}
               onClick={() => setActiveTab("preview")}
               className={cn(
                 "relative px-4 py-2.5 text-xs font-medium transition-colors",
-                activeTab === "preview"
+                effectiveTab === "preview"
                   ? "text-[color:var(--color-foreground)]"
                   : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
               )}
             >
               ตัวอย่าง (Preview)
-              {activeTab === "preview" && (
+              {effectiveTab === "preview" && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
               )}
             </button>
@@ -261,18 +266,18 @@ export function ExportDialog() {
                 type="button"
                 id="export-tab-btn-gas"
                 role="tab"
-                aria-selected={activeTab === "gas"}
-                tabIndex={activeTab === "gas" ? 0 : -1}
+                aria-selected={effectiveTab === "gas"}
+                tabIndex={effectiveTab === "gas" ? 0 : -1}
                 onClick={() => setActiveTab("gas")}
                 className={cn(
                   "relative px-4 py-2.5 text-xs font-medium transition-colors",
-                  activeTab === "gas"
+                  effectiveTab === "gas"
                     ? "text-[color:var(--color-foreground)]"
                     : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
                 )}
               >
                 GAS (Apps Script)
-                {activeTab === "gas" && (
+                {effectiveTab === "gas" && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-foreground)]" />
                 )}
               </button>
@@ -283,10 +288,10 @@ export function ExportDialog() {
             role="tabpanel"
             id="export-tab-file"
             aria-labelledby="export-tab-btn-file"
-            hidden={activeTab !== "file"}
-            className={activeTab === "file" ? "contents" : ""}
+            hidden={effectiveTab !== "file"}
+            className={effectiveTab === "file" ? "contents" : ""}
           >
-            {activeTab === "file" ? (
+            {effectiveTab === "file" ? (
               <>
                 <div className="flex min-h-0 flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">
@@ -456,10 +461,10 @@ export function ExportDialog() {
             role="tabpanel"
             id="export-tab-preview"
             aria-labelledby="export-tab-btn-preview"
-            hidden={activeTab !== "preview"}
-            className={activeTab === "preview" ? "contents" : ""}
+            hidden={effectiveTab !== "preview"}
+            className={effectiveTab === "preview" ? "contents" : ""}
           >
-            {activeTab === "preview" ? (
+            {effectiveTab === "preview" ? (
               <div className="flex min-h-0 flex-col overflow-hidden bg-[color:var(--color-muted)] p-6">
                 <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-inner shadow-slate-200">
                   <div
@@ -475,10 +480,10 @@ export function ExportDialog() {
             role="tabpanel"
             id="export-tab-gas"
             aria-labelledby="export-tab-btn-gas"
-            hidden={activeTab !== "gas"}
-            className={activeTab === "gas" ? "contents" : ""}
+            hidden={effectiveTab !== "gas"}
+            className={effectiveTab === "gas" ? "contents" : ""}
           >
-            {activeTab === "gas" ? (
+            {effectiveTab === "gas" ? (
               <>
                 <div className="flex min-h-0 flex-col overflow-hidden">
                   <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-2">

@@ -395,6 +395,7 @@ export class PaginationEngine {
 
       this.callbacks.onSplit(candidate);
       emitted++;
+      break;
     }
 
     if (emitted > 0) {

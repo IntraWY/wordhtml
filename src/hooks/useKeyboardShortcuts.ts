@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
 import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
+import { isLiveEditor } from "@/lib/editorLive";
 
 export function useKeyboardShortcuts(editor: Editor | null) {
+  const editorRef = useRef(editor);
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
   const openExportDialog = useUiStore((s) => s.openExportDialog);
-  const closeExportDialog = useUiStore((s) => s.closeExportDialog);
   const toggleFullscreen = useUiStore((s) => s.toggleFullscreen);
   const openSearch = useUiStore((s) => s.openSearch);
   const closeSearch = useUiStore((s) => s.closeSearch);
@@ -97,7 +102,8 @@ export function useKeyboardShortcuts(editor: Editor | null) {
           "ใส่ URL ของลิงก์:",
           "https://",
           (url: string) => {
-            if (!url || !editor) return;
+            const ed = editorRef.current;
+            if (!url || !isLiveEditor(ed)) return;
             let validatedUrl = url;
             try {
               const parsed = new URL(url, window.location.href);
@@ -112,7 +118,7 @@ export function useKeyboardShortcuts(editor: Editor | null) {
                 return;
               }
             }
-            editor.chain().focus().setLink({ href: validatedUrl }).run();
+            ed.chain().focus().setLink({ href: validatedUrl }).run();
           }
         );
         return;
@@ -134,9 +140,6 @@ export function useKeyboardShortcuts(editor: Editor | null) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
-    editor,
-    openExportDialog,
-    closeExportDialog,
     toggleFullscreen,
     openSearch,
     closeSearch,
@@ -145,5 +148,6 @@ export function useKeyboardShortcuts(editor: Editor | null) {
     hasDoc,
     triggerFileOpen,
     reset,
+    openExportDialog,
   ]);
 }

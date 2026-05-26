@@ -24,6 +24,7 @@ import { resolveHeaderFooter } from "./PageHeaderFooter";
 import { dispatchOpenHeaderFooter } from "@/lib/events";
 import { replacePageTokens } from "@/lib/placeholders";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { isLiveEditor } from "@/lib/editorLive";
 
 type PanelTab = "fields" | "headerFooter" | "warnings";
 
@@ -78,12 +79,22 @@ export function PlaceholderPanel({ editor }: { editor: Editor | null }) {
   }, [hf]);
 
   const pageTokens = useMemo(() => {
-    const combined = `${hf?.headerHtml ?? ""} ${hf?.footerHtml ?? ""}`;
+    if (!hf) return [];
+    const combined = [
+      hf.headerHtml,
+      hf.footerHtml,
+      hf.firstPageHeaderHtml,
+      hf.firstPageFooterHtml,
+      hf.evenHeaderHtml,
+      hf.evenFooterHtml,
+    ]
+      .filter(Boolean)
+      .join(" ");
     return listPageTokensIn(combined);
   }, [hf]);
 
   const jumpToField = (name: string) => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     jumpToMergeField(editor, name);
   };
 

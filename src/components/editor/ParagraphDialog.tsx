@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import type { Editor } from "@tiptap/react";
 import { lineHeightFromMode } from "@/lib/tiptap/paragraphFormat";
 import type { ParagraphFormatValues, LineHeightMode } from "@/lib/tiptap/paragraphFormat";
+import { isLiveEditor } from "@/lib/editorLive";
 
 interface ParagraphDialogProps {
   open: boolean;
@@ -55,7 +56,7 @@ export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps)
 
 
   const handleSave = () => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     editor.chain().focus().setParagraphFormat(draft).run();
     onClose();
   };

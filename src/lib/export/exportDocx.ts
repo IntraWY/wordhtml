@@ -1,9 +1,11 @@
-import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
+import { wrapAsDocument, triggerDownload, deriveFileName, type PageSetup } from "./wrap";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface DownloadDocxOptions {
   sourceName?: string | null;
   title?: string;
+  pageSetup?: PageSetup;
 }
 
 /**
@@ -16,14 +18,14 @@ export async function downloadDocx(
   html: string,
   options: DownloadDocxOptions = {}
 ): Promise<void> {
-  const { sourceName = null, title = "Document" } = options;
+  const { sourceName = null, title = "Document", pageSetup } = options;
 
   try {
     const { asBlob } = await import("html-docx-js/dist/html-docx");
-    const cleanHtml = stripPaginationWrappers(html);
-    const document = wrapAsDocument(cleanHtml, title);
+    const cleanHtml = sanitizeHtml(stripPaginationWrappers(html));
+    const document = wrapAsDocument(cleanHtml, { title, pageSetup });
     const blob = asBlob(document);
-    triggerDownload(blob, deriveFileName(sourceName, "docx"));
+    triggerDownload(blob, deriveFileName(sourceName, "docx", title));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "ไม่สามารถสร้างไฟล์ .docx ได้";
     throw new Error(`DOCX export failed: ${message}`);

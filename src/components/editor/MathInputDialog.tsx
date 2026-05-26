@@ -8,6 +8,7 @@ import katex from "katex";
 import { Button } from "@/components/ui/Button";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import type { Editor } from "@tiptap/react";
+import { isLiveEditor } from "@/lib/editorLive";
 
 interface MathInputDialogProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function MathInputDialog({ open, onClose, editor }: MathInputDialogProps)
   }, [latex, inline]);
 
   const handleInsert = () => {
-    if (!editor || !latex.trim()) return;
+    if (!isLiveEditor(editor) || !latex.trim()) return;
     editor.chain().focus().insertMathEquation({ latex: latex.trim(), inline }).run();
     onClose();
   };

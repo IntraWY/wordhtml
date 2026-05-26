@@ -65,6 +65,7 @@ export function getEmptyStateConfig(input: EmptyStateInput): EmptyStateConfig {
 export function isDocumentEmpty(documentHtml: string): boolean {
   const trimmed = documentHtml.trim();
   if (!trimmed) return true;
+  if (/<img\b/i.test(trimmed) || /<video\b/i.test(trimmed)) return false;
   const text = trimmed
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")

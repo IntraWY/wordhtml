@@ -47,7 +47,7 @@ export function getMergeFieldStatuses(
     if (index < 0 && typeof DOMParser !== "undefined") {
       const doc = new DOMParser().parseFromString(documentHtml, "text/html");
       const el = doc.querySelector(`[data-variable="${CSS.escape(name)}"]`);
-      if (el) index = 0;
+      if (el) index = -1;
     }
     return {
       name,

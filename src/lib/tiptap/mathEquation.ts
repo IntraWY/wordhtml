@@ -113,7 +113,10 @@ export const MathEquation = Node.create<MathEquationOptions>({
         } catch {
           dom.textContent = latex;
         }
-      }).catch(() => {
+      }).catch((e) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("KaTeX failed to load:", e);
+        }
         dom.textContent = latex;
       });
 
@@ -133,7 +136,10 @@ export const MathEquation = Node.create<MathEquationOptions>({
               } catch {
                 dom.textContent = next.latex;
               }
-            }).catch(() => {
+            }).catch((e) => {
+              if (process.env.NODE_ENV !== "production") {
+                console.warn("KaTeX failed to load:", e);
+              }
               dom.textContent = next.latex;
             });
           }

@@ -112,6 +112,9 @@ export function deriveFileName(
   fallback = "document"
 ): string {
   const base = (source ?? fallback).replace(/\.[^.]+$/, "");
-  const safe = base.replace(/[^\w\-.]+/g, "_");
+  const safe = base
+    .replace(/[^\p{L}\p{N}\-_.]+/gu, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
   return `${safe || fallback}.${extension}`;
 }

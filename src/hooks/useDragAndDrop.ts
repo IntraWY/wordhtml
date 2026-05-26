@@ -6,6 +6,7 @@ import type { Editor } from "@tiptap/react";
 import { useEditorStore } from "@/store/editorStore";
 import { useToastStore } from "@/store/toastStore";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
+import { isLiveEditor } from "@/lib/editorLive";
 
 export function useDragAndDrop(
   editor: Editor | null,
@@ -39,18 +40,20 @@ export function useDragAndDrop(
       const images = files.filter((f) => f.type.startsWith("image/"));
       const others = files.filter((f) => !f.type.startsWith("image/"));
 
-      if (images.length > 0 && editor) {
+      if (images.length > 0 && isLiveEditor(editor)) {
         const autoCompress = useEditorStore.getState().autoCompressImages;
         let inserted = 0;
         for (const file of images) {
           try {
             const finalFile = await compressImageIfEnabled(file, autoCompress);
             const src = await readFileAsDataURL(finalFile);
+            if (!isLiveEditor(editor)) break;
             editor.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
             inserted++;
           } catch {
             try {
               const src = await readFileAsDataURL(file);
+              if (!isLiveEditor(editor)) break;
               editor.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
               inserted++;
             } catch {

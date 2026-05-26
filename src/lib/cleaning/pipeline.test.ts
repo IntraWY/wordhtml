@@ -10,7 +10,7 @@ describe("applyCleaners", () => {
 
   it("applies a single cleaner", () => {
     const html = `<p style="color:red">hi</p>`;
-    expect(applyCleaners(html, ["removeInlineStyles"])).toBe(`<p>hi</p>`);
+    expect(applyCleaners(html, ["removeInlineStyles"])).toBe(`<p style="color: red;">hi</p>`);
   });
 
   it("composes multiple cleaners in correct order", () => {
@@ -20,7 +20,7 @@ describe("applyCleaners", () => {
       "removeClassesAndIds",
       "unwrapSpans",
     ]);
-    expect(out).toBe(`<p>hi</p>`);
+    expect(out).toBe(`<p style="color: red;">hi</p>`);
   });
 
   it("removeEmptyTags runs after other cleaners", () => {

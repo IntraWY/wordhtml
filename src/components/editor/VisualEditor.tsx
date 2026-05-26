@@ -51,6 +51,8 @@ import { HeadingWithId } from "@/lib/tiptap/headingWithId";
 import { BulletListWithClass } from "@/lib/tiptap/bulletListWithClass";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 import { ImageResizeView } from "./ImageResizeView";
+import { isLiveEditor } from "@/lib/editorLive";
+import { useToastStore } from "@/store/toastStore";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -195,7 +197,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       },
       handleKeyDown(_view: EditorView, event: KeyboardEvent) {
         const ed = editorRef.current;
-        if (!ed) return false;
+        if (!isLiveEditor(ed)) return false;
 
         // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
@@ -280,18 +282,21 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
             .then((finalFile) => readFileAsDataURL(finalFile))
             .then((src) => {
               const ed = editorRef.current;
-              if (ed) {
+              if (isLiveEditor(ed)) {
                 ed.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
               }
             })
             .catch(() => {
-              // fallback: insert original without compression
-              readFileAsDataURL(file).then((src) => {
-                const ed = editorRef.current;
-                if (ed) {
-                  ed.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
-                }
-              });
+              readFileAsDataURL(file)
+                .then((src) => {
+                  const ed = editorRef.current;
+                  if (isLiveEditor(ed)) {
+                    ed.chain().focus().setImage({ src, alt: "รูปภาพ (Image)" }).run();
+                  }
+                })
+                .catch(() => {
+                  useToastStore.getState().show("ไม่สามารถแทรกรูปภาพได้", "error");
+                });
             });
         }
         return true;
@@ -314,12 +319,12 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
   useEffect(() => {
     setEditorEmptyPlaceholderText(emptyState.tiptapPlaceholder);
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     editor.view.dispatch(editor.state.tr);
   }, [emptyState.tiptapPlaceholder, editor]);
 
   useEffect(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     if (documentHtml === lastWrittenHtml.current) return;
     const editorHtml = unwrapPageNode(editor.getHTML());
     if (documentHtml === editorHtml) return;
@@ -328,16 +333,18 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   }, [documentHtml, editor]);
 
   useEffect(() => {
-    onEditorReady?.(editor);
+    onEditorReady?.(editor ?? null);
+    return () => {
+      onEditorReady?.(null);
+    };
   }, [editor, onEditorReady]);
 
   useEffect(() => {
     const handler = () => {
       const ed = editorRef.current;
-      if (ed) {
-        const ok = ed.chain().focus().splitPage().run();
-        if (!ok) ed.chain().focus().insertPageBreak().run();
-      }
+      if (!isLiveEditor(ed)) return;
+      const ok = ed.chain().focus().splitPage().run();
+      if (!ok) ed.chain().focus().insertPageBreak().run();
     };
     addEventListener(EVENT_NAMES.insertPageBreak, handler);
     return () => {

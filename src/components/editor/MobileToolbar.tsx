@@ -34,6 +34,7 @@ import { FontSizeSelector } from "./FontSizeSelector";
 import { dispatchOpenSearch } from "@/lib/events";
 import { FONT_OPTIONS } from "@/lib/fonts";
 import { useCleanDocument } from "@/hooks/useCleanDocument";
+import { editorCan } from "@/lib/editorLive";
 
 function MobileBtn({
   active,
@@ -161,12 +162,12 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
   }, [showMore]);
 
   const can = {
-    bold: editor?.can().toggleBold() ?? false,
-    italic: editor?.can().toggleItalic() ?? false,
-    underline: editor?.can().toggleUnderline() ?? false,
-    strike: editor?.can().toggleStrike() ?? false,
-    undo: editor?.can().undo() ?? false,
-    redo: editor?.can().redo() ?? false,
+    bold: editorCan(editor, (c) => c.toggleBold()),
+    italic: editorCan(editor, (c) => c.toggleItalic()),
+    underline: editorCan(editor, (c) => c.toggleUnderline()),
+    strike: editorCan(editor, (c) => c.toggleStrike()),
+    undo: editorCan(editor, (c) => c.undo()),
+    redo: editorCan(editor, (c) => c.redo()),
   };
 
   return (

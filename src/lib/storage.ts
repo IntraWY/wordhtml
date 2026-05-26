@@ -78,7 +78,10 @@ function createSafeStorage<S>(
           return migrated;
         }
         return result;
-      } catch {
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Failed to parse persisted editor state, resetting:", err);
+        }
         try {
           localStorage.removeItem(name);
         } catch {

@@ -156,7 +156,7 @@ export async function exportPdf(
   }
 }
 
-function waitForImages(root: HTMLElement): Promise<void> {
+function waitForImages(root: HTMLElement, timeoutMs = 15_000): Promise<void> {
   const images = Array.from(root.querySelectorAll("img"));
   const pending = images.map(
     (img) =>
@@ -169,5 +169,9 @@ function waitForImages(root: HTMLElement): Promise<void> {
         img.addEventListener("error", () => resolve(), { once: true });
       })
   );
-  return Promise.all(pending).then(() => undefined);
+  const allLoaded = Promise.all(pending).then(() => undefined);
+  const timeout = new Promise<void>((resolve) => {
+    setTimeout(resolve, timeoutMs);
+  });
+  return Promise.race([allLoaded, timeout]);
 }

@@ -64,7 +64,7 @@ describe("deriveFileName", () => {
 
   it("replaces spaces and special chars with underscores", () => {
     expect(deriveFileName("my document!.docx", "html")).toBe(
-      "my_document_.html"
+      "my_document.html"
     );
   });
 

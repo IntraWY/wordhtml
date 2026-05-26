@@ -13,9 +13,9 @@ import {
 } from "./cleaners";
 
 describe("removeInlineStyles", () => {
-  it("strips style attribute from every element", () => {
+  it("preserves export-relevant styles and strips Word junk", () => {
     const html = `<p style="color:red"><span style="font-weight:bold">x</span></p>`;
-    expect(removeInlineStyles(html)).toBe(`<p><span>x</span></p>`);
+    expect(removeInlineStyles(html)).toBe(`<p style="color: red;"><span>x</span></p>`);
   });
 
   it("leaves elements without style alone", () => {

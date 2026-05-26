@@ -10,6 +10,7 @@ import {
   type SplitCandidate,
 } from "@/lib/pagination/engine";
 import { buildSplitTransaction } from "@/lib/pagination/splitter";
+import { isLiveEditor } from "@/lib/editorLive";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -88,8 +89,10 @@ export function usePagination(
     const bodies = Array.from(document.querySelectorAll(".page-body"));
     if (bodies.length === 0) return 1;
 
+    if (!isLiveEditor(editor)) return currentPageRef.current;
+
     // Try to find which page contains the editor selection.
-    const view = editor?.view;
+    const view = editor.view;
     if (!view) return 1;
 
     // Guard: if the editor is not focused, coordsAtPos can throw or return
@@ -104,7 +107,10 @@ export function usePagination(
     try {
       const coords = view.coordsAtPos(anchor);
       anchorY = coords.top;
-    } catch {
+    } catch (e) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("coordsAtPos failed, keeping last page:", e);
+      }
       return currentPageRef.current;
     }
 
@@ -117,44 +123,7 @@ export function usePagination(
     return bodies.length;
   }, [editor]);
 
-  const applyPendingSplits = useCallback(() => {
-    if (!editor || isApplyingRef.current) return;
-
-    const candidates = pendingSplitsRef.current;
-    if (candidates.length === 0) return;
-
-    isApplyingRef.current = true;
-    setIsPaginating(true);
-
-    try {
-      // Process all pending candidates one by one, rebuilding the transaction
-      // from the latest editor state after each dispatch to avoid position drift.
-      while (pendingSplitsRef.current.length > 0) {
-        const candidate = pendingSplitsRef.current.shift();
-        if (!candidate) break;
-        const result = buildSplitTransaction(
-          {
-            state: editor.state,
-            schema: editor.state.schema,
-            pageBreakNodeName: "pageBreak",
-          },
-          candidate
-        );
-        if (result.splitsInserted > 0) {
-          editor.view.dispatch(result.tr);
-        }
-      }
-    } catch (e) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Pagination split failed", e);
-      }
-    } finally {
-      isApplyingRef.current = false;
-      setIsPaginating(false);
-      setPageCount(countPages());
-      setCurrentPage(detectCurrentPage());
-    }
-  }, [editor, countPages, detectCurrentPage]);
+  const applyPendingSplitsRef = useRef<() => void>(() => {});
 
   const scheduleStableCheck = useCallback(() => {
     if (stableTimerRef.current) {
@@ -162,11 +131,53 @@ export function usePagination(
     }
     stableTimerRef.current = setTimeout(() => {
       stableTimerRef.current = null;
-      applyPendingSplits();
+      applyPendingSplitsRef.current();
       setPageCount(countPages());
       setCurrentPage(detectCurrentPage());
     }, STABLE_DELAY_MS);
-  }, [applyPendingSplits, countPages, detectCurrentPage]);
+  }, [countPages, detectCurrentPage]);
+
+  const applyPendingSplits = useCallback(() => {
+    if (!isLiveEditor(editor)) {
+      pendingSplitsRef.current = [];
+      return;
+    }
+    if (isApplyingRef.current) return;
+
+    const candidate = pendingSplitsRef.current.shift();
+    if (!candidate) return;
+
+    isApplyingRef.current = true;
+    setIsPaginating(true);
+
+    try {
+      const result = buildSplitTransaction(
+        {
+          state: editor.state,
+          schema: editor.state.schema,
+          pageBreakNodeName: "pageBreak",
+        },
+        candidate
+      );
+      if (result.splitsInserted > 0 && isLiveEditor(editor)) {
+        editor.view.dispatch(result.tr);
+      }
+    } catch (e) {
+      console.error("Pagination split failed", e);
+    } finally {
+      isApplyingRef.current = false;
+      setIsPaginating(false);
+      setPageCount(countPages());
+      setCurrentPage(detectCurrentPage());
+      if (pendingSplitsRef.current.length > 0) {
+        scheduleStableCheck();
+      }
+    }
+  }, [editor, countPages, detectCurrentPage, scheduleStableCheck]);
+
+  useEffect(() => {
+    applyPendingSplitsRef.current = applyPendingSplits;
+  }, [applyPendingSplits]);
 
   /* -- engine lifecycle -- */
 
@@ -194,6 +205,11 @@ export function usePagination(
     engineRef.current = engine;
 
     return () => {
+      if (stableTimerRef.current) {
+        clearTimeout(stableTimerRef.current);
+        stableTimerRef.current = null;
+      }
+      pendingSplitsRef.current = [];
       engine.destroy();
       engineRef.current = null;
     };

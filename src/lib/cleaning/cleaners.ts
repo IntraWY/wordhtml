@@ -7,11 +7,29 @@
 
 const PRESERVE_ATTRS_BY_TAG: Record<string, ReadonlyArray<string>> = {
   a: ["href", "title", "target", "rel"],
-  img: ["src", "alt", "width", "height"],
+  img: ["src", "alt", "width", "height", "data-align"],
   td: ["colspan", "rowspan"],
   th: ["colspan", "rowspan"],
   ol: ["start", "type"],
+  span: ["data-type", "data-latex", "data-inline", "data-variable", "data-field-id", "data-placeholder-field"],
+  div: ["data-type", "data-page-body", "data-page-header", "data-page-footer", "data-page-number", "data-page-setup"],
+  tr: ["data-repeat", "data-repeat-source"],
 };
+
+const GLOBAL_PRESERVE_ATTRS = new Set([
+  "data-variable", "data-type", "data-latex", "data-inline", "data-align",
+  "data-indent", "data-field-id", "data-placeholder-field",
+  "data-page-body", "data-page-header", "data-page-footer", "data-page-number", "data-page-setup",
+  "data-repeat", "data-repeat-source",
+]);
+
+function shouldPreserveAttribute(tag: string, name: string): boolean {
+  const preserve = PRESERVE_ATTRS_BY_TAG[tag] ?? [];
+  if (preserve.includes(name)) return true;
+  if (GLOBAL_PRESERVE_ATTRS.has(name)) return true;
+  if (name.startsWith("data-repeat")) return true;
+  return false;
+}
 
 const VOID_ELEMENTS = new Set([
   "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -42,7 +60,11 @@ function walk(root: Node, visit: (node: Node) => void): void {
 export function removeInlineStyles(html: string): string {
   if (!html) return html;
   const doc = parse(html);
-  const KEEP = ["margin-left", "text-indent", "width", "height"];
+  const KEEP = [
+    "margin-left", "margin-right", "margin-top", "margin-bottom",
+    "text-indent", "width", "height",
+    "font-size", "color", "background-color", "line-height", "text-align",
+  ];
   doc.body.querySelectorAll("[style]").forEach((el) => {
     const s = (el as HTMLElement).style;
     const saved: [string, string][] = KEEP
@@ -108,12 +130,10 @@ export function removeAttributes(html: string): string {
   const doc = parse(html);
   doc.body.querySelectorAll("*").forEach((el) => {
     const tag = el.tagName.toLowerCase();
-    const preserve = PRESERVE_ATTRS_BY_TAG[tag] ?? [];
     // Iterate over a snapshot — removing attrs mutates the live NamedNodeMap
     const names = Array.from(el.attributes).map((a) => a.name);
     for (const name of names) {
-      // "style" is managed exclusively by removeInlineStyles — never strip it here
-      if (name !== "style" && !preserve.includes(name)) {
+      if (name !== "style" && !shouldPreserveAttribute(tag, name)) {
         el.removeAttribute(name);
       }
     }

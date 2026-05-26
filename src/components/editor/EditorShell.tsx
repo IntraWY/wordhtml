@@ -32,6 +32,7 @@ import { ParagraphDialog } from "./ParagraphDialog";
 import { MathInputDialog } from "./MathInputDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener } from "@/lib/events";
+import { isLiveEditor } from "@/lib/editorLive";
 import { PaginationManager } from "./PaginationManager";
 import { EditorContextMenu } from "./EditorContextMenu";
 import { Tour } from "@/components/onboarding/Tour";
@@ -45,9 +46,10 @@ export function EditorShell() {
   const [rulerInfo, setRulerInfo] = useState<{ label: string } | null>(null);
 
   const onEditorReady = useCallback((ed: Editor | null) => {
-    if (editorRef.current === ed) return;
-    editorRef.current = ed;
-    setEditor(ed);
+    if (ed === null || editorRef.current !== ed) {
+      editorRef.current = ed;
+      setEditor(ed);
+    }
   }, []);
 
   const loadError = useEditorStore((s) => s.loadError);
@@ -60,6 +62,8 @@ export function EditorShell() {
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
   const templateMode = useEditorStore((s) => s.templateMode);
   const previewMode = useEditorStore((s) => s.previewMode);
+  const ribbonEditor =
+    previewMode === "preview" && templateMode ? null : editor;
 
   const isFullscreen = useUiStore((s) => s.fullscreen);
   const openSearch = useUiStore((s) => s.openSearch);
@@ -97,7 +101,7 @@ export function EditorShell() {
     const onInsertVariable = (e: CustomEvent) => {
       const name = e.detail as string;
       const ed = editorRef.current;
-      if (!ed || !name) return;
+      if (!isLiveEditor(ed) || !name) return;
       const { state } = ed;
       const pos = state.selection.from;
       const mark = state.schema.marks.variable.create({ name });
@@ -136,7 +140,7 @@ export function EditorShell() {
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "wordhtml-editor") {
-        (useEditorStore as unknown as { persist?: { rehydrate: () => void } }).persist?.rehydrate?.();
+        useEditorStore.persist.rehydrate();
       }
     };
     window.addEventListener("storage", onStorage);
@@ -207,9 +211,9 @@ export function EditorShell() {
       >
         <TopBar />
         <div className="hidden md:block">
-          <Ribbon editor={editor} />
+          <Ribbon editor={ribbonEditor} />
         </div>
-        <MobileToolbar editor={editor} />
+        <MobileToolbar editor={ribbonEditor} />
         {loadError && (
           <div
             role="alert"

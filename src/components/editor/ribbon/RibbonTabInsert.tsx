@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import {
   Link as LinkIcon,
@@ -24,12 +24,19 @@ import { useDialogStore } from "@/store/dialogStore";
 import { useEditorStore } from "@/store/editorStore";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 import { assignHeadingIds, buildTocHtml, generateToc } from "@/lib/toc";
+import { editorCan, isLiveEditor } from "@/lib/editorLive";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasEditor = editor !== null;
+  const editorRef = useRef(editor);
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+  const hasEditor = isLiveEditor(editor);
+
+  const liveEditor = () => editorRef.current;
 
   const insertImageFromFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -51,24 +58,29 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         "คำอธิบายรูปภาพ (Alt text)",
         "ใส่คำอธิบายสำหรับรูปภาพ:",
         "รูปภาพ (Image)",
-        (alt) => editor?.chain().focus().setImage({ src, alt }).run()
+        (alt) => {
+          const ed = liveEditor();
+          if (isLiveEditor(ed)) ed.chain().focus().setImage({ src, alt }).run();
+        }
       );
     } catch {
       useDialogStore.getState().openAlert("รูปภาพ (Image)", "ไม่สามารถอ่านไฟล์ได้");
     }
-  }, [editor]);
+  }, []);
 
   const handleLink = useCallback(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     const previous = editor.getAttributes("link").href as string | undefined;
     useDialogStore.getState().openPrompt(
       "แทรกลิงก์ (Insert Link)",
       "ใส่ URL ของลิงก์:",
       previous ?? "https://",
       (url) => {
+        const ed = liveEditor();
+        if (!isLiveEditor(ed)) return;
         if (url === null) return;
         if (url === "") {
-          editor.chain().focus().extendMarkRange("link").unsetLink().run();
+          ed.chain().focus().extendMarkRange("link").unsetLink().run();
           return;
         }
         let validatedUrl = url;
@@ -85,7 +97,7 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
             return;
           }
         }
-        editor.chain().focus().extendMarkRange("link").setLink({ href: validatedUrl }).run();
+        ed.chain().focus().extendMarkRange("link").setLink({ href: validatedUrl }).run();
       }
     );
   }, [editor]);
@@ -101,11 +113,14 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
           "คำอธิบายรูปภาพ (Alt text)",
           "ใส่คำอธิบายสำหรับรูปภาพ:",
           "รูปภาพ (Image)",
-          (alt) => editor?.chain().focus().setImage({ src, alt }).run()
+          (alt) => {
+            const ed = liveEditor();
+            if (isLiveEditor(ed)) ed.chain().focus().setImage({ src, alt }).run();
+          }
         );
       }
     );
-  }, [editor]);
+  }, []);
 
   const handleTable = useCallback(() => {
     editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
@@ -199,10 +214,10 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         <RibbonButton label="สารบัญ" onClick={handleToc} disabled={!hasEditor}>
           <BookOpen className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="แทรกตัวแบ่งหน้า" onClick={handlePageBreak} disabled={!hasEditor || !editor?.can().insertPageBreak?.()}>
+        <RibbonButton label="แทรกตัวแบ่งหน้า" onClick={handlePageBreak} disabled={!hasEditor || !editorCan(editor, (c) => c.insertPageBreak())}>
           <Split className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="เพิ่มหน้าใหม่" onClick={handleAddPage} disabled={!hasEditor || !editor?.can().insertPageBreak?.()}>
+        <RibbonButton label="เพิ่มหน้าใหม่" onClick={handleAddPage} disabled={!hasEditor || !editorCan(editor, (c) => c.insertPageBreak())}>
           <FilePlus className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>

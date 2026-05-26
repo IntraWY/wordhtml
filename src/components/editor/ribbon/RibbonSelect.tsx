@@ -8,13 +8,15 @@ interface RibbonSelectProps {
   onChange: (value: string) => void;
   options: { label: string; value: string }[];
   className?: string;
+  disabled?: boolean;
 }
 
-export function RibbonSelect({ label, value, onChange, options, className }: RibbonSelectProps) {
+export function RibbonSelect({ label, value, onChange, options, className, disabled }: RibbonSelectProps) {
   return (
     <select
       aria-label={label}
       value={value}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
         "h-7 appearance-none rounded-md border border-transparent bg-transparent px-2 text-xs text-[color:var(--color-foreground)] outline-none focus:border-[color:var(--color-accent)] hover:bg-[color:var(--color-muted)] cursor-pointer",

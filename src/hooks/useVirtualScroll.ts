@@ -95,11 +95,12 @@ export function useVirtualScroll(
 
           if (entry.isIntersecting) {
             visible.add(pageIdx);
-            // Add overscan pages before and after.
             for (let i = 1; i <= overscan; i++) {
               if (pageIdx - i >= 0) visible.add(pageIdx - i);
               if (pageIdx + i < totalPages) visible.add(pageIdx + i);
             }
+          } else {
+            visible.delete(pageIdx);
           }
         }
         setVisiblePages(new Set(visible));

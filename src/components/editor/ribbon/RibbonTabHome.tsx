@@ -47,6 +47,7 @@ import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { useUiStore } from "@/store/uiStore";
 import { dispatchOpenSearch } from "@/lib/events";
+import { editorCan, isLiveEditor } from "@/lib/editorLive";
 
 const FONT_OPTIONS = [
   { label: "ค่าเริ่มต้น", value: "" },
@@ -121,7 +122,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
     | "paragraph";
 
   const handleFormat = useCallback((action: FormatAction) => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     const chain = editor.chain().focus();
     switch (action) {
       case "bold": chain.toggleBold().run(); break;
@@ -235,7 +236,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
   }, [editor]);
 
 
-  const hasEditor = editor !== null;
+  const hasEditor = isLiveEditor(editor);
 
   return (
     <>
@@ -259,8 +260,9 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
           value={currentFont}
           onChange={handleFontChange}
           options={FONT_OPTIONS}
+          disabled={!hasEditor}
         />
-        {editor && <FontSizeSelector editor={editor} />}
+        {hasEditor && editor && <FontSizeSelector editor={editor} />}
         <RibbonButton label="ตัวหนา (Bold)" onClick={() => handleFormat("bold")} active={editor?.isActive("bold")} disabled={!hasEditor}>
           <Bold className="size-3.5" />
         </RibbonButton>
@@ -407,10 +409,10 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         <RibbonButton label="รายการตัวเลข" onClick={() => handleFormat("orderedList")} active={editor?.isActive("orderedList")} disabled={!hasEditor}>
           <ListOrdered className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ลดเยื้อง" onClick={() => handleFormat("outdent")} disabled={!editor?.isActive("listItem")}>
+        <RibbonButton label="ลดเยื้อง" onClick={() => handleFormat("outdent")} disabled={!hasEditor || !editor?.isActive("listItem")}>
           <Outdent className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="เพิ่มเยื้อง" onClick={() => handleFormat("indentList")} disabled={!editor?.isActive("listItem")}>
+        <RibbonButton label="เพิ่มเยื้อง" onClick={() => handleFormat("indentList")} disabled={!hasEditor || !editor?.isActive("listItem")}>
           <Indent className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
@@ -445,10 +447,10 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
 
       {/* Edit */}
       <RibbonGroup label="แก้ไข">
-        <RibbonButton label="เลิกทำ" onClick={() => handleFormat("undo")} disabled={!editor?.can().undo()}>
+        <RibbonButton label="เลิกทำ" onClick={() => handleFormat("undo")} disabled={!editorCan(editor, (c) => c.undo())}>
           <Undo2 className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ทำซ้ำ" onClick={() => handleFormat("redo")} disabled={!editor?.can().redo()}>
+        <RibbonButton label="ทำซ้ำ" onClick={() => handleFormat("redo")} disabled={!editorCan(editor, (c) => c.redo())}>
           <Redo2 className="size-3.5" />
         </RibbonButton>
         <RibbonButton label="ค้นหา/แทนที่" onClick={dispatchOpenSearch}>

@@ -55,6 +55,8 @@ export function extractImages(
     counter += 1;
 
     const blob = base64ToBlob(base64, mimeType);
+    if (!blob || blob.size === 0) return;
+
     images.push({ filename, mimeType, blob });
     img.setAttribute("src", `${basePath}/${filename}`);
   });
@@ -62,7 +64,7 @@ export function extractImages(
   return { html: doc.body.innerHTML, images };
 }
 
-function base64ToBlob(base64: string, mimeType: string): Blob {
+function base64ToBlob(base64: string, mimeType: string): Blob | null {
   try {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
@@ -71,6 +73,6 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
     }
     return new Blob([bytes], { type: mimeType });
   } catch {
-    return new Blob([], { type: mimeType });
+    return null;
   }
 }

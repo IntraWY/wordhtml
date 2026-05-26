@@ -5,6 +5,7 @@ import { X, ChevronUp, ChevronDown } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
 import { Button } from "@/components/ui/Button";
+import { isLiveEditor } from "@/lib/editorLive";
 
 interface SearchPanelProps {
   editor: Editor | null;
@@ -27,14 +28,13 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
 
   // Push search term into the editor's search-and-replace extension if available.
   useEffect(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     editor.commands.setSearchTerm?.(searchTerm);
     editor.commands.resetIndex?.();
   }, [editor, searchTerm]);
 
-  // Push replace term into the editor's search-and-replace extension if available.
   useEffect(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     editor.commands.setReplaceTerm?.(replaceTerm);
   }, [editor, replaceTerm]);
 
@@ -95,7 +95,7 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
   if (!open) return null;
 
   const callCmd = (name: SearchCommandKey) => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     const cmds = editor.commands as unknown as Partial<
       Record<SearchCommandKey, () => boolean>
     >;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { Ruler } from "./Ruler";
+import { isLiveEditor } from "@/lib/editorLive";
 
 function toNum(v: unknown): number {
   return typeof v === "number" && !isNaN(v) ? v : 0;
@@ -32,8 +33,9 @@ export function IndentRuler({
   const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
 
   useEffect(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     const update = () => {
+      if (!isLiveEditor(editor)) return;
       const { state } = editor;
       const nodeType = state.selection.$from.parent.type.name;
       const attrs =
@@ -47,13 +49,16 @@ export function IndentRuler({
     };
     editor.on("selectionUpdate", update);
     return () => {
-      editor.off("selectionUpdate", update);
+      if (isLiveEditor(editor)) {
+        editor.off("selectionUpdate", update);
+      }
     };
   }, [editor]);
 
   const handleIndentChange = useCallback(
     (marginLeft: number, textIndent: number) => {
-      editor?.commands.setIndent(marginLeft, textIndent);
+      if (!isLiveEditor(editor)) return;
+      editor.commands.setIndent(marginLeft, textIndent);
     },
     [editor]
   );
