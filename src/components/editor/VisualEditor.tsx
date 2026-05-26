@@ -42,7 +42,9 @@ import {
   setEditorEmptyPlaceholderText,
 } from "@/lib/editorEmptyPlaceholder";
 import { dispatchOpenFile } from "@/lib/events";
-import { Upload, FileText, Keyboard, Braces } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import { Upload, FileText, Keyboard, Braces, Eye } from "lucide-react";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
 import { ParagraphFormatExtension } from "@/lib/tiptap/paragraphFormat";
@@ -392,18 +394,27 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       <span id="editor-placeholder" className="sr-only">
         {emptyState.srOnlyDescription}
       </span>
-      <EditorContent editor={editor} className="h-full" aria-label="เนื้อหาเอกสาร (Document content)" />
-      {isEmpty && emptyState.showEmptyHint && (
-        <EmptyHint
-          config={emptyState}
-          onOpenFile={dispatchOpenFile}
-          onPreview={() => setPreviewMode("preview")}
-          onOpenVariables={openPlaceholderPanel}
-        />
-      )}
+      <div className="relative w-full">
+        <EditorContent editor={editor} className="h-full" aria-label="เนื้อหาเอกสาร (Document content)" />
+        {isEmpty && emptyState.showEmptyHint && (
+          <EmptyHint
+            config={emptyState}
+            onOpenFile={dispatchOpenFile}
+            onPreview={() => setPreviewMode("preview")}
+            onOpenVariables={openPlaceholderPanel}
+          />
+        )}
+      </div>
     </>
   );
 }
+
+const TEMPLATE_EMPTY_VARIANTS = new Set<EmptyStateConfig["variant"]>([
+  "template",
+  "template-preview",
+]);
+
+type EmptyStateConfig = ReturnType<typeof getEmptyStateConfig>;
 
 function EmptyHint({
   config,
@@ -411,11 +422,14 @@ function EmptyHint({
   onPreview,
   onOpenVariables,
 }: {
-  config: ReturnType<typeof getEmptyStateConfig>;
+  config: EmptyStateConfig;
   onOpenFile: () => void;
   onPreview: () => void;
   onOpenVariables: () => void;
 }) {
+  const isTemplate = TEMPLATE_EMPTY_VARIANTS.has(config.variant);
+  const regionLabel = config.hintTitle ?? "เริ่มต้นเอกสาร (Get started)";
+
   const handleAction = (action: string) => {
     if (action === "open-file") onOpenFile();
     if (action === "preview") onPreview();
@@ -423,65 +437,107 @@ function EmptyHint({
   };
 
   return (
-    <div className="mt-12 flex flex-col items-center gap-4 text-center select-none" aria-hidden="true">
-      <div className="flex items-center gap-6 text-[color:var(--color-muted-foreground)]">
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-            <Upload className="size-4" />
+    <div
+      role="region"
+      aria-label={regionLabel}
+      className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 py-10"
+    >
+      <div className="flex max-w-md flex-col items-center gap-4 text-center">
+        {isTemplate ? (
+          <TemplateEmptyVisual variant={config.variant} />
+        ) : (
+          <DefaultEmptyVisual />
+        )}
+
+        {config.hintTitle && (
+          <h2 className="text-sm font-semibold text-[color:var(--color-foreground)]">
+            {config.hintTitle}
+          </h2>
+        )}
+        {config.hintSubtitle && (
+          <p className="text-xs leading-relaxed text-[color:var(--color-muted-foreground)]">
+            {config.hintSubtitle}
+          </p>
+        )}
+
+        {config.variant === "template" && (
+          <p className="font-mono text-xs text-[color:var(--color-muted-foreground)]">
+            {"{{ชื่อตัวแปร}}"}
+          </p>
+        )}
+
+        {config.actions && config.actions.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {config.actions.map((action) => (
+              <Button
+                key={action.id}
+                type="button"
+                variant={action.id === "file" ? "secondary" : "primary"}
+                size="sm"
+                className="pointer-events-auto"
+                onClick={() => handleAction(action.action)}
+              >
+                {action.label}
+              </Button>
+            ))}
           </div>
-          <span className="text-[11px]">อัปโหลด .docx</span>
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-            <FileText className="size-4" />
-          </div>
-          <span className="text-[11px]">วางจาก Word</span>
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-            <Keyboard className="size-4" />
-          </div>
-          <span className="text-[11px]">พิมพ์เอง</span>
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-            <Braces className="size-4" />
-          </div>
-          <span className="text-[11px]">ใช้ตัวแปร (Vars)</span>
-        </div>
+        )}
+
+        {config.variant === "default" && (
+          <p className="text-xs text-[color:var(--color-muted-foreground)]">
+            พิมพ์ {"{{ชื่อตัวแปร}}"} เพื่อสร้างตัวแปร · เปิดแผง Placeholder ที่เมนูมุมมอง
+          </p>
+        )}
       </div>
-      <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+    </div>
+  );
+}
+
+/** Decorative-only quick-start icons (default mode). */
+function DefaultEmptyVisual() {
+  const items = [
+    { icon: Upload, label: "อัปโหลด .docx" },
+    { icon: FileText, label: "วางจาก Word" },
+    { icon: Keyboard, label: "พิมพ์เอง" },
+  ] as const;
+
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        className="flex items-center gap-5 text-[color:var(--color-muted-foreground)]"
+      >
+        {items.map(({ icon: Icon, label }) => (
+          <div key={label} className="flex flex-col items-center gap-1.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)] opacity-80">
+              <Icon className="size-4" aria-hidden />
+            </div>
+            <span className="text-[11px]">{label}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-[color:var(--color-muted-foreground)]" aria-hidden="true">
         Ctrl+O เปิดไฟล์ · ลากวางไฟล์ที่นี่ · Ctrl+Shift+N เอกสารใหม่
       </p>
-      {config.hintTitle && (
-        <p className="text-sm font-medium text-[color:var(--color-foreground)]">
-          {config.hintTitle}
-        </p>
+    </>
+  );
+}
+
+function TemplateEmptyVisual({
+  variant,
+}: {
+  variant: EmptyStateConfig["variant"];
+}) {
+  const Icon = variant === "template-preview" ? Eye : Braces;
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        "flex h-12 w-12 items-center justify-center rounded-xl border border-[color:var(--color-border)]",
+        "bg-[color:var(--color-muted)] text-[color:var(--color-muted-foreground)]"
       )}
-      {config.hintSubtitle && (
-        <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-          {config.hintSubtitle}
-        </p>
-      )}
-      {config.actions && config.actions.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-2 pointer-events-auto">
-          {config.actions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              onClick={() => handleAction(action.action)}
-              className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5 text-[11px] font-medium shadow-sm hover:bg-[color:var(--color-muted)]"
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {config.variant === "default" && (
-        <p className="text-[11px] text-[color:var(--color-muted-foreground)] pointer-events-none">
-          พิมพ์ {"{{ชื่อตัวแปร}}"} เพื่อสร้างตัวแปร · เปิดแผง Placeholder ที่เมนูมุมมอง
-        </p>
-      )}
+    >
+      <Icon className="size-6" />
     </div>
   );
 }
