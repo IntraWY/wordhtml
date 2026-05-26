@@ -90,6 +90,17 @@ export function EditorShell() {
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
   const { onDragOver, onDragLeave, onDrop } = useDragAndDrop(editor, setIsDragging);
 
+  /* Sync global pageSetup (ruler, ribbon, dialogs) into every page-node in the editor */
+  useEffect(() => {
+    if (!isLiveEditor(editor)) return;
+    editor.commands.setDocumentPageSetup({
+      size: pageSetup.size,
+      orientation: pageSetup.orientation,
+      marginMm: pageSetup.marginMm,
+      ...(pageSetup.headerFooter ? { headerFooter: pageSetup.headerFooter } : {}),
+    });
+  }, [editor, pageSetup]);
+
   /* custom-event bridge between menu components and shell */
   useEffect(() => {
     const onSearch = () => openSearch();

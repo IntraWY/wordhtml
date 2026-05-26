@@ -9,6 +9,20 @@ function defaultPageSetup(): PageSetup {
   };
 }
 
+function mergePageSetup(current: PageSetup, partial: Partial<PageSetup>): PageSetup {
+  return {
+    ...current,
+    ...partial,
+    marginMm: {
+      ...current.marginMm,
+      ...(partial.marginMm ?? {}),
+    },
+    headerFooter: partial.headerFooter
+      ? { ...current.headerFooter, ...partial.headerFooter }
+      : current.headerFooter,
+  };
+}
+
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pageCommands: {
@@ -16,6 +30,7 @@ declare module "@tiptap/core" {
       splitPage: () => ReturnType;
       mergePage: () => ReturnType;
       setPageSetup: (pageSetup: Partial<PageSetup>) => ReturnType;
+      setDocumentPageSetup: (pageSetup: Partial<PageSetup>) => ReturnType;
     };
   }
 }
@@ -266,20 +281,35 @@ export const PageCommands = Extension.create({
 
           const currentSetup =
             (pageNode.attrs.pageSetup as PageSetup) ?? defaultPageSetup();
-          const mergedSetup: PageSetup = {
-            ...currentSetup,
-            ...pageSetup,
-            marginMm: {
-              ...currentSetup.marginMm,
-              ...(pageSetup.marginMm ?? {}),
-            },
-          };
+          const mergedSetup = mergePageSetup(currentSetup, pageSetup);
 
           tr.setNodeMarkup(pageNodePos, undefined, {
             ...pageNode.attrs,
             pageSetup: mergedSetup,
           });
 
+          dispatch(tr);
+          return true;
+        },
+
+      setDocumentPageSetup:
+        (pageSetup: Partial<PageSetup>) =>
+        ({ tr, state, dispatch }) => {
+          if (!dispatch) return true;
+
+          let changed = false;
+          state.doc.descendants((node, pos) => {
+            if (node.type.name !== "pageNode") return;
+            const currentSetup =
+              (node.attrs.pageSetup as PageSetup) ?? defaultPageSetup();
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              pageSetup: mergePageSetup(currentSetup, pageSetup),
+            });
+            changed = true;
+          });
+
+          if (!changed) return false;
           dispatch(tr);
           return true;
         },

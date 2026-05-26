@@ -1,5 +1,33 @@
 import { Extension } from "@tiptap/core";
+import type { EditorState } from "@tiptap/pm/state";
+import type { Transaction } from "@tiptap/pm/state";
 import { PX_PER_CM } from "@/lib/page";
+
+function applyToSelectedBlocks(
+  state: EditorState,
+  tr: Transaction,
+  patch: (attrs: Record<string, unknown>) => Record<string, unknown>
+): boolean {
+  const { from, to, $from } = state.selection;
+  if (from === to) {
+    for (let d = $from.depth; d > 0; d--) {
+      const node = $from.node(d);
+      if (node.type.name === "paragraph" || node.type.name === "heading") {
+        tr.setNodeMarkup($from.before(d), undefined, patch({ ...node.attrs }));
+        return true;
+      }
+    }
+    return false;
+  }
+  let handled = false;
+  state.doc.nodesBetween(from, to, (node, pos) => {
+    if (node.type.name === "paragraph" || node.type.name === "heading") {
+      tr.setNodeMarkup(pos, undefined, patch({ ...node.attrs }));
+      handled = true;
+    }
+  });
+  return handled;
+}
 
 export type LineHeightMode =
   | "single"
@@ -206,134 +234,59 @@ export const ParagraphFormatExtension = Extension.create({
     return {
       setParagraphFormat:
         (values: ParagraphFormatValues) =>
-        ({ tr, state }) => {
-          const { from, to } = state.selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (
-              node.type.name === "paragraph" ||
-              node.type.name === "heading"
-            ) {
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                ...values,
-              });
-              handled = true;
-            }
-          });
-          return handled;
-        },
+        ({ tr, state }) =>
+          applyToSelectedBlocks(state, tr, (attrs) => ({ ...attrs, ...values })),
       setIndent:
         (marginLeft: number, textIndent: number) =>
-        ({ tr, state }) => {
-          const { from, to } = state.selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (
-              node.type.name === "paragraph" ||
-              node.type.name === "heading"
-            ) {
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                marginLeft,
-                textIndent,
-              });
-              handled = true;
-            }
-          });
-          return handled;
-        },
+        ({ tr, state }) =>
+          applyToSelectedBlocks(state, tr, (attrs) => ({
+            ...attrs,
+            marginLeft,
+            textIndent,
+          })),
       setLineSpacing:
         (mode: LineHeightMode, value?: number) =>
-        ({ tr, state }) => {
-          const { from, to } = state.selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (
-              node.type.name === "paragraph" ||
-              node.type.name === "heading"
-            ) {
-              const update: ParagraphFormatValues = {
-                ...node.attrs,
-                lineHeightMode: mode,
-              };
-              if (mode === "single" || mode === "oneHalf" || mode === "double") {
-                update.lineHeight = null;
-              } else {
-                update.lineHeight = value ?? null;
-              }
-              tr.setNodeMarkup(pos, undefined, update);
-              handled = true;
+        ({ tr, state }) =>
+          applyToSelectedBlocks(state, tr, (attrs) => {
+            const update: ParagraphFormatValues = {
+              ...attrs,
+              lineHeightMode: mode,
+            };
+            if (mode === "single" || mode === "oneHalf" || mode === "double") {
+              update.lineHeight = null;
+            } else {
+              update.lineHeight = value ?? null;
             }
-          });
-          return handled;
-        },
+            return update as Record<string, unknown>;
+          }),
       increaseBlockIndent:
         () =>
-        ({ tr, state }) => {
-          const { from, to } = state.selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (
-              node.type.name === "paragraph" ||
-              node.type.name === "heading"
-            ) {
-              const current = (node.attrs.marginLeft as number) ?? 0;
-              const next = Math.round((current + 0.5) * 10) / 10;
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                marginLeft: next,
-              });
-              handled = true;
-            }
-          });
-          return handled;
-        },
+        ({ tr, state }) =>
+          applyToSelectedBlocks(state, tr, (attrs) => {
+            const current = (attrs.marginLeft as number) ?? 0;
+            const next = Math.round((current + 0.5) * 10) / 10;
+            return { ...attrs, marginLeft: next };
+          }),
       decreaseBlockIndent:
         () =>
-        ({ tr, state }) => {
-          const { from, to } = state.selection;
-          let handled = false;
-          state.doc.nodesBetween(from, to, (node, pos) => {
-            if (
-              node.type.name === "paragraph" ||
-              node.type.name === "heading"
-            ) {
-              const current = (node.attrs.marginLeft as number) ?? 0;
-              const next = Math.max(0, Math.round((current - 0.5) * 10) / 10);
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                marginLeft: next,
-              });
-              handled = true;
-            }
-          });
-          return handled;
-        },
+        ({ tr, state }) =>
+          applyToSelectedBlocks(state, tr, (attrs) => {
+            const current = (attrs.marginLeft as number) ?? 0;
+            const next = Math.max(0, Math.round((current - 0.5) * 10) / 10);
+            return { ...attrs, marginLeft: next };
+          }),
     };
   },
 
   addKeyboardShortcuts() {
     const blockIndent = (delta: number) =>
-      this.editor.commands.command(({ tr, state }) => {
-        const { from, to } = state.selection;
-        let handled = false;
-        state.doc.nodesBetween(from, to, (node, pos) => {
-          if (
-            node.type.name === "paragraph" ||
-            node.type.name === "heading"
-          ) {
-            const current = (node.attrs.marginLeft as number) ?? 0;
-            const next = Math.max(0, Math.round((current + delta) * 10) / 10);
-            tr.setNodeMarkup(pos, undefined, {
-              ...node.attrs,
-              marginLeft: next,
-            });
-            handled = true;
-          }
-        });
-        return handled;
-      });
+      this.editor.commands.command(({ tr, state }) =>
+        applyToSelectedBlocks(state, tr, (attrs) => {
+          const current = (attrs.marginLeft as number) ?? 0;
+          const next = Math.max(0, Math.round((current + delta) * 10) / 10);
+          return { ...attrs, marginLeft: next };
+        })
+      );
 
     return {
       Tab: () => {
