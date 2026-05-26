@@ -17,6 +17,8 @@ export function ImageResizeView({
   node,
   updateAttributes,
   selected,
+  getPos,
+  editor,
 }: NodeViewProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -94,6 +96,28 @@ export function ImageResizeView({
     updateAttributes({ width: preset, height: null });
   };
 
+  const focusAfterImage = useCallback(() => {
+    const pos = getPos();
+    if (typeof pos !== "number") return;
+    const after = pos + node.nodeSize;
+    editor.chain().focus().setTextSelection(after).run();
+  }, [editor, getPos, node.nodeSize]);
+
+  const handleWrapperClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const img = imgRef.current;
+      if (!img) return;
+      const rect = img.getBoundingClientRect();
+      const clickedBelowImage = e.clientY > rect.bottom + 4;
+      const clickedSizeBar = (e.target as HTMLElement).closest("button") !== null;
+      if (clickedBelowImage && !clickedSizeBar) {
+        e.preventDefault();
+        focusAfterImage();
+      }
+    },
+    [focusAfterImage]
+  );
+
   // --- Alignment wrapper style (mirrors CSS for A4Preview) ---
   const wrapperStyle: React.CSSProperties =
     align === "left"
@@ -142,7 +166,7 @@ export function ImageResizeView({
   })();
 
   return (
-    <NodeViewWrapper as="div" style={wrapperStyle}>
+    <NodeViewWrapper as="div" style={wrapperStyle} onClick={handleWrapperClick}>
       {/* Image + handles */}
       <div style={{ position: "relative", display: "inline-block" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

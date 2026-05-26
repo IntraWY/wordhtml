@@ -14,6 +14,7 @@ import { MathEquation } from "@/lib/tiptap/mathEquation";
 import { PagedDocument } from "@/lib/tiptap/pagedDocument";
 import { PageNode } from "@/lib/tiptap/pageNode";
 import { PageBodyNode } from "@/lib/tiptap/pageBody";
+import { PageBodyTrailingParagraph } from "@/lib/tiptap/pageBodyTrailingParagraph";
 import { PageHeaderNode } from "@/lib/tiptap/pageHeader";
 import { PageFooterNode } from "@/lib/tiptap/pageFooter";
 import { PageCommands } from "@/lib/tiptap/pageCommands";
@@ -164,6 +165,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       PagedDocument,
       PageNode,
       PageBodyNode,
+      PageBodyTrailingParagraph,
       PageHeaderNode,
       PageFooterNode,
       PageCommands,

@@ -96,10 +96,39 @@ function queryPageBodies(root: HTMLElement | Document): HTMLElement[] {
   return Array.from(root.querySelectorAll(".page-body"));
 }
 
+/**
+ * Measures the rendered block content height inside a page body.
+ * `.page-body` has `height: 100%` (full A4 frame), so `scrollHeight` /
+ * `clientHeight` reflect the page frame (~1123px), not the text — using
+ * those values caused every page to appear permanently overflowed.
+ */
+function measurePageBodyContentHeight(el: HTMLElement): number {
+  const proseMirror = el.querySelector<HTMLElement>(".ProseMirror");
+  const container = proseMirror ?? el;
+  const children = Array.from(container.children) as HTMLElement[];
+  if (children.length === 0) return 0;
+
+  const containerTop = container.getBoundingClientRect().top;
+  let maxBottom = 0;
+  for (const child of children) {
+    const rect = child.getBoundingClientRect();
+    maxBottom = Math.max(maxBottom, rect.bottom - containerTop);
+  }
+  return maxBottom;
+}
+
 function getAtomicTagSet(options: PaginationOptions): Set<string> {
   return new Set(
     (options.atomicTags ?? DEFAULT_ATOMIC_TAGS).map((t) => t.toLowerCase())
   );
+}
+
+/** Image node views render as `<div>` wrappers — treat them as atomic. */
+function isAtomicBlock(el: HTMLElement, atomicTags: Set<string>): boolean {
+  const tag = el.tagName.toLowerCase();
+  if (atomicTags.has(tag)) return true;
+  if (el.querySelector("img")) return true;
+  return false;
 }
 
 /* ------------------------------------------------------------------ */
@@ -130,15 +159,14 @@ export function measurePageBodies(
     const el = bodies[i];
     const scrollHeight = el.scrollHeight;
     const clientHeight = el.clientHeight;
-    // Use the larger of scrollHeight / clientHeight to be safe.
-    const effectiveHeight = Math.max(scrollHeight, clientHeight);
-    const overflowPx = effectiveHeight - maxHeightPx;
+    const contentHeightPx = measurePageBodyContentHeight(el);
+    const overflowPx = contentHeightPx - maxHeightPx;
 
     if (overflowPx > tolerancePx) {
       results.push({
         pageIndex: i,
         el,
-        scrollHeight,
+        scrollHeight: contentHeightPx,
         clientHeight,
         overflowPx,
       });
@@ -197,13 +225,16 @@ export function findSplitPosition(
       return null;
     }
 
-    // Child does not fit. If it is atomic, skip it (move entire element to next page).
-    if (atomicTags.has(child.tagName.toLowerCase())) {
-      continue;
+    // Child does not fit — split before splittable blocks (e.g. trailing paragraph).
+    if (!isAtomicBlock(child, atomicTags)) {
+      const pmPos = resolveDomToPmPos(editor, child);
+      if (pmPos !== null) return pmPos;
     }
 
-    // If a single non-atomic child is taller than the whole page, we will
-    // handle it at the text-node level later. For now keep walking upward.
+    // Atomic block does not fit — keep walking upward to split before it.
+    if (isAtomicBlock(child, atomicTags)) {
+      continue;
+    }
   }
 
   // Every child overflows — likely a single huge atomic node or first paragraph.
