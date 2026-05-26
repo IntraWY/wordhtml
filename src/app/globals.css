@@ -100,6 +100,75 @@ body {
   pointer-events: none;
 }
 
+/* Missing merge-field placeholder (template preview) */
+.placeholder-missing {
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 12px;
+}
+
+html[data-theme="dark"] .placeholder-missing {
+  color: #fca5a5;
+  background: #450a0a;
+}
+
+.placeholder-field {
+  display: inline-block;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 4px;
+  padding: 0 6px;
+  margin: 0 1px;
+  font-size: 0.95em;
+  background: color-mix(in srgb, var(--color-muted) 40%, transparent);
+  color: var(--color-foreground);
+  vertical-align: baseline;
+}
+
+.placeholder-field.is-empty {
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+
+.placeholder-field.is-required.is-empty {
+  border-color: #f59e0b;
+}
+
+/* Live page chrome overlays (header/footer on canvas) */
+.page-chrome-header,
+.page-chrome-footer {
+  pointer-events: none;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--color-muted-foreground);
+  padding: 4px var(--page-margin-right, 19mm) 4px var(--page-margin-left, 19mm);
+  box-sizing: border-box;
+}
+
+.page-chrome-header {
+  border-bottom: 1px dashed var(--color-border);
+  min-height: 20px;
+}
+
+.page-chrome-footer {
+  border-top: 1px dashed var(--color-border);
+  min-height: 20px;
+  margin-top: auto;
+}
+
+.page-chrome-placeholder {
+  opacity: 0.45;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.page-node.has-page-chrome {
+  display: flex;
+  flex-direction: column;
+}
+
 
 /* Dot grid "desk" canvas behind the editor content card */
 .editor-canvas {

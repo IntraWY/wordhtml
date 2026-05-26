@@ -11,7 +11,7 @@ A redesigned clone of [wordhtml.com](https://wordhtml.com/) built with Next.js 1
 - **Five export formats** — clean `.html` (with images inlined or extracted), a `.zip` bundle, `.docx`, Markdown, or Google Apps Script code.
 - **Paste from Word** — Word/Google Docs paste artifacts (mso-* styles, MsoNormal classes, conditional comments) are stripped on the way in.
 - **WYSIWYG A4 editor** — interactive horizontal and vertical rulers with draggable margin guides, page setup (A4/Letter, portrait/landscape), and header/footer configuration.
-- **Template mode** — define `{{variables}}`, paste data from Google Sheets, and preview merged documents.
+- **Template mode** — define `{{variables}}`, paste data from Google Sheets, and preview merged documents. See [`docs/placeholder-system.md`](./docs/placeholder-system.md) for merge fields, page tokens, the Placeholder panel, and export policies.
 - **Document history** — up to 20 local snapshots with auto-save after idle periods.
 - **100% client-side** — no document ever leaves your machine. Static-export ready.
 
@@ -58,7 +58,12 @@ No environment variables. No runtime config. No backend.
 - **JSZip** for ZIP exports with extracted images
 - **Vitest** + **jsdom** for tests
 
-See [`CLAUDE.md`](./CLAUDE.md) for architecture, conventions, and how to extend.
+## Documentation
+
+| Doc | Description |
+|---|---|
+| [`CLAUDE.md`](./CLAUDE.md) | Architecture, conventions, pagination, and how to extend |
+| [`docs/placeholder-system.md`](./docs/placeholder-system.md) | Placeholder registry, `{{variables}}`, header/footer tokens, panel, export health |
 
 ## Privacy
 

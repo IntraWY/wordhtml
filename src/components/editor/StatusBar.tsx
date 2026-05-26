@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect, useState, type ElementType } from "react";
+import { useRef, useEffect, useState, useMemo, type ElementType } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
 import { countWords, plainTextFromHtml } from "@/lib/text";
 import { CLEANERS } from "@/types";
 import { cn } from "@/lib/utils";
-import { FileText, Type, Sparkles, AlignLeft, Ruler, Save } from "lucide-react";
+import { FileText, Type, Sparkles, AlignLeft, Ruler, Save, AlertTriangle } from "lucide-react";
+import { countMissingFields, getMergeFieldStatuses } from "@/lib/placeholders";
 
 function useDebouncedMemo<T>(factory: () => T, deps: React.DependencyList, delay = 300): T {
   const [value, setValue] = useState<T>(factory);
@@ -61,6 +62,18 @@ export function StatusBar({
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const history = useEditorStore((s) => s.history);
   const lastAction = useUiStore((s) => s.lastAction);
+  const templateMode = useEditorStore((s) => s.templateMode);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const variables = useEditorStore((s) => s.variables);
+  const dataSet = useEditorStore((s) => s.dataSet);
+  const openPlaceholderPanel = useUiStore((s) => s.openPlaceholderPanel);
+
+  const missingFieldCount = useMemo(() => {
+    if (!templateMode || previewMode !== "preview") return 0;
+    const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
+    const statuses = getMergeFieldStatuses(documentHtml, variables, dataRow, "preview");
+    return countMissingFields(statuses);
+  }, [templateMode, previewMode, documentHtml, variables, dataSet]);
 
   const words = useDebouncedMemo(() => countWords(documentHtml), [documentHtml], 300);
   const chars = useDebouncedMemo(() => plainTextFromHtml(documentHtml).length, [documentHtml], 300);
@@ -125,6 +138,17 @@ export function StatusBar({
             <span className="size-1.5 rounded-full bg-amber-500" />
             ยังไม่บันทึก (Unsaved)
           </span>
+        )}
+        {missingFieldCount > 0 && (
+          <button
+            type="button"
+            onClick={openPlaceholderPanel}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-amber-700 hover:bg-amber-50"
+            title="ตัวแปรที่ยังไม่มีค่า (Missing placeholders)"
+          >
+            <AlertTriangle className="size-3" />
+            {missingFieldCount} ช่องว่าง
+          </button>
         )}
         <span className="text-[color:var(--color-border-strong)]">
           {sizeLabel} · {orientationLabel}

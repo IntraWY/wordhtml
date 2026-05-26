@@ -15,6 +15,7 @@ import {
   Globe,
   Braces,
   Sigma,
+  TextCursorInput,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -135,6 +136,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     const pos = editor.state.selection.from;
     editor.chain().focus().setTextSelection(pos - 2).run();
   }, [editor]);
+  const handlePlaceholderField = useCallback(() => {
+    editor?.chain().focus().insertPlaceholderField({ label: "ช่องกรอก" }).run();
+  }, [editor]);
   const handleAddPage = useCallback(() => {
     if (!editor) return;
     const doc = editor.state.doc;
@@ -206,6 +210,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
       <RibbonGroup label="ตัวแปร (Vars)">
         <RibbonButton label="แทรกตัวแปร" onClick={handleVariable} disabled={!hasEditor}>
           <Braces className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="ช่องกรอก" onClick={handlePlaceholderField} disabled={!hasEditor}>
+          <TextCursorInput className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 

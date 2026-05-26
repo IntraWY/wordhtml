@@ -4,7 +4,7 @@ import { useMemo, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import type { PageSetup } from "@/types";
-import { replaceVariables } from "./PageHeaderFooter";
+import { replacePageTokens } from "@/lib/placeholders";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface ProcessedContentProps {
@@ -47,11 +47,17 @@ export function ProcessedContent({
   const sanitizedHtml = useMemo(() => sanitizeHtml(html), [html]);
 
   const replacedHeader = useMemo(
-    () => sanitizeHtml(headerHtml ? replaceVariables(headerHtml, pageNumber, totalPages) : ""),
+    () =>
+      sanitizeHtml(
+        headerHtml ? replacePageTokens(headerHtml, { pageNumber, totalPages }) : ""
+      ),
     [headerHtml, pageNumber, totalPages]
   );
   const replacedFooter = useMemo(
-    () => sanitizeHtml(footerHtml ? replaceVariables(footerHtml, pageNumber, totalPages) : ""),
+    () =>
+      sanitizeHtml(
+        footerHtml ? replacePageTokens(footerHtml, { pageNumber, totalPages }) : ""
+      ),
     [footerHtml, pageNumber, totalPages]
   );
 

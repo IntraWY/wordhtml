@@ -9,7 +9,7 @@ import { useEditorStore } from "@/store/editorStore";
 import type { HeaderFooterConfig } from "@/types";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
-import { replaceVariables } from "@/lib/variables";
+import { replacePageTokens } from "@/lib/placeholders";
 
 interface HeaderFooterDialogProps {
   open: boolean;
@@ -264,11 +264,10 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       <span
                         dangerouslySetInnerHTML={{
                           __html: sanitizeHtml(
-                            replaceVariables(
-                              draft.headerHtml || "(ไม่มีส่วนหัว)",
-                              1,
-                              1
-                            )
+                            replacePageTokens(draft.headerHtml || "(ไม่มีส่วนหัว)", {
+                              pageNumber: 1,
+                              totalPages: 1,
+                            })
                           ),
                         }}
                       />
@@ -280,11 +279,10 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       <span
                         dangerouslySetInnerHTML={{
                           __html: sanitizeHtml(
-                            replaceVariables(
-                              draft.footerHtml || "(ไม่มีส่วนท้าย)",
-                              1,
-                              1
-                            )
+                            replacePageTokens(draft.footerHtml || "(ไม่มีส่วนท้าย)", {
+                              pageNumber: 1,
+                              totalPages: 1,
+                            })
                           ),
                         }}
                       />

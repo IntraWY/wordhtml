@@ -28,6 +28,9 @@ import { generateGASFunction } from "@/lib/gasGenerator";
 import type { ExportFormat, ImageMode } from "@/types";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { resolveHtmlPlaceholders } from "@/lib/placeholders";
+import { checkExportHealth } from "@/lib/export/exportHealthCheck";
+import { inlinePlaceholderFields } from "@/lib/export/inlinePlaceholderFields";
 
 type ExportKind = ExportFormat;
 
@@ -46,6 +49,12 @@ export function ExportDialog() {
   const templateMode = useEditorStore((s) => s.templateMode);
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
+  const variables = useEditorStore((s) => s.variables);
+  const dataSet = useEditorStore((s) => s.dataSet);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const exportMissingPolicy = useEditorStore((s) => s.exportMissingPolicy);
+  const setExportMissingPolicy = useEditorStore((s) => s.setExportMissingPolicy);
+  const fieldValues = useEditorStore((s) => s.fieldValues);
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
@@ -60,8 +69,39 @@ export function ExportDialog() {
 
   const cleanedHtml = useMemo(() => {
     if (!open) return "";
-    return applyCleaners(documentHtml, enabledCleaners);
-  }, [open, documentHtml, enabledCleaners]);
+    let html = applyCleaners(documentHtml, enabledCleaners);
+    html = inlinePlaceholderFields(html, fieldValues);
+    if (templateMode) {
+      const dataRow = dataSet?.rows[dataSet.currentRowIndex] ?? {};
+      html = resolveHtmlPlaceholders(html, {
+        mode: "export",
+        variables,
+        dataRow,
+        missingPolicy: exportMissingPolicy,
+      });
+    }
+    return html;
+  }, [
+    open,
+    documentHtml,
+    enabledCleaners,
+    fieldValues,
+    templateMode,
+    variables,
+    dataSet,
+    exportMissingPolicy,
+  ]);
+
+  const exportHealthIssues = useMemo(() => {
+    if (!open) return [];
+    return checkExportHealth({
+      documentHtml,
+      variables,
+      dataRow: dataSet?.rows[dataSet.currentRowIndex] ?? {},
+      templateMode,
+      previewMode,
+    });
+  }, [open, documentHtml, variables, dataSet, templateMode, previewMode]);
 
   useEffect(() => {
     if (!copied) return;
@@ -114,6 +154,11 @@ export function ExportDialog() {
 
   const handleDownload = async (kind: ExportKind) => {
     if (busy) return;
+    const blocking = exportHealthIssues.find((i) => i.severity === "error");
+    if (blocking) {
+      useToastStore.getState().show(blocking.message, "error");
+      return;
+    }
     setBusy(kind);
     try {
       const opts = { sourceName: fileName };
@@ -276,6 +321,37 @@ export function ExportDialog() {
               </div>
 
               <footer className="flex flex-col gap-4 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
+                {exportHealthIssues.length > 0 && (
+                  <ul className="space-y-1 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-xs">
+                    {exportHealthIssues.map((issue) => (
+                      <li
+                        key={issue.code}
+                        className={cn(
+                          issue.severity === "error" && "text-red-600",
+                          issue.severity === "warning" && "text-amber-700",
+                          issue.severity === "info" && "text-[color:var(--color-muted-foreground)]"
+                        )}
+                      >
+                        {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {templateMode && (
+                  <label className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-muted-foreground)]">
+                    <span>ตัวแปรที่ไม่มีค่า (Missing fields):</span>
+                    <select
+                      value={exportMissingPolicy}
+                      onChange={(e) =>
+                        setExportMissingPolicy(e.target.value as "bracket" | "blank")
+                      }
+                      className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1 text-[color:var(--color-foreground)]"
+                    >
+                      <option value="bracket">แสดง [ชื่อ]</option>
+                      <option value="blank">เว้นว่าง</option>
+                    </select>
+                  </label>
+                )}
                 {(pendingFormat ?? "html") === "md" ? (
                   <p className="text-xs text-[color:var(--color-muted-foreground)]">
                     หมายเหตุ: Markdown จะฝังรูปภาพในรูปแบบ <code className="font-mono">![alt](src)</code> เสมอ ตัวเลือกรูปภาพด้านล่างใช้กับ HTML/ZIP เท่านั้น

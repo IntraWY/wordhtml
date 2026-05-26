@@ -1,43 +1,26 @@
 import type { TemplateVariable, ProcessedTemplate } from "@/types/template";
-
-const VAR_REGEX = /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/;
+import {
+  extractMergeFieldNames,
+  replaceMergeFields,
+  MERGE_FIELD_REGEX_SOURCE,
+} from "@/lib/placeholders";
+import { escapeHtml } from "@/lib/placeholders/escapeHtml";
 
 /**
  * Extract all {{variableName}} patterns from HTML.
  * Returns unique variable names in order of first appearance.
  */
 export function extractVariables(html: string): string[] {
-  const seen = new Set<string>();
-  const results: string[] = [];
-  const regex = new RegExp(VAR_REGEX.source, "g");
-  let match;
-  while ((match = regex.exec(html)) !== null) {
-    const name = match[1];
-    if (!seen.has(name)) {
-      seen.add(name);
-      results.push(name);
-    }
-  }
-  return results;
+  return extractMergeFieldNames(html);
 }
 
-/**
- * Replace {{variableName}} with actual values from a data row.
- * Missing variables are replaced with a red placeholder span.
- */
+/** @deprecated Use replaceMergeFields from @/lib/placeholders */
 export function replaceVariables(
   html: string,
   variables: TemplateVariable[],
   dataRow: Record<string, string>
 ): string {
-  const regex = new RegExp(VAR_REGEX.source, "g");
-  return html.replace(regex, (match, name) => {
-    const value = dataRow[name] ?? variables.find((v) => v.name === name)?.value;
-    if (value === undefined || value === null) {
-      return `<span style="color:#dc2626;background:#fee2e2;padding:0 4px;border-radius:2px;font-size:12px;">[${name}]</span>`;
-    }
-    return escapeHtml(value);
-  });
+  return replaceMergeFields(html, variables, dataRow, { mode: "preview" });
 }
 
 /**
@@ -83,7 +66,7 @@ export function expandRepeatingRows(
         clone.removeAttribute("data-repeat");
         // Replace variables in the clone's HTML
         clone.innerHTML = clone.innerHTML.replace(
-          new RegExp(VAR_REGEX.source, "g"),
+          new RegExp(MERGE_FIELD_REGEX_SOURCE, "g"),
           (_match: string, name: string) => {
             const variable = usedVars.find((v) => v.name === name);
             if (!variable || !variable.listValues) return `{{${name}}}`;
@@ -115,7 +98,7 @@ export function expandRepeatingRows(
     for (let i = 0; i < maxCount; i++) {
       const newRow = fullRowMatch
         .replace(/\s*data-repeat=["']true["']/i, "")
-        .replace(new RegExp(VAR_REGEX.source, "g"), (match: string, name: string) => {
+        .replace(new RegExp(MERGE_FIELD_REGEX_SOURCE, "g"), (match: string, name: string) => {
           const variable = usedVars.find((v) => v.name === name);
           if (!variable || !variable.listValues) return match;
           return escapeHtml(variable.listValues[i] ?? "");
@@ -159,16 +142,7 @@ export function processTemplate(
   let html = expandRepeatingRows(templateHtml, variables);
 
   // Step 2: replace simple variables
-  html = replaceVariables(html, variables, dataRow);
+  html = replaceMergeFields(html, variables, dataRow, { mode: "preview" });
 
   return { html, warnings };
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }

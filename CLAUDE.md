@@ -18,6 +18,12 @@ npm test             # vitest run (193 tests across 15 files)
 npm run lint
 ```
 
+## Documentation
+
+| Topic | File |
+|---|---|
+| Placeholder system (`{{variables}}`, page tokens, panel, export health) | [`docs/placeholder-system.md`](./docs/placeholder-system.md) |
+
 ## Stack
 
 | Layer | Library | Notes |
@@ -116,6 +122,9 @@ src/
 │   ├── pagination/
 │   │   ├── engine.ts             # PaginationEngine: ResizeObserver + overflow detection
 │   │   └── splitter.ts           # ProseMirror transaction builders for page splits
+│   ├── placeholders/             # Registry: merge fields, page tokens, resolve, export health
+│   │   ├── registry.ts, resolve.ts, mergeFields.ts, pageTokens.ts, …
+│   │   └── See docs/placeholder-system.md
 │   ├── tiptap/
 │   │   ├── paragraphFormat.ts    # ParagraphFormatExtension: marginLeft/Right, textIndent,
 │   │   │                         #   spaceBefore/After, lineHeight/lineHeightMode
@@ -382,6 +391,13 @@ Numbers update automatically when `splitPage` / `mergePage` commands renumber no
 - Phase 1 scope: paragraph-level splitting. Tables/images that overflow move to next page as atomic units.
 - **Goal**: Editor displays pages visually separated like Microsoft Word, with content flowing automatically across pages in real-time.
 - **Constraint**: Must remain static client-side; no server rendering or API routes.
+
+## Placeholder System
+
+Unified placeholders for merge fields (`{{name}}`), page tokens (`{page}`, `{total}`, `{date}`), empty-state hints, the Placeholder panel (View ribbon), live header/footer chrome on the canvas, inline fill-in fields, and export health checks.
+
+- **Code:** `src/lib/placeholders/`, `PlaceholderPanel.tsx`, `PageChromeLayer.tsx`, `placeholderField.ts`
+- **Full guide:** [`docs/placeholder-system.md`](./docs/placeholder-system.md) — architecture, modules, UI entry points, export order, testing, roadmap
 
 ## Adding features
 

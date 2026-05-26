@@ -8,6 +8,7 @@ import {
   SpellCheck,
   Keyboard,
   BookOpen,
+  Braces,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -27,6 +28,7 @@ export function RibbonTabView({ editor }: { editor: Editor | null }) {
   const toggleFullscreen = useUiStore((s) => s.toggleFullscreen);
   const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
   const toggleSpellcheck = useEditorStore((s) => s.toggleSpellcheck);
+  const openPlaceholderPanel = useUiStore((s) => s.openPlaceholderPanel);
 
   return (
     <>
@@ -56,6 +58,9 @@ export function RibbonTabView({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="คีย์ลัด" onClick={dispatchOpenShortcuts}>
           <Keyboard className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="Placeholder" onClick={openPlaceholderPanel}>
+          <Braces className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 

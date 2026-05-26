@@ -54,7 +54,7 @@ describe("replaceVariables", () => {
     const html = "{{missing}}";
     const result = replaceVariables(html, [], {});
     expect(result).toContain("missing");
-    expect(result).toContain("dc2626"); // red color
+    expect(result).toContain("placeholder-missing");
   });
 
   it("escapes HTML in values", () => {

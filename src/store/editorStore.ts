@@ -18,6 +18,7 @@ import type {
   DataSet,
   PageSetup,
 } from "@/types";
+import type { ExportMissingPolicy } from "@/lib/placeholders";
 
 const MAX_HISTORY = 20;
 const AUTO_SNAPSHOT_IDLE_MS = 120_000; // 2 minutes idle
@@ -64,6 +65,10 @@ interface EditorState {
   variables: TemplateVariable[];
   dataSet: DataSet | null;
   previewMode: "edit" | "preview";
+  /** Content-control values keyed by fieldId (session-only). */
+  fieldValues: Record<string, string>;
+  /** How missing {{vars}} appear in export output. */
+  exportMissingPolicy: ExportMissingPolicy;
   // image compression
   autoCompressImages: boolean;
   // spellcheck
@@ -97,6 +102,8 @@ interface EditorState {
   setVariables: (variables: TemplateVariable[] | ((prev: TemplateVariable[]) => TemplateVariable[])) => void;
   setDataSet: (dataSet: DataSet | null) => void;
   setPreviewMode: (mode: "edit" | "preview") => void;
+  setFieldValue: (fieldId: string, value: string) => void;
+  setExportMissingPolicy: (policy: ExportMissingPolicy) => void;
 }
 
 const DEFAULT_CLEANERS: CleanerKey[] = ["removeInlineStyles", "removeEmptyTags"];
@@ -119,6 +126,8 @@ export const useEditorStore = create<EditorState>()(
       variables: [],
       dataSet: null,
       previewMode: "edit",
+      fieldValues: {},
+      exportMissingPolicy: "bracket",
       autoCompressImages: true,
       spellcheckEnabled: true,
       _autoSnapshotTimer: null,
@@ -211,6 +220,7 @@ export const useEditorStore = create<EditorState>()(
           lastLoadWarnings: [],
           pendingExportFormat: null,
           lastEditAt: 0,
+          fieldValues: {},
         }),
 
       saveSnapshot: () => {
@@ -286,6 +296,11 @@ export const useEditorStore = create<EditorState>()(
       setVariables: (variables) => set((state) => ({ variables: typeof variables === "function" ? variables(state.variables) : variables })),
       setDataSet: (dataSet) => set({ dataSet }),
       setPreviewMode: (previewMode) => set({ previewMode }),
+      setFieldValue: (fieldId, value) =>
+        set((state) => ({
+          fieldValues: { ...state.fieldValues, [fieldId]: value },
+        })),
+      setExportMissingPolicy: (exportMissingPolicy) => set({ exportMissingPolicy }),
     }),
     {
       name: "wordhtml-editor",
@@ -314,6 +329,7 @@ export const useEditorStore = create<EditorState>()(
         dataSet: state.dataSet,
         autoCompressImages: state.autoCompressImages,
         spellcheckEnabled: state.spellcheckEnabled,
+        exportMissingPolicy: state.exportMissingPolicy,
       }),
     }
   )

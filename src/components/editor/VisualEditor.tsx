@@ -17,6 +17,7 @@ import { PageBodyNode } from "@/lib/tiptap/pageBody";
 import { PageHeaderNode } from "@/lib/tiptap/pageHeader";
 import { PageFooterNode } from "@/lib/tiptap/pageFooter";
 import { PageCommands } from "@/lib/tiptap/pageCommands";
+import { PlaceholderField } from "@/lib/tiptap/placeholderField";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -33,6 +34,13 @@ import FontFamily from "@tiptap/extension-font-family";
 import { VariableSuggestion } from "@/lib/tiptap/variableSuggestionExtension";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
+import { getEmptyStateConfig, isDocumentEmpty } from "@/lib/placeholders";
+import {
+  editorEmptyPlaceholderText,
+  setEditorEmptyPlaceholderText,
+} from "@/lib/editorEmptyPlaceholder";
+import { dispatchOpenFile } from "@/lib/events";
 import { Upload, FileText, Keyboard, Braces } from "lucide-react";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { cleanPastedHtml } from "@/lib/conversion/pasteCleanup";
@@ -83,8 +91,22 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const setHtml = useEditorStore((s) => s.setHtml);
   const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
+  const templateMode = useEditorStore((s) => s.templateMode);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const dataSet = useEditorStore((s) => s.dataSet);
+  const lastLoadWarnings = useEditorStore((s) => s.lastLoadWarnings);
+  const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
+  const openPlaceholderPanel = useUiStore((s) => s.openPlaceholderPanel);
 
-  const isEmpty = documentHtml.trim().length === 0;
+  const isEmpty = isDocumentEmpty(documentHtml);
+  const emptyState = getEmptyStateConfig({
+    documentHtml,
+    templateMode,
+    previewMode,
+    hasDataSet: Boolean(dataSet),
+    dataSetRowIndex: dataSet?.currentRowIndex,
+    lastLoadWarnings,
+  });
 
   // Tracks the last HTML the editor itself emitted, so we can ignore store
   // updates that originated from the editor (e.g., when the source pane
@@ -110,7 +132,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       }),
       createImageWithAlign(ImageResizeView),
       Placeholder.configure({
-        placeholder: "พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…",
+        placeholder: () => editorEmptyPlaceholderText,
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -143,6 +165,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       PageHeaderNode,
       PageFooterNode,
       PageCommands,
+      PlaceholderField,
     ],
     []
   );
@@ -290,6 +313,12 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   }, [editor]);
 
   useEffect(() => {
+    setEditorEmptyPlaceholderText(emptyState.tiptapPlaceholder);
+    if (!editor) return;
+    editor.view.dispatch(editor.state.tr);
+  }, [emptyState.tiptapPlaceholder, editor]);
+
+  useEffect(() => {
     if (!editor) return;
     if (documentHtml === lastWrittenHtml.current) return;
     const editorHtml = unwrapPageNode(editor.getHTML());
@@ -331,17 +360,40 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   return (
     <>
       <span id="editor-placeholder" className="sr-only">
-        พิมพ์ วางจาก Word หรืออัปโหลดไฟล์ .docx เพื่อเริ่มต้น…
+        {emptyState.srOnlyDescription}
       </span>
       <EditorContent editor={editor} className="h-full" aria-label="เนื้อหาเอกสาร (Document content)" />
-      {isEmpty && <EmptyHint />}
+      {isEmpty && emptyState.showEmptyHint && (
+        <EmptyHint
+          config={emptyState}
+          onOpenFile={dispatchOpenFile}
+          onPreview={() => setPreviewMode("preview")}
+          onOpenVariables={openPlaceholderPanel}
+        />
+      )}
     </>
   );
 }
 
-function EmptyHint() {
+function EmptyHint({
+  config,
+  onOpenFile,
+  onPreview,
+  onOpenVariables,
+}: {
+  config: ReturnType<typeof getEmptyStateConfig>;
+  onOpenFile: () => void;
+  onPreview: () => void;
+  onOpenVariables: () => void;
+}) {
+  const handleAction = (action: string) => {
+    if (action === "open-file") onOpenFile();
+    if (action === "preview") onPreview();
+    if (action === "variables") onOpenVariables();
+  };
+
   return (
-    <div className="mt-12 flex flex-col items-center gap-4 text-center select-none pointer-events-none" aria-hidden="true">
+    <div className="mt-12 flex flex-col items-center gap-4 text-center select-none" aria-hidden="true">
       <div className="flex items-center gap-6 text-[color:var(--color-muted-foreground)]">
         <div className="flex flex-col items-center gap-1.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
@@ -371,9 +423,35 @@ function EmptyHint() {
       <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
         Ctrl+O เปิดไฟล์ · ลากวางไฟล์ที่นี่ · Ctrl+Shift+N เอกสารใหม่
       </p>
-      <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-        พิมพ์ {"{{ชื่อตัวแปร}}"} เพื่อสร้างตัวแปร · เปิดโหมด Template ที่เมนูมุมมอง
-      </p>
+      {config.hintTitle && (
+        <p className="text-sm font-medium text-[color:var(--color-foreground)]">
+          {config.hintTitle}
+        </p>
+      )}
+      {config.hintSubtitle && (
+        <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+          {config.hintSubtitle}
+        </p>
+      )}
+      {config.actions && config.actions.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-2 pointer-events-auto">
+          {config.actions.map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => handleAction(action.action)}
+              className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5 text-[11px] font-medium shadow-sm hover:bg-[color:var(--color-muted)]"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {config.variant === "default" && (
+        <p className="text-[11px] text-[color:var(--color-muted-foreground)] pointer-events-none">
+          พิมพ์ {"{{ชื่อตัวแปร}}"} เพื่อสร้างตัวแปร · เปิดแผง Placeholder ที่เมนูมุมมอง
+        </p>
+      )}
     </div>
   );
 }

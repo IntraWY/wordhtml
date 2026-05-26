@@ -35,6 +35,8 @@ import { addEventListener, removeEventListener } from "@/lib/events";
 import { PaginationManager } from "./PaginationManager";
 import { EditorContextMenu } from "./EditorContextMenu";
 import { Tour } from "@/components/onboarding/Tour";
+import { PageChromeLayer } from "./PageChromeLayer";
+import { PlaceholderPanel } from "./PlaceholderPanel";
 
 export function EditorShell() {
   const editorRef = useRef<Editor | null>(null);
@@ -74,8 +76,11 @@ export function EditorShell() {
   useBeforeUnload();
   const { articleRef, contentHeight } = useEditorResize();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [headerFooterReservePx, setHeaderFooterReservePx] = useState(0);
+  const placeholderPanelOpen = useUiStore((s) => s.placeholderPanelOpen);
   const { pageCount, currentPage, goToPage } = usePagination(editor, pageSetup, {
     scrollContainerRef,
+    headerFooterReservePx,
   });
   const currentPageRef = useRef(currentPage);
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
@@ -302,6 +307,15 @@ export function EditorShell() {
                         >
                           <VisualEditor onEditorReady={onEditorReady} />
                         </PageCanvas>
+                        {previewMode !== "preview" && (
+                          <PageChromeLayer
+                            pagesRootRef={articleRef as React.RefObject<HTMLElement>}
+                            scrollContainerRef={scrollContainerRef}
+                            pageSetup={pageSetup}
+                            pageCount={pageCount}
+                            onReserveHeightChange={setHeaderFooterReservePx}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -315,6 +329,7 @@ export function EditorShell() {
             {sourceOpen && <SourcePane />}
           </div>
           {templateMode && <VariablePanel />}
+          {placeholderPanelOpen && <PlaceholderPanel editor={editor} />}
         </main>
 
         {isDragging && (

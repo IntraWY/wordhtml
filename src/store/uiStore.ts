@@ -14,6 +14,7 @@ interface UiState {
   batchConvertOpen: boolean;
   headerFooterOpen: boolean;
   paragraphOpen: boolean;
+  placeholderPanelOpen: boolean;
   lastAction: string | null;
 
   openExportDialog: () => void;
@@ -36,6 +37,8 @@ interface UiState {
   closeHeaderFooter: () => void;
   openParagraph: () => void;
   closeParagraph: () => void;
+  openPlaceholderPanel: () => void;
+  closePlaceholderPanel: () => void;
   setLastAction: (action: string | null) => void;
 }
 
@@ -51,6 +54,7 @@ export const useUiStore = create<UiState>()((set) => ({
   batchConvertOpen: false,
   headerFooterOpen: false,
   paragraphOpen: false,
+  placeholderPanelOpen: false,
   lastAction: null,
 
   openExportDialog: () => set({ exportDialogOpen: true }),
@@ -73,5 +77,7 @@ export const useUiStore = create<UiState>()((set) => ({
   closeHeaderFooter: () => set({ headerFooterOpen: false }),
   openParagraph: () => set({ paragraphOpen: true }),
   closeParagraph: () => set({ paragraphOpen: false }),
+  openPlaceholderPanel: () => set({ placeholderPanelOpen: true }),
+  closePlaceholderPanel: () => set({ placeholderPanelOpen: false }),
   setLastAction: (lastAction) => set({ lastAction }),
 }));

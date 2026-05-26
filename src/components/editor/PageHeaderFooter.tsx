@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
-import { replaceVariables } from "@/lib/variables";
+import { replacePageTokens } from "@/lib/placeholders";
 
 export interface PageHeaderFooterProps {
   pageNumber: number;
@@ -14,7 +14,8 @@ export interface PageHeaderFooterProps {
   className?: string;
 }
 
-export { replaceVariables };
+/** @deprecated Use replacePageTokens from @/lib/placeholders */
+export { replacePageTokens as replaceVariables };
 
 /**
  * Resolves the correct header/footer HTML for a given page number
@@ -60,11 +61,17 @@ export function PageHeaderFooter({
   className,
 }: PageHeaderFooterProps) {
   const replacedHeader = useMemo(
-    () => sanitizeHtml(headerHtml ? replaceVariables(headerHtml, pageNumber, totalPages) : ""),
+    () =>
+      sanitizeHtml(
+        headerHtml ? replacePageTokens(headerHtml, { pageNumber, totalPages }) : ""
+      ),
     [headerHtml, pageNumber, totalPages]
   );
   const replacedFooter = useMemo(
-    () => sanitizeHtml(footerHtml ? replaceVariables(footerHtml, pageNumber, totalPages) : ""),
+    () =>
+      sanitizeHtml(
+        footerHtml ? replacePageTokens(footerHtml, { pageNumber, totalPages }) : ""
+      ),
     [footerHtml, pageNumber, totalPages]
   );
 
