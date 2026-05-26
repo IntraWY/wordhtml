@@ -79,6 +79,8 @@ interface EditorState {
   autoSave: AutoSaveSettings;
   /** Internal auto-snapshot timer (not persisted). */
   _autoSnapshotTimer: ReturnType<typeof setTimeout> | null;
+  /** Bumped on bulk external HTML loads (snapshot/file/reset) — not persisted. */
+  htmlSyncRevision: number;
   // actions
   setHtml: (html: string, options?: { debounce?: boolean }) => void;
   /** Commit any debounced HTML before save/export/unload. */
@@ -165,6 +167,7 @@ export const useEditorStore = create<EditorState>()(
       spellcheckEnabled: true,
       autoSave: DEFAULT_AUTO_SAVE,
       _autoSnapshotTimer: null,
+      htmlSyncRevision: 0,
 
       scheduleAutoSnapshot: () => {
         const state = get();
@@ -291,12 +294,13 @@ export const useEditorStore = create<EditorState>()(
           } else {
             throw new Error("ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, หรือ .md");
           }
-          set({
+          set((state) => ({
             documentHtml: html,
             fileName: name,
             isLoadingFile: false,
             lastLoadWarnings: warnings,
-          });
+            htmlSyncRevision: state.htmlSyncRevision + 1,
+          }));
         } catch (error: unknown) {
           const message =
             error instanceof Error ? error.message : "ไม่สามารถอ่านไฟล์ได้";
@@ -306,7 +310,7 @@ export const useEditorStore = create<EditorState>()(
       reset: () => {
         clearHtmlDebounce();
         pendingDocumentHtml = null;
-        set({
+        set((state) => ({
           documentHtml: "",
           fileName: null,
           loadError: null,
@@ -316,7 +320,8 @@ export const useEditorStore = create<EditorState>()(
           fieldValues: {},
           dataSet: null,
           previewMode: "edit",
-        });
+          htmlSyncRevision: state.htmlSyncRevision + 1,
+        }));
       },
 
       saveSnapshot: (options) => {
@@ -355,15 +360,23 @@ export const useEditorStore = create<EditorState>()(
       },
 
       loadSnapshot: (id) => {
+        const t0 = performance.now();
         const { history } = get();
         const snap = history.find((s) => s.id === id);
         if (!snap) return;
         clearHtmlDebounce();
         pendingDocumentHtml = null;
-        set({
+        set((state) => ({
           documentHtml: snap.html,
           fileName: snap.fileName,
+          htmlSyncRevision: state.htmlSyncRevision + 1,
+        }));
+        // #region agent log
+        debugPerfLog("A", "editorStore.ts:loadSnapshot", "snapshot loaded to store", {
+          htmlLen: snap.html.length,
+          storeMs: Math.round((performance.now() - t0) * 100) / 100,
         });
+        // #endregion
       },
 
       duplicateSnapshot: (id) => {

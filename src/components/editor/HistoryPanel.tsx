@@ -1,8 +1,8 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState, useEffect, useRef } from "react";
-import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash, Pencil } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash, Pencil, Loader2 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
@@ -30,6 +30,31 @@ export function HistoryPanel() {
   const deleteSnapshot = useEditorStore((s) => s.deleteSnapshot);
   const renameSnapshot = useEditorStore((s) => s.renameSnapshot);
   const clearHistory = useEditorStore((s) => s.clearHistory);
+  const htmlSyncRevision = useEditorStore((s) => s.htmlSyncRevision);
+
+  const [loadingSnapshotId, setLoadingSnapshotId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  const pendingLoadIdRef = useRef<string | null>(null);
+
+  const handleLoadSnapshot = useCallback(
+    (id: string) => {
+      pendingLoadIdRef.current = id;
+      setLoadingSnapshotId(id);
+      startTransition(() => {
+        loadSnapshot(id);
+      });
+    },
+    [loadSnapshot]
+  );
+
+  useEffect(() => {
+    if (!pendingLoadIdRef.current) return;
+    const timer = window.setTimeout(() => {
+      setLoadingSnapshotId(null);
+      pendingLoadIdRef.current = null;
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [htmlSyncRevision]);
 
   return (
     <Dialog.Root open={open} onOpenChange={(o) => !o && close()}>
@@ -94,7 +119,8 @@ export function HistoryPanel() {
                   <SnapshotRow
                     key={snap.id}
                     snap={snap}
-                    onLoad={() => loadSnapshot(snap.id)}
+                    loading={loadingSnapshotId === snap.id}
+                    onLoad={() => handleLoadSnapshot(snap.id)}
                     onDuplicate={() => duplicateSnapshot(snap.id)}
                     onDelete={() => deleteSnapshot(snap.id)}
                     onRename={(name) => renameSnapshot(snap.id, name)}
@@ -117,13 +143,21 @@ export function HistoryPanel() {
 
 interface SnapshotRowProps {
   snap: DocumentSnapshot;
+  loading?: boolean;
   onLoad: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onRename: (name: string | null) => void;
 }
 
-function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: SnapshotRowProps) {
+function SnapshotRow({
+  snap,
+  loading = false,
+  onLoad,
+  onDuplicate,
+  onDelete,
+  onRename,
+}: SnapshotRowProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(snap.fileName ?? "");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -154,7 +188,12 @@ function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: Snapshot
   }, [editing]);
 
   return (
-    <li className="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]">
+    <li
+      className={cn(
+        "group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]",
+        loading && "opacity-70"
+      )}
+    >
       <FileText className="size-8 shrink-0 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-1.5 text-[color:var(--color-muted-foreground)]" />
       <div className="min-w-0 flex-1">
         {editing ? (
@@ -174,8 +213,9 @@ function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: Snapshot
           <button
             type="button"
             onClick={onLoad}
+            disabled={loading}
             title="โหลดเอกสารนี้"
-            className="block w-full truncate text-left text-sm font-medium hover:underline"
+            className="block w-full truncate text-left text-sm font-medium hover:underline disabled:cursor-wait disabled:no-underline"
           >
             {displayName}
           </button>
@@ -185,18 +225,29 @@ function SnapshotRow({ snap, onLoad, onDuplicate, onDelete, onRename }: Snapshot
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        <ActionBtn label="เปลี่ยนชื่อ" onClick={startEdit}>
-          <Pencil className="size-3.5" />
-        </ActionBtn>
-        <ActionBtn label="โหลดเอกสาร" onClick={onLoad}>
-          <RotateCcw className="size-3.5" />
-        </ActionBtn>
-        <ActionBtn label="ทำสำเนา" onClick={onDuplicate}>
-          <Copy className="size-3.5" />
-        </ActionBtn>
-        <ActionBtn label="ลบ" onClick={onDelete} danger>
-          <Trash2 className="size-3.5" />
-        </ActionBtn>
+        {loading ? (
+          <span
+            className="grid h-8 w-8 place-items-center text-[color:var(--color-muted-foreground)]"
+            aria-label="กำลังโหลดเอกสาร"
+          >
+            <Loader2 className="size-4 animate-spin" />
+          </span>
+        ) : (
+          <>
+            <ActionBtn label="เปลี่ยนชื่อ" onClick={startEdit}>
+              <Pencil className="size-3.5" />
+            </ActionBtn>
+            <ActionBtn label="โหลดเอกสาร" onClick={onLoad}>
+              <RotateCcw className="size-3.5" />
+            </ActionBtn>
+            <ActionBtn label="ทำสำเนา" onClick={onDuplicate}>
+              <Copy className="size-3.5" />
+            </ActionBtn>
+            <ActionBtn label="ลบ" onClick={onDelete} danger>
+              <Trash2 className="size-3.5" />
+            </ActionBtn>
+          </>
+        )}
       </div>
     </li>
   );

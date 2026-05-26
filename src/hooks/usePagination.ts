@@ -12,6 +12,7 @@ import {
 import { buildSplitTransaction } from "@/lib/pagination/splitter";
 import { isLiveEditor } from "@/lib/editorLive";
 import { debugPerfLog } from "@/lib/debugPerfLog";
+import { useEditorStore } from "@/store/editorStore";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -52,6 +53,8 @@ const STABLE_DELAY_MS = 150;
 const PAGE_SCROLL_OFFSET_PX = 24;
 /** Wait for typing to pause before measuring/splitting pages. */
 const PAGINATION_TYPING_IDLE_MS = 450;
+/** Wait for bulk HTML loads (snapshot/file) before measuring pages. */
+const BULK_LOAD_PAGINATION_PAUSE_MS = 750;
 const RESIZE_DEBOUNCE_MS = 150;
 
 /* ------------------------------------------------------------------ */
@@ -65,6 +68,7 @@ export function usePagination(
 ): UsePaginationResult {
   const { debounceMs = DEFAULT_DEBOUNCE_MS, scrollContainerRef } = options;
   const { headerFooterReservePx, atomicTags, tolerancePx } = options;
+  const htmlSyncRevision = useEditorStore((s) => s.htmlSyncRevision);
 
   const [isPaginating, setIsPaginating] = useState(false);
   const [pageCount, setPageCount] = useState(1);
@@ -220,6 +224,21 @@ export function usePagination(
       engineRef.current = null;
     };
   }, [editor, pageSetup, headerFooterReservePx, atomicTags, tolerancePx, scheduleStableCheck]);
+
+  /* -- defer pagination after bulk HTML load (snapshot / file open) -- */
+
+  useEffect(() => {
+    if (htmlSyncRevision === 0) return;
+    engineRef.current?.pauseFor(BULK_LOAD_PAGINATION_PAUSE_MS);
+    // #region agent log
+    debugPerfLog(
+      "B",
+      "usePagination.ts:bulkLoadPause",
+      "pagination paused after bulk html load",
+      { pauseMs: BULK_LOAD_PAGINATION_PAUSE_MS, htmlSyncRevision }
+    );
+    // #endregion
+  }, [htmlSyncRevision]);
 
   /* -- editor updates -- */
 

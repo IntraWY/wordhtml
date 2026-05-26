@@ -95,6 +95,7 @@ function unwrapPageNode(html: string): string {
 
 export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
+  const htmlSyncRevision = useEditorStore((s) => s.htmlSyncRevision);
   const setHtml = useEditorStore((s) => s.setHtml);
   const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
   const templateMode = useEditorStore((s) => s.templateMode);
@@ -118,6 +119,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   // updates that originated from the editor (e.g., when the source pane
   // mirrors the editor, we don't want to re-set content and lose the cursor).
   const lastWrittenHtml = useRef<string>("");
+  const lastSyncedRevision = useRef(0);
   const editorRef = useRef<Editor | null>(null);
 
   const extensions = useMemo(
@@ -340,11 +342,41 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   useEffect(() => {
     if (!isLiveEditor(editor)) return;
     if (documentHtml === lastWrittenHtml.current) return;
-    const editorHtml = unwrapPageNode(editor.getHTML());
-    if (documentHtml === editorHtml) return;
-    editor.commands.setContent(wrapInPageNode(documentHtml || ""), { emitUpdate: false });
-    lastWrittenHtml.current = documentHtml;
-  }, [documentHtml, editor]);
+
+    const isExternalLoad = htmlSyncRevision > lastSyncedRevision.current;
+    if (!isExternalLoad) {
+      const editorHtml = unwrapPageNode(editor.getHTML());
+      if (documentHtml === editorHtml) return;
+    }
+
+    const wrapped = wrapInPageNode(documentHtml || "");
+    let cancelled = false;
+
+    const applyContent = () => {
+      if (cancelled || !isLiveEditor(editor)) return;
+      const t0 = performance.now();
+      editor.commands.setContent(wrapped, { emitUpdate: false });
+      lastWrittenHtml.current = documentHtml;
+      lastSyncedRevision.current = htmlSyncRevision;
+      // #region agent log
+      debugPerfLog("A", "VisualEditor.tsx:setContent", "external html applied", {
+        setContentMs: Math.round((performance.now() - t0) * 100) / 100,
+        htmlLen: documentHtml.length,
+        isExternalLoad,
+      });
+      // #endregion
+    };
+
+    if (isExternalLoad) {
+      requestAnimationFrame(applyContent);
+    } else {
+      applyContent();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [documentHtml, editor, htmlSyncRevision]);
 
   useEffect(() => {
     onEditorReady?.(editor ?? null);

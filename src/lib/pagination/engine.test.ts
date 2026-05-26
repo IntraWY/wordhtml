@@ -1,6 +1,7 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { calculatePageMetrics, measurePageBodies } from "./engine";
+import { describe, it, expect, afterEach, vi, beforeEach } from "vitest";
+import { calculatePageMetrics, measurePageBodies, PaginationEngine } from "./engine";
 import type { PageSetup } from "@/types";
+import type { Editor } from "@tiptap/react";
 
 const pageSetup: PageSetup = {
   size: "A4",
@@ -39,5 +40,36 @@ describe("measurePageBodies", () => {
     const metrics = calculatePageMetrics(pageSetup);
     const overflows = measurePageBodies(document, metrics.contentHeightPx);
     expect(overflows).toHaveLength(0);
+  });
+});
+
+describe("PaginationEngine.pauseFor", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("skips scheduleCheck while paused", () => {
+    let now = 1000;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+
+    const editor = {
+      view: { dom: { ownerDocument: document } },
+    } as unknown as Editor;
+    const onSplit = vi.fn();
+    const engine = new PaginationEngine(
+      editor,
+      { pageSetup },
+      { onSplit }
+    );
+    engine.pauseFor(500);
+    now = 1200;
+    engine.scheduleCheck();
+    vi.advanceTimersByTime(200);
+    expect(onSplit).not.toHaveBeenCalled();
+    engine.destroy();
   });
 });

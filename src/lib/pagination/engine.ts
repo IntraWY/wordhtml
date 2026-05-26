@@ -293,6 +293,7 @@ export class PaginationEngine {
   private isDestroyed = false;
   private lastSplitCount = 0;
   private stableCallScheduled = false;
+  private pausedUntil = 0;
 
   constructor(
     editor: Editor,
@@ -310,6 +311,11 @@ export class PaginationEngine {
     if (this.isDestroyed) return;
     this.setupObserver();
     this.setupPollingFallback();
+  }
+
+  /** Skip measure/split passes until `performance.now()` passes this deadline. */
+  pauseFor(ms: number): void {
+    this.pausedUntil = performance.now() + ms;
   }
 
   destroy(): void {
@@ -374,6 +380,7 @@ export class PaginationEngine {
   /* -- checking -- */
 
   public scheduleCheck(): void {
+    if (performance.now() < this.pausedUntil) return;
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
@@ -389,6 +396,7 @@ export class PaginationEngine {
    */
   checkAllPages(): void {
     if (this.isDestroyed) return;
+    if (performance.now() < this.pausedUntil) return;
 
     const t0 = typeof performance !== "undefined" ? performance.now() : 0;
     const metrics = calculatePageMetrics(
