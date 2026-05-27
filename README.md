@@ -65,7 +65,8 @@ Optional Firebase env vars for cloud templates (see [`.env.example`](./.env.exam
 |---|---|
 | [`CLAUDE.md`](./CLAUDE.md) | Architecture, conventions, pagination, and how to extend |
 | [`docs/placeholder-system.md`](./docs/placeholder-system.md) | Placeholder registry, `{{variables}}`, header/footer tokens, panel, export health |
-| [`docs/firebase-cloud-sync-design.md`](./docs/firebase-cloud-sync-design.md) | History vs Templates storage, planned Auth + cross-device sync |
+| [`docs/firebase-cloud-sync-design.md`](./docs/firebase-cloud-sync-design.md) | History vs Templates storage, Auth + cross-device sync |
+| [`docs/deploy-firebase.md`](./docs/deploy-firebase.md) | Firebase Console + rules deploy checklist |
 
 ## Privacy
 

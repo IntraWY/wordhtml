@@ -2,7 +2,13 @@
 
 import { useEffect } from "react";
 
-import { setCloudHistoryUid } from "@/lib/cloudHistoryBridge";
+import {
+  setCloudHistoryUid,
+  isCloudHistoryMergePaused,
+  hasUploadedHistoryThisSession,
+  markHistoryUploadedThisSession,
+  clearHistoryUploadSession,
+} from "@/lib/cloudHistoryBridge";
 import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import {
   subscribeSnapshots,
@@ -33,17 +39,23 @@ export function useCloudHistorySync(): void {
     setCloudSyncStatus("syncing");
 
     const local = useEditorStore.getState().history;
-    void uploadLocalSnapshotsToCloud(uid, local).catch((err) => {
-      if (!cancelled) {
-        const message = err instanceof Error ? err.message : "Upload failed";
-        setCloudSyncStatus("error", message);
-      }
-    });
+    if (!hasUploadedHistoryThisSession(uid) && local.length > 0) {
+      void uploadLocalSnapshotsToCloud(uid, local)
+        .then(() => {
+          if (!cancelled) markHistoryUploadedThisSession(uid);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            const message = err instanceof Error ? err.message : "Upload failed";
+            setCloudSyncStatus("error", message);
+          }
+        });
+    }
 
     const unsub = subscribeSnapshots(
       uid,
       (remote) => {
-        if (cancelled) return;
+        if (cancelled || isCloudHistoryMergePaused()) return;
         const current = useEditorStore.getState().history;
         const merged = mergeSnapshots(current, remote);
         useEditorStore.setState({ history: merged });
@@ -61,6 +73,7 @@ export function useCloudHistorySync(): void {
       unsub();
       setCloudHistoryUid(null);
       setCloudSyncStatus("idle");
+      if (uid) clearHistoryUploadSession(uid);
     };
   }, [user?.uid, authReady, setCloudSyncStatus]);
 }

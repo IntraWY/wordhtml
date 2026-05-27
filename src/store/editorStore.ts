@@ -23,7 +23,10 @@ import type {
 import { DEFAULT_AUTO_SAVE } from "@/types";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import type { ExportMissingPolicy } from "@/lib/placeholders";
-import { getCloudHistoryUid } from "@/lib/cloudHistoryBridge";
+import {
+  getCloudHistoryUid,
+  setPauseCloudHistoryMerge,
+} from "@/lib/cloudHistoryBridge";
 import {
   saveSnapshotToCloud,
   deleteSnapshotFromCloud,
@@ -44,16 +47,6 @@ function syncSnapshotToCloud(snapshot: DocumentSnapshot): void {
   });
 }
 
-function syncDeleteFromCloud(id: string): void {
-  const uid = getCloudHistoryUid();
-  if (!uid) return;
-  void deleteSnapshotFromCloud(uid, id).catch(() => {
-    useToastStore
-      .getState()
-      .show("ไม่สามารถลบประวัติบนคลาวด์ได้", "warning");
-  });
-}
-
 function syncRenameInCloud(id: string, fileName: string | null): void {
   const uid = getCloudHistoryUid();
   if (!uid) return;
@@ -64,14 +57,19 @@ function syncRenameInCloud(id: string, fileName: string | null): void {
   });
 }
 
-function syncClearCloud(): void {
-  const uid = getCloudHistoryUid();
-  if (!uid) return;
-  void clearSnapshotsInCloud(uid).catch(() => {
+async function clearCloudHistory(uid: string): Promise<boolean> {
+  setPauseCloudHistoryMerge(true);
+  try {
+    await clearSnapshotsInCloud(uid);
+    return true;
+  } catch {
     useToastStore
       .getState()
       .show("ไม่สามารถล้างประวัติบนคลาวด์ได้", "warning");
-  });
+    return false;
+  } finally {
+    setPauseCloudHistoryMerge(false);
+  }
 }
 
 const DEFAULT_PAGE_SETUP: PageSetup = {
@@ -154,7 +152,7 @@ interface EditorState {
   duplicateSnapshot: (id: string) => void;
   deleteSnapshot: (id: string) => void;
   renameSnapshot: (id: string, fileName: string | null) => void;
-  clearHistory: () => void;
+  clearHistory: () => Promise<void>;
   // template actions
   toggleTemplateMode: () => void;
   setVariables: (variables: TemplateVariable[] | ((prev: TemplateVariable[]) => TemplateVariable[])) => void;
@@ -443,11 +441,21 @@ export const useEditorStore = create<EditorState>()(
         syncSnapshotToCloud(duplicate);
       },
 
-      deleteSnapshot: (id) => {
+      deleteSnapshot: async (id) => {
+        const uid = getCloudHistoryUid();
+        if (uid) {
+          try {
+            await deleteSnapshotFromCloud(uid, id);
+          } catch {
+            useToastStore
+              .getState()
+              .show("ไม่สามารถลบประวัติบนคลาวด์ได้", "warning");
+            return;
+          }
+        }
         set((state) => ({
           history: state.history.filter((s) => s.id !== id),
         }));
-        syncDeleteFromCloud(id);
       },
 
       renameSnapshot: (id, fileName) => {
@@ -460,9 +468,13 @@ export const useEditorStore = create<EditorState>()(
         syncRenameInCloud(id, name);
       },
 
-      clearHistory: () => {
+      clearHistory: async () => {
+        const uid = getCloudHistoryUid();
+        if (uid) {
+          const ok = await clearCloudHistory(uid);
+          if (!ok) return;
+        }
         set({ history: [] });
-        syncClearCloud();
       },
 
       // template actions

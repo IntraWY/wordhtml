@@ -89,7 +89,7 @@ export function HistoryPanel() {
                       "ล้างประวัติ (Clear History)",
                       "ต้องการล้างประวัติทั้งหมดหรือไม่?",
                       () => {
-                        clearHistory();
+                        void clearHistory();
                       }
                     );
                   }}

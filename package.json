@@ -1,6 +1,6 @@
 {
   "name": "wordhtml",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
-    "version:bump": "node scripts/bump-version.mjs"
+    "version:bump": "node scripts/bump-version.mjs",
+    "firebase:deploy-rules": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
