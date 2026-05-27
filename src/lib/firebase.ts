@@ -3,6 +3,10 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
+import { isFirebaseConfigured } from "./firebaseConfig";
+
+export { isFirebaseConfigured } from "./firebaseConfig";
+
 function getEnv(key: string, value: string | undefined): string {
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
@@ -26,6 +30,9 @@ let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
+  if (!isFirebaseConfigured()) {
+    throw new Error("Firebase is not configured (missing NEXT_PUBLIC_FIREBASE_* env vars)");
+  }
   if (!app) {
     app = initializeApp(buildFirebaseConfig());
   }

@@ -7,6 +7,7 @@ import {
   deleteTemplate as deleteTemplateFromFirestore,
 } from "@/lib/templateFirestore";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { useAuthStore } from "@/store/authStore";
 import type { Unsubscribe, FirestoreError } from "firebase/firestore";
 
 const MAX_TEMPLATES = 50;
@@ -33,6 +34,53 @@ interface TemplateState {
 }
 
 let unsubscribe: Unsubscribe | null = null;
+
+function getTemplateUid(): string | null {
+  return useAuthStore.getState().user?.uid ?? null;
+}
+
+function handleSubscriptionError(error: FirestoreError): string {
+  if (error.code === "permission-denied") {
+    return "ไม่มีสิทธิ์เข้าถึง Templates (Permission denied) — ลองเข้าสู่ระบบ";
+  }
+  if (error.code === "unauthenticated") {
+    return "กรุณาเข้าสู่ระบบเพื่อดู Templates";
+  }
+  if (error.code === "unavailable" || error.code === "resource-exhausted") {
+    return "การเชื่อมต่อ Firebase มีปัญหา กรุณาลองใหม่ภายหลัง";
+  }
+  return `โหลด Templates ไม่สำเร็จ: ${error.message}`;
+}
+
+function stopTemplateSubscription(): void {
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+}
+
+function startTemplateSubscription(): void {
+  stopTemplateSubscription();
+  const uid = getTemplateUid();
+  useTemplateStore.setState({ loading: true, error: null });
+  unsubscribe = subscribeTemplates(
+    uid,
+    (templates) => {
+      useTemplateStore.setState({ templates, loading: false, error: null });
+    },
+    (error) => {
+      const message = handleSubscriptionError(error);
+      useTemplateStore.setState({ loading: false, error: message });
+    }
+  );
+}
+
+/** Re-subscribe when auth user changes while panel may be open. */
+export function restartTemplateSubscription(): void {
+  if (useTemplateStore.getState().panelOpen) {
+    startTemplateSubscription();
+  }
+}
 
 export function exportAllTemplates(templates: DocumentTemplate[]) {
   const payload = {
@@ -83,19 +131,6 @@ export function parseTemplateExport(jsonText: string): DocumentTemplate[] | null
   }
 }
 
-function handleSubscriptionError(error: FirestoreError): string {
-  if (error.code === "permission-denied") {
-    return "ไม่มีสิทธิ์เข้าถึง Templates (Permission denied)";
-  }
-  if (error.code === "unauthenticated") {
-    return "กรุณาเข้าสู่ระบบเพื่อดู Templates";
-  }
-  if (error.code === "unavailable" || error.code === "resource-exhausted") {
-    return "การเชื่อมต่อ Firebase มีปัญหา กรุณาลองใหม่ภายหลัง";
-  }
-  return `โหลด Templates ไม่สำเร็จ: ${error.message}`;
-}
-
 export const useTemplateStore = create<TemplateState>()((set, get) => ({
   templates: [],
   panelOpen: false,
@@ -104,28 +139,12 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
 
   openPanel: () => {
     set({ panelOpen: true });
-    // Start real-time subscription when panel opens
-    if (!unsubscribe) {
-      set({ loading: true, error: null });
-      unsubscribe = subscribeTemplates(
-        (templates) => {
-          set({ templates, loading: false, error: null });
-        },
-        (error) => {
-          const message = handleSubscriptionError(error);
-          set({ loading: false, error: message });
-        }
-      );
-    }
+    startTemplateSubscription();
   },
 
   closePanel: () => {
     set({ panelOpen: false });
-    // Stop subscription when panel closes to save bandwidth
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
+    stopTemplateSubscription();
   },
 
   saveTemplate: async (name, html, pageSetup) => {
@@ -143,15 +162,15 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       pageSetup,
     };
 
-    await saveTemplateToFirestore(template);
+    await saveTemplateToFirestore(template, getTemplateUid());
   },
 
   renameTemplate: async (id, name) => {
-    await updateTemplateName(id, name);
+    await updateTemplateName(id, name, getTemplateUid());
   },
 
   deleteTemplate: async (id) => {
-    await deleteTemplateFromFirestore(id);
+    await deleteTemplateFromFirestore(id, getTemplateUid());
   },
 
   importTemplates: async (items) => {
@@ -161,9 +180,10 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       .filter((t) => !existingIds.has(t.id))
       .slice(0, MAX_TEMPLATES - state.templates.length);
 
+    const uid = getTemplateUid();
     await Promise.all(
       newItems.map((item) =>
-        saveTemplateToFirestore({ ...item, html: sanitizeHtml(item.html) })
+        saveTemplateToFirestore({ ...item, html: sanitizeHtml(item.html) }, uid)
       )
     );
 

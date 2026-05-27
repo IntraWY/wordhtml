@@ -23,9 +23,56 @@ import type {
 import { DEFAULT_AUTO_SAVE } from "@/types";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import type { ExportMissingPolicy } from "@/lib/placeholders";
+import { getCloudHistoryUid } from "@/lib/cloudHistoryBridge";
+import {
+  saveSnapshotToCloud,
+  deleteSnapshotFromCloud,
+  renameSnapshotInCloud,
+  clearSnapshotsInCloud,
+} from "@/lib/historyFirestore";
 
 const MAX_HISTORY = 20;
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
+
+function syncSnapshotToCloud(snapshot: DocumentSnapshot): void {
+  const uid = getCloudHistoryUid();
+  if (!uid) return;
+  void saveSnapshotToCloud(uid, snapshot).catch(() => {
+    useToastStore
+      .getState()
+      .show("ไม่สามารถซิงก์ประวัติไปคลาวด์ได้", "warning");
+  });
+}
+
+function syncDeleteFromCloud(id: string): void {
+  const uid = getCloudHistoryUid();
+  if (!uid) return;
+  void deleteSnapshotFromCloud(uid, id).catch(() => {
+    useToastStore
+      .getState()
+      .show("ไม่สามารถลบประวัติบนคลาวด์ได้", "warning");
+  });
+}
+
+function syncRenameInCloud(id: string, fileName: string | null): void {
+  const uid = getCloudHistoryUid();
+  if (!uid) return;
+  void renameSnapshotInCloud(uid, id, fileName).catch(() => {
+    useToastStore
+      .getState()
+      .show("ไม่สามารถเปลี่ยนชื่อประวัติบนคลาวด์ได้", "warning");
+  });
+}
+
+function syncClearCloud(): void {
+  const uid = getCloudHistoryUid();
+  if (!uid) return;
+  void clearSnapshotsInCloud(uid).catch(() => {
+    useToastStore
+      .getState()
+      .show("ไม่สามารถล้างประวัติบนคลาวด์ได้", "warning");
+  });
+}
 
 const DEFAULT_PAGE_SETUP: PageSetup = {
   size: "A4",
@@ -348,6 +395,7 @@ export const useEditorStore = create<EditorState>()(
         }
 
         set({ history: updated });
+        syncSnapshotToCloud(snapshot);
 
         const showFeedback = source === "manual" || autoSave.notifyOnSave;
         if (showFeedback) {
@@ -392,23 +440,30 @@ export const useEditorStore = create<EditorState>()(
         };
         const updated = [duplicate, ...history].slice(0, MAX_HISTORY);
         set({ history: updated });
+        syncSnapshotToCloud(duplicate);
       },
 
       deleteSnapshot: (id) => {
         set((state) => ({
           history: state.history.filter((s) => s.id !== id),
         }));
+        syncDeleteFromCloud(id);
       },
 
       renameSnapshot: (id, fileName) => {
+        const name = fileName || null;
         set((state) => ({
           history: state.history.map((s) =>
-            s.id === id ? { ...s, fileName: fileName || null } : s
+            s.id === id ? { ...s, fileName: name } : s
           ),
         }));
+        syncRenameInCloud(id, name);
       },
 
-      clearHistory: () => set({ history: [] }),
+      clearHistory: () => {
+        set({ history: [] });
+        syncClearCloud();
+      },
 
       // template actions
       toggleTemplateMode: () =>

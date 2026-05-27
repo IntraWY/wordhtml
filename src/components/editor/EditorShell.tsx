@@ -44,8 +44,12 @@ import { EditorContextMenu } from "./EditorContextMenu";
 import { Tour } from "@/components/onboarding/Tour";
 import { PageChromeLayer } from "./PageChromeLayer";
 import { PlaceholderPanel } from "./PlaceholderPanel";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useCloudHistorySync } from "@/hooks/useCloudHistorySync";
 
 export function EditorShell() {
+  useFirebaseAuth();
+  useCloudHistorySync();
   const editorRef = useRef<Editor | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [isDragging, setIsDragging] = useState(false);

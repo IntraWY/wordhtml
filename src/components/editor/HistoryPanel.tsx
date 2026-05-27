@@ -5,7 +5,9 @@ import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash, Pencil, Loader2 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useAuthStore } from "@/store/authStore";
 import { useUiStore } from "@/store/uiStore";
+import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import { useDialogStore } from "@/store/dialogStore";
 import { cn } from "@/lib/utils";
 import type { DocumentSnapshot } from "@/types";
@@ -31,6 +33,10 @@ export function HistoryPanel() {
   const renameSnapshot = useEditorStore((s) => s.renameSnapshot);
   const clearHistory = useEditorStore((s) => s.clearHistory);
   const htmlSyncRevision = useEditorStore((s) => s.htmlSyncRevision);
+  const user = useAuthStore((s) => s.user);
+  const cloudSyncStatus = useAuthStore((s) => s.cloudSyncStatus);
+  const cloudSyncError = useAuthStore((s) => s.cloudSyncError);
+  const firebaseEnabled = isFirebaseConfigured();
 
   const [loadingSnapshotId, setLoadingSnapshotId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -138,10 +144,21 @@ export function HistoryPanel() {
             <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
               เก็บล่าสุด {history.length}/20 รายการ · บันทึกอัตโนมัติเมื่อ Export หรือ Ctrl+S
             </p>
-            <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-              เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น (localStorage) — ไม่ซิงก์ข้ามอุปกรณ์ · ใช้ Template
-              หรือส่งออกไฟล์เพื่อย้ายไปเครื่องอื่น
-            </p>
+            {firebaseEnabled && user ? (
+              <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+                {cloudSyncStatus === "syncing"
+                  ? "กำลังซิงก์ประวัติกับคลาวด์…"
+                  : cloudSyncStatus === "error"
+                    ? `ซิงก์คลาวด์ไม่สำเร็จ: ${cloudSyncError ?? "ไม่ทราบสาเหตุ"}`
+                    : "เข้าสู่ระบบแล้ว — ประวัติซิงก์ข้ามเครื่องที่ใช้บัญชีเดียวกัน"}
+              </p>
+            ) : (
+              <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+                {firebaseEnabled
+                  ? "ยังไม่ได้เข้าสู่ระบบ — ประวัติเก็บในเครื่องนี้เท่านั้น · กดเข้าสู่ระบบบนแถบด้านบนเพื่อซิงก์ข้ามอุปกรณ์"
+                  : "เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น — ใช้ Template หรือส่งออกไฟล์เพื่อย้ายไปเครื่องอื่น"}
+              </p>
+            )}
           </footer>
         </Dialog.Content>
       </Dialog.Portal>

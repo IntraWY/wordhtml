@@ -54,7 +54,21 @@ There is no `userId` field and no Firebase Authentication in the app. Who can re
 
 ---
 
-## Planned architecture (Phase: cloud sync + Auth)
+## Implemented (v0.1.8+): Auth + cloud history
+
+- `src/lib/firebaseAuth.ts` — Google sign-in
+- `src/store/authStore.ts` — user + cloud sync status
+- `src/lib/historyFirestore.ts` — `users/{uid}/snapshots`
+- `src/hooks/useFirebaseAuth.ts` + `useCloudHistorySync.ts` — wired in `EditorShell`
+- `src/components/editor/AuthButton.tsx` — Top bar sign-in/out
+- `editorStore` — pushes snapshot CRUD to Firestore when signed in
+- `templateFirestore` — `users/{uid}/templates` when signed in; legacy `templates` when anonymous; one-time migration on first login
+
+Deploy **firestore.rules** and enable Google Auth in Firebase Console.
+
+---
+
+## Planned architecture (reference)
 
 ### Goals
 

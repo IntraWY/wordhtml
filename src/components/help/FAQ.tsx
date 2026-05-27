@@ -37,7 +37,7 @@ const items: FaqItem[] = [
   {
     question: "ทำไมประวัติบน PC ไม่เหมือนที่ทำบน notebook?",
     answer:
-      "โดยปกติเป็นเพราะประวัติเก็บแยกตามเบราว์เซอร์และเครื่อง ไม่ใช่บั๊ก Firebase ตรวจสอบ: (1) ใช้ URL เดียวกันหรือไม่ เช่น wordhtml.vercel.app ทั้งสองเครื่อง — localhost กับ production ไม่แชร์ข้อมูล (2) เบราว์เซอร์/โปรไฟล์เดียวกันหรือไม่ (3) เปิด DevTools → Application → Local Storage → คีย์ wordhtml-editor บน notebook ควรมี history แต่บน PC อาจว่าง วิธีย้ายงาน: ส่งออกไฟล์ (HTML/ZIP) หรือบันทึกเป็น Template บน notebook แล้วโหลดบน PC",
+      "ถ้ายังไม่ได้เข้าสู่ระบบ ประวัติเก็บใน localStorage ของแต่ละเครื่องเท่านั้น — กดเข้าสู่ระบบ (Google) บนแถบด้านบนทั้งสองเครื่องด้วยบัญชีเดียวกัน แล้วบันทึก snapshot (Ctrl+S) เพื่อซิงก์ผ่าน Firebase ตรวจสอบเพิ่ม: URL เดียวกัน (production ไม่แชร์กับ localhost) และไม่ใช้โหมดไม่ระบุตัวตน ทางเลือกอื่น: ส่งออกไฟล์หรือบันทึกเป็น Template",
   },
   {
     question: "ตัวแปร Template ({{variable}}) ใช้งานอย่างไร?",

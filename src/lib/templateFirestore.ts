@@ -15,7 +15,7 @@ import { getFirebaseDb } from "./firebase";
 import type { DocumentTemplate } from "@/store/templateStore";
 import type { PageSetup } from "@/types";
 
-const COLLECTION_NAME = "templates";
+const LEGACY_COLLECTION = "templates";
 
 interface FirestoreTemplate {
   name: string;
@@ -43,24 +43,37 @@ function fromFirestore(id: string, data: FirestoreTemplate): DocumentTemplate {
   };
 }
 
-export async function loadTemplates(): Promise<DocumentTemplate[]> {
-  const db = getFirebaseDb();
-  const q = query(collection(db, COLLECTION_NAME), orderBy("createdAt", "desc"));
+function userTemplatesCollection(uid: string) {
+  return collection(getFirebaseDb(), "users", uid, "templates");
+}
+
+function legacyTemplatesCollection() {
+  return collection(getFirebaseDb(), LEGACY_COLLECTION);
+}
+
+function resolveTemplatesCollection(uid: string | null) {
+  return uid ? userTemplatesCollection(uid) : legacyTemplatesCollection();
+}
+
+export async function loadTemplates(uid: string | null): Promise<DocumentTemplate[]> {
+  const col = uid ? userTemplatesCollection(uid) : legacyTemplatesCollection();
+  const q = query(col, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => fromFirestore(doc.id, doc.data() as FirestoreTemplate));
+  return snapshot.docs.map((d) => fromFirestore(d.id, d.data() as FirestoreTemplate));
 }
 
 export function subscribeTemplates(
+  uid: string | null,
   onNext: (templates: DocumentTemplate[]) => void,
   onError?: (error: FirestoreError) => void
 ): Unsubscribe {
-  const db = getFirebaseDb();
-  const q = query(collection(db, COLLECTION_NAME), orderBy("createdAt", "desc"));
+  const col = resolveTemplatesCollection(uid);
+  const q = query(col, orderBy("createdAt", "desc"));
   return onSnapshot(
     q,
     (snapshot) => {
-      const templates = snapshot.docs.map((doc) =>
-        fromFirestore(doc.id, doc.data() as FirestoreTemplate)
+      const templates = snapshot.docs.map((d) =>
+        fromFirestore(d.id, d.data() as FirestoreTemplate)
       );
       onNext(templates);
     },
@@ -74,19 +87,60 @@ export function subscribeTemplates(
   );
 }
 
-export async function saveTemplate(template: DocumentTemplate): Promise<void> {
-  const db = getFirebaseDb();
-  const ref = doc(collection(db, COLLECTION_NAME), template.id);
+export async function saveTemplate(
+  template: DocumentTemplate,
+  uid: string | null
+): Promise<void> {
+  const col = resolveTemplatesCollection(uid);
+  const ref = doc(col, template.id);
   await setDoc(ref, toFirestore(template));
 }
 
-export async function updateTemplateName(id: string, name: string): Promise<void> {
-  const db = getFirebaseDb();
-  const ref = doc(db, COLLECTION_NAME, id);
+export async function updateTemplateName(
+  id: string,
+  name: string,
+  uid: string | null
+): Promise<void> {
+  const ref = doc(resolveTemplatesCollection(uid), id);
   await setDoc(ref, { name }, { merge: true });
 }
 
-export async function deleteTemplate(id: string): Promise<void> {
-  const db = getFirebaseDb();
-  await deleteDoc(doc(db, COLLECTION_NAME, id));
+export async function deleteTemplate(id: string, uid: string | null): Promise<void> {
+  await deleteDoc(doc(resolveTemplatesCollection(uid), id));
+}
+
+const MIGRATION_KEY_PREFIX = "wordhtml-templates-migrated-";
+
+export function hasMigratedLegacyTemplates(uid: string): boolean {
+  if (typeof localStorage === "undefined") return true;
+  return localStorage.getItem(`${MIGRATION_KEY_PREFIX}${uid}`) === "1";
+}
+
+export function markLegacyTemplatesMigrated(uid: string): void {
+  try {
+    localStorage.setItem(`${MIGRATION_KEY_PREFIX}${uid}`, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Copy global templates into users/{uid}/templates (first sign-in). */
+export async function migrateLegacyTemplatesToUser(uid: string): Promise<number> {
+  const legacySnap = await getDocs(
+    query(legacyTemplatesCollection(), orderBy("createdAt", "desc"))
+  );
+  if (legacySnap.empty) {
+    markLegacyTemplatesMigrated(uid);
+    return 0;
+  }
+
+  let copied = 0;
+  for (const legacyDoc of legacySnap.docs) {
+    const data = legacyDoc.data() as FirestoreTemplate;
+    const ref = doc(userTemplatesCollection(uid), legacyDoc.id);
+    await setDoc(ref, data);
+    copied += 1;
+  }
+  markLegacyTemplatesMigrated(uid);
+  return copied;
 }

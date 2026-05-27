@@ -9,6 +9,7 @@ import { useUiStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
+import { AuthButton } from "./AuthButton";
 import { dispatchOpenTemplates, dispatchInsertPageBreak } from "@/lib/events";
 import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
 
@@ -50,6 +51,7 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <AuthButton />
           <ThemeToggle />
           <button
             type="button"
