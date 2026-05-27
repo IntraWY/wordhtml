@@ -58,6 +58,20 @@ test.describe("Smoke", () => {
     await expect(editor).toContainText("Hello World");
   });
 
+  test("slash command menu opens without editor crash", async ({ page }) => {
+    await page.goto("/");
+    const editor = page.locator(".ProseMirror").first();
+    await expect(editor).toBeVisible();
+    await editor.click();
+    await editor.pressSequentially("/");
+    await expect(
+      page.getByText("หัวข้อ 1", { exact: false }).first()
+    ).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.getByRole("heading", { name: /พบปัญหาที่ไม่คาดคิด/i })
+    ).toHaveCount(0);
+  });
+
   test("export dialog opens with Ctrl+S", async ({ page }) => {
     await page.goto("/");
     const editor = page.locator("[contenteditable='true']").first();

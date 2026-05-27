@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
 import Suggestion from "@tiptap/suggestion";
 import { variableSuggestion } from "./variableSuggestion";
+import { variableSuggestionPluginKey } from "./suggestionPluginKeys";
 
 interface SuggestionCommandProps {
   editor: {
@@ -68,6 +69,7 @@ export const VariableSuggestion = Extension.create({
   addProseMirrorPlugins() {
     return [
       Suggestion({
+        pluginKey: variableSuggestionPluginKey,
         editor: this.editor,
         ...this.options.suggestion,
       }),

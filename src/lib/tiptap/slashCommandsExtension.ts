@@ -4,6 +4,7 @@ import type { Editor } from "@tiptap/react";
 
 import { slashSuggestion } from "./slashSuggestion";
 import type { SlashItem } from "./slashCommandsConfig";
+import { slashCommandsPluginKey } from "./suggestionPluginKeys";
 
 export const SlashCommandsExtension = Extension.create({
   name: "slashCommands",
@@ -31,6 +32,7 @@ export const SlashCommandsExtension = Extension.create({
   addProseMirrorPlugins() {
     return [
       Suggestion({
+        pluginKey: slashCommandsPluginKey,
         editor: this.editor,
         ...this.options.suggestion,
       }),
