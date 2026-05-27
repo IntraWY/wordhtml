@@ -15,6 +15,8 @@ interface UiState {
   headerFooterOpen: boolean;
   paragraphOpen: boolean;
   placeholderPanelOpen: boolean;
+  commandPaletteOpen: boolean;
+  templateGalleryOpen: boolean;
   lastAction: string | null;
 
   openExportDialog: () => void;
@@ -39,6 +41,10 @@ interface UiState {
   closeParagraph: () => void;
   openPlaceholderPanel: () => void;
   closePlaceholderPanel: () => void;
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
+  openTemplateGallery: () => void;
+  closeTemplateGallery: () => void;
   setLastAction: (action: string | null) => void;
 }
 
@@ -55,6 +61,8 @@ export const useUiStore = create<UiState>()((set) => ({
   headerFooterOpen: false,
   paragraphOpen: false,
   placeholderPanelOpen: false,
+  commandPaletteOpen: false,
+  templateGalleryOpen: false,
   lastAction: null,
 
   openExportDialog: () => set({ exportDialogOpen: true }),
@@ -79,5 +87,9 @@ export const useUiStore = create<UiState>()((set) => ({
   closeParagraph: () => set({ paragraphOpen: false }),
   openPlaceholderPanel: () => set({ placeholderPanelOpen: true }),
   closePlaceholderPanel: () => set({ placeholderPanelOpen: false }),
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  openTemplateGallery: () => set({ templateGalleryOpen: true }),
+  closeTemplateGallery: () => set({ templateGalleryOpen: false }),
   setLastAction: (lastAction) => set({ lastAction }),
 }));

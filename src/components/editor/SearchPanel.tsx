@@ -107,7 +107,7 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
       ref={panelRef}
       role="dialog"
       aria-label="ค้นหาและแทนที่ (Find & Replace)"
-      className="fixed bottom-4 right-4 z-50 flex w-80 flex-col gap-2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-3 shadow-lg"
+      className="search-panel fixed bottom-4 right-4 z-50 flex w-80 flex-col gap-2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-3 shadow-lg"
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold tracking-tight">
@@ -122,7 +122,11 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
           <X className="size-3.5" />
         </button>
       </div>
+      <label htmlFor="wordhtml-search-input" className="sr-only">
+        ค้นหา (Search)
+      </label>
       <input
+        id="wordhtml-search-input"
         ref={inputRef}
         type="text"
         placeholder="ค้นหา…"
@@ -130,7 +134,11 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
         onChange={(e) => setSearchTerm(e.target.value)}
         className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
       />
+      <label htmlFor="wordhtml-replace-input" className="sr-only">
+        แทนที่ด้วย (Replace with)
+      </label>
       <input
+        id="wordhtml-replace-input"
         type="text"
         placeholder="แทนที่ด้วย…"
         value={replaceTerm}

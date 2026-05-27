@@ -17,34 +17,7 @@ export interface PageHeaderFooterProps {
 /** @deprecated Use replacePageTokens from @/lib/placeholders */
 export { replacePageTokens as replaceVariables };
 
-/**
- * Resolves the correct header/footer HTML for a given page number
- * based on the configuration flags.
- */
-export function resolveHeaderFooter(
-  pageNumber: number,
-  baseHeader: string,
-  baseFooter: string,
-  differentFirstPage: boolean,
-  differentOddEven: boolean,
-  firstPageHeader?: string,
-  firstPageFooter?: string,
-  evenHeader?: string,
-  evenFooter?: string
-): { header: string; footer: string } {
-  let header = baseHeader;
-  let footer = baseFooter;
-
-  if (differentFirstPage && pageNumber === 1) {
-    if (firstPageHeader !== undefined) header = firstPageHeader;
-    if (firstPageFooter !== undefined) footer = firstPageFooter;
-  } else if (differentOddEven && pageNumber % 2 === 0) {
-    if (evenHeader !== undefined) header = evenHeader;
-    if (evenFooter !== undefined) footer = evenFooter;
-  }
-
-  return { header, footer };
-}
+export { resolveHeaderFooter } from "@/lib/headerFooterResolve";
 
 /**
  * Full Phase-2 header/footer renderer.

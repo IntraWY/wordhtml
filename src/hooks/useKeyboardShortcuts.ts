@@ -95,7 +95,7 @@ export function useKeyboardShortcuts(editor: Editor | null) {
         return;
       }
 
-      if (key === "k") {
+      if (key === "k" && event.shiftKey) {
         event.preventDefault();
         useDialogStore.getState().openPrompt(
           "แทรกลิงก์ (Insert Link)",

@@ -530,6 +530,35 @@ html[data-theme="dark"] .paper {
   margin-top: auto;
 }
 
+.page-node .page-header,
+.page-node .page-footer {
+  outline: none;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.page-node .page-header:empty::before,
+.page-node .page-footer:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-muted-foreground);
+  opacity: 0.6;
+}
+
+.content-slot {
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  text-align: center;
+  margin: 0.5rem 0;
+  background: var(--color-muted);
+}
+
+.content-slot-label {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  font-weight: 500;
+}
+
 .page-content {
   flex: 1;
 }

@@ -4,6 +4,7 @@ import type { Editor } from "@tiptap/react";
 import type { PageSetup } from "@/types";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import { debugPerfLog } from "@/lib/debugPerfLog";
+import { findTableRowSplitPosition } from "./tableSplit";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -230,6 +231,12 @@ export function findSplitPosition(
     if (!isAtomicBlock(child, atomicTags)) {
       const pmPos = resolveDomToPmPos(editor, child);
       if (pmPos !== null) return pmPos;
+    }
+
+    // Table: try row-level split before moving the whole table.
+    if (child.tagName === "TABLE") {
+      const rowPos = findTableRowSplitPosition(editor, child, maxHeightPx);
+      if (rowPos !== null) return rowPos;
     }
 
     // Atomic block does not fit — keep walking upward to split before it.

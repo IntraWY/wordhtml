@@ -10,6 +10,7 @@ export interface PageSetup {
 export interface WrapOptions {
   title?: string;
   pageSetup?: PageSetup;
+  extraCss?: string;
 }
 
 const DEFAULT_PAGE_SETUP: PageSetup = {
@@ -75,6 +76,7 @@ export function wrapAsDocument(
     .katex-display { margin: 1em 0; overflow-x: auto; }
     .katex { font-size: 1.1em; line-height: 1.2; }
     span[data-type="math-equation"] { display: inline-block; }
+    ${opts.extraCss ?? ""}
   </style>
 </head>
 <body>

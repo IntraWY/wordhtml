@@ -33,6 +33,7 @@ import {
   renameSnapshotInCloud,
   clearSnapshotsInCloud,
 } from "@/lib/historyFirestore";
+import { clearRecoveryDraft, scheduleRecoveryDraft } from "@/lib/draftRecovery";
 
 const MAX_HISTORY = 20;
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
@@ -182,7 +183,9 @@ export const useEditorStore = create<EditorState>()(
       };
 
       const commitDocumentHtml = (html: string) => {
+        const { fileName, pageSetup } = get();
         set({ documentHtml: html, lastEditAt: Date.now() });
+        scheduleRecoveryDraft(html, fileName, pageSetup);
         get().scheduleAutoSnapshot();
         // #region agent log
         debugPerfLog("A", "editorStore.ts:commitDocumentHtml", "store html commit", {
@@ -340,6 +343,7 @@ export const useEditorStore = create<EditorState>()(
           } else {
             throw new Error("ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, หรือ .md");
           }
+          clearRecoveryDraft();
           set((state) => ({
             documentHtml: html,
             fileName: name,
@@ -356,6 +360,7 @@ export const useEditorStore = create<EditorState>()(
       reset: () => {
         clearHtmlDebounce();
         pendingDocumentHtml = null;
+        clearRecoveryDraft();
         set((state) => ({
           documentHtml: "",
           fileName: null,
@@ -394,6 +399,9 @@ export const useEditorStore = create<EditorState>()(
 
         set({ history: updated });
         syncSnapshotToCloud(snapshot);
+        if (source === "manual") {
+          clearRecoveryDraft();
+        }
 
         const showFeedback = source === "manual" || autoSave.notifyOnSave;
         if (showFeedback) {

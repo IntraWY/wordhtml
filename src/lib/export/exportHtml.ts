@@ -1,6 +1,10 @@
 import { wrapAsDocument, triggerDownload, deriveFileName, type PageSetup } from "./wrap";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import {
+  buildHeaderFooterExportBlocks,
+  countPageBreaksInHtml,
+} from "./exportHeaderFooter";
 
 interface DownloadHtmlOptions {
   /** Original source filename (if any) — used to derive the export filename */
@@ -16,7 +20,14 @@ interface DownloadHtmlOptions {
 export function downloadHtml(html: string, options: DownloadHtmlOptions = {}): void {
   const { sourceName = null, title = "Document", pageSetup } = options;
   const cleanHtml = sanitizeHtml(stripPaginationWrappers(html));
-  const document = wrapAsDocument(cleanHtml, { title, pageSetup });
+  const totalPages = countPageBreaksInHtml(cleanHtml);
+  const hf = buildHeaderFooterExportBlocks(pageSetup, totalPages);
+  const body = hf.bodyPrefix ? `${hf.bodyPrefix}\n${cleanHtml}` : cleanHtml;
+  const document = wrapAsDocument(body, {
+    title,
+    pageSetup,
+    extraCss: hf.css,
+  });
   const blob = new Blob([document], { type: "text/html;charset=utf-8" });
   triggerDownload(blob, deriveFileName(sourceName, "html", title));
 }

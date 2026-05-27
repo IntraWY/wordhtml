@@ -1,6 +1,6 @@
 {
   "name": "wordhtml",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -43,8 +43,10 @@
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "driver.js": "^1.4.0",
     "firebase": "^12.13.0",
+    "fuse.js": "^7.3.0",
     "html-docx-js": "^0.3.1",
     "html2pdf.js": "^0.14.0",
     "jszip": "^3.10.1",

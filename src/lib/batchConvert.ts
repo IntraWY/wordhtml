@@ -1,36 +1,82 @@
 import JSZip from "jszip";
 
 import { docxToHtml } from "@/lib/conversion/docxToHtml";
+import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import { wrapAsDocument } from "@/lib/export/wrap";
 
-function deriveSafeFileName(name: string): string {
-  const base = name.replace(/\.docx$/i, "");
+export interface BatchConvertProgress {
+  current: number;
+  total: number;
+  fileName: string;
+}
+
+export interface BatchConvertOptions {
+  onProgress?: (p: BatchConvertProgress) => void;
+  signal?: AbortSignal;
+}
+
+function deriveSafeFileName(name: string, ext: string): string {
+  const base = name.replace(/\.[^.]+$/i, "");
   const safe = base.replace(/[^\w\-.]+/g, "_");
-  return `${safe || "document"}.html`;
+  return `${safe || "document"}.${ext}`;
+}
+
+function assertNotAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DOMException("ยกเลิกการแปลงแล้ว", "AbortError");
+  }
 }
 
 /**
- * Batch-convert multiple .docx files to HTML and package them into a ZIP.
- *
- * @param files - Array of Files (should be .docx, non-docx files are skipped)
- * @returns A Blob containing the ZIP archive
+ * Batch-convert .docx / .html files to HTML and package into a ZIP.
  */
-export async function batchConvert(files: File[]): Promise<Blob> {
-  const docxFiles = files.filter((f) => f.name.toLowerCase().endsWith(".docx"));
-  const zip = new JSZip();
+export async function batchConvert(
+  files: File[],
+  options: BatchConvertOptions = {}
+): Promise<Blob> {
+  const { onProgress, signal } = options;
+  const supported = files.filter((f) => {
+    const lower = f.name.toLowerCase();
+    return (
+      lower.endsWith(".docx") ||
+      lower.endsWith(".html") ||
+      lower.endsWith(".htm")
+    );
+  });
 
-  for (let i = 0; i < docxFiles.length; i++) {
-    const file = docxFiles[i];
+  const zip = new JSZip();
+  const total = supported.length;
+
+  for (let i = 0; i < supported.length; i++) {
+    assertNotAborted(signal);
+    const file = supported[i];
+    onProgress?.({ current: i + 1, total, fileName: file.name });
+
+    const lower = file.name.toLowerCase();
     try {
-      const result = await docxToHtml(file);
-      const html = wrapAsDocument(result.html, file.name.replace(/\.docx$/i, ""));
-      zip.file(deriveSafeFileName(file.name), html);
+      let html: string;
+      if (lower.endsWith(".docx")) {
+        const result = await docxToHtml(file);
+        html = result.html;
+      } else {
+        html = await loadHtmlFile(file);
+      }
+      assertNotAborted(signal);
+      const wrapped = wrapAsDocument(html, file.name.replace(/\.[^.]+$/i, ""));
+      zip.file(deriveSafeFileName(file.name, "html"), wrapped);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "ไม่สามารถแปลงไฟล์ได้";
-      // Store error as a text file in the ZIP so the user knows which files failed
-      zip.file(`${deriveSafeFileName(file.name)}.error.txt`, `เกิดข้อผิดพลาดขณะแปลง ${file.name}:\n${message}`);
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw error;
+      }
+      const message =
+        error instanceof Error ? error.message : "ไม่สามารถแปลงไฟล์ได้";
+      zip.file(
+        `${deriveSafeFileName(file.name, "html")}.error.txt`,
+        `เกิดข้อผิดพลาดขณะแปลง ${file.name}:\n${message}`
+      );
     }
   }
 
+  assertNotAborted(signal);
   return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Clock, Bookmark, Save, Split } from "lucide-react";
+import { Download, Clock, Bookmark, Save, Split, Layers, LayoutTemplate } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
@@ -10,7 +10,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { HistoryPanel } from "./HistoryPanel";
 import { AuthButton } from "./AuthButton";
-import { dispatchOpenTemplates, dispatchInsertPageBreak } from "@/lib/events";
+import {
+  dispatchOpenTemplates,
+  dispatchInsertPageBreak,
+  dispatchOpenBatchConvert,
+} from "@/lib/events";
 import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
 
 export function TopBar() {
@@ -73,6 +77,16 @@ export function TopBar() {
           </button>
           <button
             type="button"
+            onClick={() => useUiStore.getState().openTemplateGallery()}
+            title="แกลเลอรีเทมเพลต"
+            aria-label="แกลเลอรีเทมเพลต"
+            className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+          >
+            <LayoutTemplate className="size-4" />
+            <span className="hidden md:inline text-sm">แกลเลอรี</span>
+          </button>
+          <button
+            type="button"
             onClick={dispatchOpenTemplates}
             title="Template ของฉัน"
             aria-label="Template ของฉัน"
@@ -102,6 +116,16 @@ export function TopBar() {
           >
             <Split className="size-4" />
             <span className="hidden md:inline text-sm">แบ่งหน้า</span>
+          </button>
+          <button
+            type="button"
+            onClick={dispatchOpenBatchConvert}
+            title="แปลงเป็นกลุ่ม (Batch convert)"
+            aria-label="แปลงเป็นกลุ่ม (Batch convert)"
+            className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+          >
+            <Layers className="size-4" />
+            <span className="hidden md:inline text-sm">Batch</span>
           </button>
           <UploadButton />
           <Button

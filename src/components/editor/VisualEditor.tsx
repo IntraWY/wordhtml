@@ -19,6 +19,8 @@ import { PageHeaderNode } from "@/lib/tiptap/pageHeader";
 import { PageFooterNode } from "@/lib/tiptap/pageFooter";
 import { PageCommands } from "@/lib/tiptap/pageCommands";
 import { PlaceholderField } from "@/lib/tiptap/placeholderField";
+import { ImageSlot, TableSlot } from "@/lib/tiptap/contentSlots";
+import { SlashCommandsExtension } from "@/lib/tiptap/slashCommandsExtension";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
@@ -161,6 +163,9 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       PageFooterNode,
       PageCommands,
       PlaceholderField,
+      ImageSlot,
+      TableSlot,
+      SlashCommandsExtension,
     ],
     []
   );

@@ -16,6 +16,7 @@ export function BatchUploadDialog() {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
+  const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,20 +41,39 @@ export function BatchUploadDialog() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    setBusy(false);
+    setProgress("ยกเลิกแล้ว (Cancelled)");
+  }, []);
+
   const handleConvert = useCallback(async () => {
     if (files.length === 0 || busy) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
     setProgress("");
 
     try {
-      const blob = await batchConvert(files);
+      const blob = await batchConvert(files, {
+        signal: controller.signal,
+        onProgress: ({ current, total, fileName }) => {
+          setProgress(`แปลง ${current}/${total}: ${fileName}`);
+        },
+      });
       triggerDownload(blob, `batch-convert-${Date.now()}.zip`);
       setProgress("เสร็จสิ้น (Done)");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาด (Error)";
-      setProgress(message);
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setProgress("ยกเลิกแล้ว (Cancelled)");
+      } else {
+        const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาด (Error)";
+        setProgress(message);
+      }
     } finally {
       setBusy(false);
+      abortRef.current = null;
     }
   }, [files, busy]);
 
@@ -83,7 +103,7 @@ export function BatchUploadDialog() {
             {/* File input */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-[color:var(--color-muted-foreground)]">
-                เลือกไฟล์ .docx (Select .docx files)
+                เลือกไฟล์ .docx / .html (Select files)
               </label>
               <div className="flex items-center gap-2">
                 <Button
@@ -104,7 +124,7 @@ export function BatchUploadDialog() {
               <input
                 ref={inputRef}
                 type="file"
-                accept=".docx"
+                accept=".docx,.html,.htm"
                 multiple
                 className="hidden"
                 onChange={handleFileChange}
@@ -146,8 +166,12 @@ export function BatchUploadDialog() {
           </div>
 
           <footer className="flex items-center justify-end gap-2 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-            <Button variant="secondary" size="sm" onClick={() => close()} disabled={busy}>
-              ยกเลิก (Cancel)
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => (busy ? handleCancel() : close())}
+            >
+              {busy ? "หยุด (Stop)" : "ปิด (Close)"}
             </Button>
             <Button
               variant="primary"

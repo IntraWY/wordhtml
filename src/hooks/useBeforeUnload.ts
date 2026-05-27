@@ -2,12 +2,14 @@
 
 import { useEffect } from "react";
 import { useEditorStore } from "@/store/editorStore";
+import { flushRecoveryDraft } from "@/lib/draftRecovery";
 
 export function useBeforeUnload() {
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       const state = useEditorStore.getState();
       state.flushDocumentHtml();
+      flushRecoveryDraft();
       const html = state.documentHtml.trim();
       if (!html) return;
       const lastHistory = state.history[0];

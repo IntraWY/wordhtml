@@ -31,7 +31,7 @@ export const PageFooterNode = Node.create({
       mergeAttributes(HTMLAttributes, {
         class: "page-footer",
         "data-page-footer": "true",
-        contenteditable: "false",
+        contenteditable: "true",
       }),
       0,
     ];

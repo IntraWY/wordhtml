@@ -31,7 +31,7 @@ export const PageHeaderNode = Node.create({
       mergeAttributes(HTMLAttributes, {
         class: "page-header",
         "data-page-header": "true",
-        contenteditable: "false",
+        contenteditable: "true",
       }),
       0,
     ];

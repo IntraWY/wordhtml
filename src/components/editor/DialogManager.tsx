@@ -11,7 +11,11 @@ import { HeaderFooterDialog } from "./HeaderFooterDialog";
 import { ShortcutsPanel } from "./ShortcutsPanel";
 import { TableOfContentsPanel } from "./TableOfContentsPanel";
 import { DialogSystem } from "./DialogSystem";
+import { RecoveryDialog } from "./RecoveryDialog";
+import { CommandPalette } from "./CommandPalette";
+import { TemplateGalleryDialog } from "./TemplateGalleryDialog";
 import { MobileBlock } from "@/components/MobileBlock";
+import { useDraftRecovery } from "@/hooks/useDraftRecovery";
 import type { Editor } from "@tiptap/react";
 
 interface DialogManagerProps {
@@ -19,6 +23,14 @@ interface DialogManagerProps {
 }
 
 export function DialogManager({ editor }: DialogManagerProps) {
+  const {
+    recoveryOpen,
+    pendingDraft,
+    handleRestore,
+    handleDiscard,
+    handleOptOut,
+  } = useDraftRecovery();
+
   const searchOpen = useUiStore((s) => s.searchOpen);
   const closeSearch = useUiStore((s) => s.closeSearch);
   const pageSetupOpen = useUiStore((s) => s.pageSetupOpen);
@@ -32,6 +44,15 @@ export function DialogManager({ editor }: DialogManagerProps) {
 
   return (
     <>
+      <RecoveryDialog
+        open={recoveryOpen}
+        draft={pendingDraft}
+        onRestore={handleRestore}
+        onDiscard={handleDiscard}
+        onOptOut={handleOptOut}
+      />
+      <CommandPalette editor={editor} />
+      <TemplateGalleryDialog />
       <ExportDialog />
       <DialogSystem />
       <BatchUploadDialog />

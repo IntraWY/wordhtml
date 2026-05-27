@@ -1,6 +1,9 @@
 import { createJSONStorage, type PersistStorage } from "zustand/middleware";
 import { useToastStore } from "@/store/toastStore";
 import type { DocumentSnapshot, PageSetup } from "@/types";
+import { idbPutDraft, idbGetDraft, idbDeleteDraft } from "@/lib/indexedDb";
+
+const IDB_EDITOR_BACKUP_KEY = "wordhtml-editor-backup";
 
 const SCHEMA_VERSION = 1;
 
@@ -71,7 +74,20 @@ function createSafeStorage<S>(
   return {
     getItem: async (name) => {
       try {
-        const result = await base.getItem(name);
+        let result = await base.getItem(name);
+        if (!result && name === "wordhtml-editor") {
+          const backup = await idbGetDraft(IDB_EDITOR_BACKUP_KEY);
+          if (backup?.html) {
+            try {
+              result = JSON.parse(backup.html) as StorageValue<S>;
+              useToastStore
+                .getState()
+                .show("โหลดการตั้งค่าจาก IndexedDB สำรอง", "success");
+            } catch {
+              /* ignore corrupt backup */
+            }
+          }
+        }
         if (!result) return null;
         if (migrate) {
           const migrated = migrate(result) as StorageValue<S>;
@@ -96,8 +112,30 @@ function createSafeStorage<S>(
     setItem: async (name, value) => {
       try {
         await base.setItem(name, value);
+        if (name === "wordhtml-editor") {
+          void idbDeleteDraft(IDB_EDITOR_BACKUP_KEY).catch(() => {});
+        }
       } catch (e) {
         if (isQuotaError(e)) {
+          if (name === "wordhtml-editor" && value?.state) {
+            try {
+              const serialized = JSON.stringify(value);
+              await idbPutDraft(IDB_EDITOR_BACKUP_KEY, {
+                html: serialized,
+                fileName: "editor-state-backup",
+                savedAt: new Date().toISOString(),
+              });
+              useToastStore
+                .getState()
+                .show(
+                  "localStorage เต็ม — สำรองการตั้งค่าไป IndexedDB แล้ว",
+                  "warning"
+                );
+              return;
+            } catch {
+              /* fall through */
+            }
+          }
           useToastStore
             .getState()
             .show("พื้นที่จัดเก็บเต็ม กรุณาลบ Snapshot หรือ Template เก่า");
