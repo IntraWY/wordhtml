@@ -39,6 +39,7 @@ export function HistoryPanel() {
   const firebaseEnabled = isFirebaseConfigured();
 
   const [loadingSnapshotId, setLoadingSnapshotId] = useState<string | null>(null);
+  const [deletingSnapshotId, setDeletingSnapshotId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const pendingLoadIdRef = useRef<string | null>(null);
 
@@ -51,6 +52,18 @@ export function HistoryPanel() {
       });
     },
     [loadSnapshot]
+  );
+
+  const handleDeleteSnapshot = useCallback(
+    async (id: string) => {
+      setDeletingSnapshotId(id);
+      try {
+        await deleteSnapshot(id);
+      } finally {
+        setDeletingSnapshotId(null);
+      }
+    },
+    [deleteSnapshot]
   );
 
   useEffect(() => {
@@ -130,9 +143,10 @@ export function HistoryPanel() {
                     key={snap.id}
                     snap={snap}
                     loading={loadingSnapshotId === snap.id}
+                    deleting={deletingSnapshotId === snap.id}
                     onLoad={() => handleLoadSnapshot(snap.id)}
                     onDuplicate={() => duplicateSnapshot(snap.id)}
-                    onDelete={() => deleteSnapshot(snap.id)}
+                    onDelete={() => void handleDeleteSnapshot(snap.id)}
                     onRename={(name) => renameSnapshot(snap.id, name)}
                   />
                 ))}
@@ -169,6 +183,7 @@ export function HistoryPanel() {
 interface SnapshotRowProps {
   snap: DocumentSnapshot;
   loading?: boolean;
+  deleting?: boolean;
   onLoad: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -178,6 +193,7 @@ interface SnapshotRowProps {
 function SnapshotRow({
   snap,
   loading = false,
+  deleting = false,
   onLoad,
   onDuplicate,
   onDelete,
@@ -216,7 +232,7 @@ function SnapshotRow({
     <li
       className={cn(
         "group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]",
-        loading && "opacity-70"
+        (loading || deleting) && "opacity-70"
       )}
     >
       <FileText className="size-8 shrink-0 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-1.5 text-[color:var(--color-muted-foreground)]" />
@@ -238,7 +254,7 @@ function SnapshotRow({
           <button
             type="button"
             onClick={onLoad}
-            disabled={loading}
+            disabled={loading || deleting}
             title="โหลดเอกสารนี้"
             className="block w-full truncate text-left text-sm font-medium hover:underline disabled:cursor-wait disabled:no-underline"
           >
@@ -254,6 +270,13 @@ function SnapshotRow({
           <span
             className="grid h-8 w-8 place-items-center text-[color:var(--color-muted-foreground)]"
             aria-label="กำลังโหลดเอกสาร"
+          >
+            <Loader2 className="size-4 animate-spin" />
+          </span>
+        ) : deleting ? (
+          <span
+            className="grid h-8 w-8 place-items-center text-[color:var(--color-muted-foreground)]"
+            aria-label="กำลังลบประวัติ"
           >
             <Loader2 className="size-4 animate-spin" />
           </span>
