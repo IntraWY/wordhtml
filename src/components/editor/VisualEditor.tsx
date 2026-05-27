@@ -57,6 +57,7 @@ import { ImageResizeView } from "./ImageResizeView";
 import { isLiveEditor } from "@/lib/editorLive";
 import { useToastStore } from "@/store/toastStore";
 import { debugPerfLog } from "@/lib/debugPerfLog";
+import { unwrapPageNode } from "@/lib/unwrapPageNode";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -76,21 +77,6 @@ function wrapInPageNode(html: string): string {
     return `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'><div class="page-body" data-page-body="true"><p></p></div></div>`;
   }
   return `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'><div class="page-body" data-page-body="true">${html}</div></div>`;
-}
-
-function unwrapPageNode(html: string): string {
-  // Only unwrap single-page documents. Multi-page HTML preserves its structure.
-  if (!html.includes('class="page-node"')) return html;
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  const nodes = doc.querySelectorAll(".page-node");
-  if (nodes.length !== 1) return html;
-
-  const body = nodes[0].querySelector(".page-body");
-  if (!body) return html;
-
-  return body.innerHTML;
 }
 
 export function VisualEditor({ onEditorReady }: VisualEditorProps) {

@@ -35,7 +35,9 @@ import { DialogManager } from "./DialogManager";
 import { ParagraphDialog } from "./ParagraphDialog";
 import { MathInputDialog } from "./MathInputDialog";
 import { MobileBlock } from "@/components/MobileBlock";
-import { addEventListener, removeEventListener } from "@/lib/events";
+import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
+import { unwrapPageNode } from "@/lib/unwrapPageNode";
+import { normalizeImagePercentWidths } from "@/lib/imageScale";
 import { isLiveEditor } from "@/lib/editorLive";
 import { PaginationManager } from "./PaginationManager";
 import { EditorContextMenu } from "./EditorContextMenu";
@@ -128,6 +130,20 @@ export function EditorShell() {
     const onOpenMath = () => setMathOpen(true);
     const onPageNext = () => goToPage(currentPageRef.current + 1);
     const onPagePrev = () => goToPage(currentPageRef.current - 1);
+    const onEnterPreview = () => {
+      const ed = editorRef.current;
+      if (isLiveEditor(ed)) {
+        const pageSetup = useEditorStore.getState().pageSetup;
+        const html = normalizeImagePercentWidths(
+          unwrapPageNode(ed.getHTML()),
+          pageSetup
+        );
+        useEditorStore.getState().setHtml(html);
+      } else {
+        useEditorStore.getState().flushDocumentHtml();
+      }
+    };
+    addEventListener(EVENT_NAMES.enterPreview, onEnterPreview);
     addEventListener("wordhtml:open-search", onSearch);
     addEventListener("wordhtml:open-page-setup", onPageSetup);
     addEventListener("wordhtml:open-shortcuts", onShortcuts);
@@ -139,6 +155,7 @@ export function EditorShell() {
     addEventListener("wordhtml:page-prev", onPagePrev);
     window.addEventListener("wordhtml:open-math-dialog", onOpenMath);
     return () => {
+      removeEventListener(EVENT_NAMES.enterPreview, onEnterPreview);
       removeEventListener("wordhtml:open-search", onSearch);
       removeEventListener("wordhtml:open-page-setup", onPageSetup);
       removeEventListener("wordhtml:open-shortcuts", onShortcuts);

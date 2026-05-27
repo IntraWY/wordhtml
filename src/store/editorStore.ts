@@ -8,7 +8,8 @@ import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
 import { useUiStore } from "./uiStore";
 import { editorStorage } from "@/lib/storage";
-import { dispatchOpenFile } from "@/lib/events";
+import { dispatchOpenFile, dispatchEnterPreview } from "@/lib/events";
+import { normalizeImagePercentWidths } from "@/lib/imageScale";
 import type {
   CleanerKey,
   ImageMode,
@@ -417,7 +418,18 @@ export const useEditorStore = create<EditorState>()(
         })),
       setVariables: (variables) => set((state) => ({ variables: typeof variables === "function" ? variables(state.variables) : variables })),
       setDataSet: (dataSet) => set({ dataSet }),
-      setPreviewMode: (previewMode) => set({ previewMode }),
+      setPreviewMode: (previewMode) => {
+        if (previewMode === "preview") {
+          dispatchEnterPreview();
+          get().flushDocumentHtml();
+          const normalized = normalizeImagePercentWidths(
+            get().documentHtml,
+            get().pageSetup
+          );
+          get().setHtml(normalized);
+        }
+        set({ previewMode });
+      },
       setFieldValue: (fieldId, value) =>
         set((state) => ({
           fieldValues: { ...state.fieldValues, [fieldId]: value },

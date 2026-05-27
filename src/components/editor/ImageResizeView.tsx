@@ -3,6 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
+import {
+  formatImageWidthLabel,
+  imageWidthMatchesPreset,
+  normalizeImagePercentWidths,
+  resolveImagePresetWidth,
+} from "@/lib/imageScale";
+import { getPageContentWidthPx } from "@/lib/pageContentWidth";
+import { unwrapPageNode } from "@/lib/unwrapPageNode";
+import { useEditorStore } from "@/store/editorStore";
 
 interface DragState {
   handle: "bl" | "br";
@@ -23,6 +32,7 @@ export function ImageResizeView({
   const imgRef = useRef<HTMLImageElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [liveShift, setLiveShift] = useState(false);
+  const [bodyWidthPx, setBodyWidthPx] = useState(0);
 
   const { src, alt, width, height, align } = node.attrs as {
     src: string;
@@ -73,6 +83,16 @@ export function ImageResizeView({
     };
   }, [drag, updateAttributes]);
 
+  useEffect(() => {
+    const body = imgRef.current?.closest(".page-body");
+    if (!body) return;
+    const update = () => setBodyWidthPx(body.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(body);
+    return () => ro.disconnect();
+  }, [src]);
+
   const startDrag = useCallback(
     (handle: "bl" | "br") => (e: React.MouseEvent) => {
       e.preventDefault();
@@ -93,7 +113,18 @@ export function ImageResizeView({
 
   const applyPreset = (preset: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    updateAttributes({ width: preset, height: null });
+    const body = imgRef.current?.closest(".page-body");
+    const measuredW = body?.getBoundingClientRect().width ?? bodyWidthPx;
+    const pageSetup = useEditorStore.getState().pageSetup;
+    const fallbackW = getPageContentWidthPx(pageSetup);
+    const resolved = resolveImagePresetWidth(preset, measuredW, fallbackW);
+    updateAttributes({ width: resolved, height: null });
+    // Sync store immediately so Preview never reads stale debounced HTML.
+    const html = normalizeImagePercentWidths(
+      unwrapPageNode(editor.getHTML()),
+      pageSetup
+    );
+    useEditorStore.getState().setHtml(html);
   };
 
   const focusAfterImage = useCallback(() => {
@@ -161,7 +192,9 @@ export function ImageResizeView({
 
   // --- Size bar label ---
   const sizeLabel = (() => {
-    if (!isDragging) return width ?? "ต้นฉบับ";
+    if (!isDragging) {
+      return formatImageWidthLabel(width, bodyWidthPx);
+    }
     return `${width ?? "?"} × ${height ?? "?"}${liveShift ? " · free" : " · locked"}`;
   })();
 
@@ -224,9 +257,9 @@ export function ImageResizeView({
                   onMouseDown={applyPreset(p)}
                   style={{
                     padding: "2px 6px",
-                    border: `1px solid ${width === p ? "#93c5fd" : "#e5e7eb"}`,
-                    background: width === p ? "#dbeafe" : "#f9fafb",
-                    color: width === p ? "#1d4ed8" : "#555",
+                    border: `1px solid ${imageWidthMatchesPreset(width, p, bodyWidthPx) ? "#93c5fd" : "#e5e7eb"}`,
+                    background: imageWidthMatchesPreset(width, p, bodyWidthPx) ? "#dbeafe" : "#f9fafb",
+                    color: imageWidthMatchesPreset(width, p, bodyWidthPx) ? "#1d4ed8" : "#555",
                     borderRadius: 4,
                     fontSize: 10,
                     fontWeight: 500,
