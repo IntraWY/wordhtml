@@ -29,9 +29,9 @@ export function createImageWithAlign(
           renderHTML: (attrs) => {
             if (!attrs.width) return {};
             const w = attrs.width as string;
-            // % widths: just the attribute; px widths: also inline style
+            // Browsers ignore width="50%" on <img>; always emit inline style.
             return w.includes("%")
-              ? { width: w }
+              ? { width: w, style: `width:${w}` }
               : { width: w, style: `width:${w}px` };
           },
         },

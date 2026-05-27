@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { stripPaginationWrappers } from "@/lib/export/stripPaginationWrappers";
 import { splitHtmlIntoPages } from "@/lib/paginationEngine";
 import { cn } from "@/lib/utils";
 import { ProcessedContent } from "./ProcessedContent";
@@ -15,7 +16,7 @@ interface MultiPagePreviewProps {
 
 export function MultiPagePreview({ html, pageSetup, className }: MultiPagePreviewProps) {
   const pages = useMemo(() => {
-    return splitHtmlIntoPages(html, pageSetup);
+    return splitHtmlIntoPages(stripPaginationWrappers(html), pageSetup);
   }, [html, pageSetup]);
 
   const hf = pageSetup.headerFooter;

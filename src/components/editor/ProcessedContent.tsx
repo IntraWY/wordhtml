@@ -61,17 +61,25 @@ export function ProcessedContent({
     [footerHtml, pageNumber, totalPages]
   );
 
+  const headerOffset = showHeaderFooter && headerHtml ? 35 : 0;
+  const footerOffset = showHeaderFooter && footerHtml ? 35 : 0;
+
   return (
-    <article
-      className={cn("paper printable-paper flex flex-col", className)}
+    <div
+      className={cn(
+        "page-node printable-paper flex flex-col",
+        showHeaderFooter && (headerHtml || footerHtml) && "has-page-chrome",
+        className
+      )}
+      data-page-number={pageNumber}
       style={{
-        minHeight: heightPx,
-        height: exactHeight
-          ? heightPx -
-            (showHeaderFooter && headerHtml ? 35 : 0) -
-            (showHeaderFooter && footerHtml ? 35 : 0)
-          : undefined,
         width: widthPx,
+        minHeight: heightPx,
+        height: exactHeight ? heightPx - headerOffset - footerOffset : undefined,
+        ["--page-margin-top" as string]: `${marginTopPx}px`,
+        ["--page-margin-right" as string]: `${marginRightPx}px`,
+        ["--page-margin-bottom" as string]: `${marginBottomPx}px`,
+        ["--page-margin-left" as string]: `${marginLeftPx}px`,
         ...style,
       }}
     >
@@ -82,13 +90,10 @@ export function ProcessedContent({
         />
       )}
       <div
-        className="page-content"
-        style={{
-          paddingTop: marginTopPx,
-          paddingRight: marginRightPx,
-          paddingBottom: marginBottomPx,
-          paddingLeft: marginLeftPx,
-        }}
+        className={cn(
+          "page-body prose-editor",
+          showHeaderFooter && (headerHtml || footerHtml) && "flex-1 min-h-0"
+        )}
         dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
       />
       {showHeaderFooter && footerHtml && (
@@ -97,6 +102,6 @@ export function ProcessedContent({
           dangerouslySetInnerHTML={{ __html: replacedFooter }}
         />
       )}
-    </article>
+    </div>
   );
 }

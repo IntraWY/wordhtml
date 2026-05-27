@@ -312,6 +312,7 @@ html[data-theme="dark"] .placeholder-missing {
 }
 /* Base image styles */
 .prose-editor img,
+.page-body img,
 .paper img {
   max-width: 100%;
   height: auto;
@@ -323,12 +324,16 @@ html[data-theme="dark"] .placeholder-missing {
 .paper img[data-align="center"] { display: block; margin: 1em auto; clear: both; float: none; }
 .paper img[data-align="right"]  { float: right; margin: 0.5em 0 0.5em 1em; clear: right; }
 
-/* Editor: alignment handled by ImageResizeView inline styles (NodeView wrapper div).
+/* Editor + preview: alignment handled by ImageResizeView inline styles (NodeView wrapper div).
    Keep fallback selectors for any non-NodeView img (paste before extension loads). */
-.prose-editor img:not([data-align]) { display: block; margin: 1em 0; }
-.prose-editor img[data-align="left"]   { float: left;  margin: 0.5em 1em 0.5em 0; clear: left; }
-.prose-editor img[data-align="center"] { display: block; margin: 1em auto; clear: both; float: none; }
-.prose-editor img[data-align="right"]  { float: right; margin: 0.5em 0 0.5em 1em; clear: right; }
+.prose-editor img:not([data-align]),
+.page-body img:not([data-align]) { display: block; margin: 1em 0; }
+.prose-editor img[data-align="left"],
+.page-body img[data-align="left"]   { float: left;  margin: 0.5em 1em 0.5em 0; clear: left; }
+.prose-editor img[data-align="center"],
+.page-body img[data-align="center"] { display: block; margin: 1em auto; clear: both; float: none; }
+.prose-editor img[data-align="right"],
+.page-body img[data-align="right"]  { float: right; margin: 0.5em 0 0.5em 1em; clear: right; }
 .prose-editor hr,
 .paper hr {
   border: none;
@@ -499,11 +504,11 @@ html[data-theme="dark"] .paper {
 }
 
 /* Multi-page preview spacing */
-.multi-page-preview .paper {
+.multi-page-preview .page-node {
   margin-bottom: 1.5rem;
 }
 
-.multi-page-preview .paper:last-child {
+.multi-page-preview .page-node:last-child {
   margin-bottom: 0;
 }
 
@@ -665,6 +670,7 @@ html[data-theme="dark"] .page-node {
 .prose-editor table,
 .paper table,
 .prose-editor img,
+.page-body img,
 .paper img,
 .prose-editor figure,
 .paper figure {

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { useToastStore } from "@/store/toastStore";
+import { stripPaginationWrappers } from "@/lib/export/stripPaginationWrappers";
 import { processTemplate } from "@/lib/templateEngine";
 import { MultiPagePreview } from "./MultiPagePreview";
 
@@ -26,7 +27,9 @@ export function TemplatePreview({ widthPx }: TemplatePreviewProps) {
         variables.map((v) => [v.name, v.isList ? (v.listValues ?? []).join(", ") : v.value])
       );
       const mergedRow = { ...variableFallback, ...dataRow };
-      return processTemplate(documentHtml, variables, mergedRow).html;
+      return stripPaginationWrappers(
+        processTemplate(documentHtml, variables, mergedRow).html
+      );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Template processing failed";
       useToastStore.getState().show(`ตัวอย่าง Template ล้มเหลว: ${message}`, "error");
