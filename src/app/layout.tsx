@@ -82,6 +82,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeScript }}
           suppressHydrationWarning
         />
+        <meta name="generator" content={APP_VERSION_LABEL} />
+        <meta name="app-version" content={`v${APP_VERSION}`} />
+        <meta name="build-id" content={BUILD_ID} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>{children}</ThemeProvider>

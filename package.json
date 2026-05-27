@@ -1,6 +1,6 @@
 {
   "name": "wordhtml",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "version:bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

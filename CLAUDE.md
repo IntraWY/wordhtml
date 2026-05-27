@@ -428,6 +428,22 @@ Before writing new code:
 - Don't destructure the whole Zustand store in a component — use one `useEditorStore` call per field. New-object selector return causes whole-component re-renders on any store change.
 - Don't display keyboard shortcuts in menus that aren't actually wired. Audit `EditorShell.tsx` keydown handler + StarterKit defaults before adding shortcut text.
 
+## Versioning
+
+- **Single source of truth**: `package.json` → `version`
+- **Where it shows up**:
+  - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
+  - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
+- **Current version**: **v0.1.5**
+
+### Patch bump rule (deploy default)
+
+When deploying, bump patch by **+0.0.1** (e.g. `0.1.5` → `0.1.6`) before building.
+
+```bash
+npm run version:bump
+```
+
 ## Deploy
 
 ```bash

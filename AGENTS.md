@@ -151,3 +151,14 @@
 - **Pagination:** Phase 1 + Phase 1.5 (Debug Audit) + Phase 4 (UI Integration) เสร็จสมบูรณ์
 - **Export:** ทุก format (HTML/ZIP/DOCX/MD/PDF) รองรับ multi-page wrappers
 - **Commits:** 5 commits (`perf` → `refactor` → `fix(a11y)` → `fix(pagination)` + `fix(security)` + `docs` → `feat(pagination-ui)`)
+
+---
+
+## 2026-05-27 — Versioned Deploy Prep
+
+- **Task:** เตรียม deploy แบบมีเวอร์ชัน + patch bump rule
+- **เป้าหมายเวอร์ชัน:** `v0.1.5`
+- **สิ่งที่เพิ่ม/แก้:**
+  - `package.json` — bump เป็น `0.1.5`
+  - `scripts/bump-version.mjs` — เพิ่มสคริปต์ bump patch (+0.0.1)
+  - `CLAUDE.md` — เพิ่มนโยบาย versioning + ขั้นตอน bump ก่อน deploy
