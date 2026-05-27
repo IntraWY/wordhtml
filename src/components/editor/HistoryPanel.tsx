@@ -112,6 +112,10 @@ export function HistoryPanel() {
                 <p className="text-xs text-[color:var(--color-muted-foreground)]">
                   ระบบจะบันทึกอัตโนมัติทุกครั้งที่กด Export หรือ Ctrl+S
                 </p>
+                <p className="max-w-sm text-xs text-[color:var(--color-muted-foreground)]">
+                  เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น — ไม่ซิงก์ข้าม PC หรือ notebook
+                  ต้องการใช้บนเครื่องอื่นให้ส่งออกไฟล์หรือบันทึกเป็น Template
+                </p>
               </div>
             ) : (
               <ul className="divide-y divide-[color:var(--color-border)]">
@@ -130,9 +134,13 @@ export function HistoryPanel() {
             )}
           </div>
 
-          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-3">
+          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-3 space-y-1">
             <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
               เก็บล่าสุด {history.length}/20 รายการ · บันทึกอัตโนมัติเมื่อ Export หรือ Ctrl+S
+            </p>
+            <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+              เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น (localStorage) — ไม่ซิงก์ข้ามอุปกรณ์ · ใช้ Template
+              หรือส่งออกไฟล์เพื่อย้ายไปเครื่องอื่น
             </p>
           </footer>
         </Dialog.Content>

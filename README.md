@@ -12,8 +12,9 @@ A redesigned clone of [wordhtml.com](https://wordhtml.com/) built with Next.js 1
 - **Paste from Word** — Word/Google Docs paste artifacts (mso-* styles, MsoNormal classes, conditional comments) are stripped on the way in.
 - **WYSIWYG A4 editor** — interactive horizontal and vertical rulers with draggable margin guides, page setup (A4/Letter, portrait/landscape), and header/footer configuration.
 - **Template mode** — define `{{variables}}`, paste data from Google Sheets, and preview merged documents. See [`docs/placeholder-system.md`](./docs/placeholder-system.md) for merge fields, page tokens, the Placeholder panel, and export policies.
-- **Document history** — up to 20 local snapshots with auto-save after idle periods.
-- **100% client-side** — no document ever leaves your machine. Static-export ready.
+- **Document history** — up to 20 snapshots per browser (localStorage); does not sync across devices.
+- **Named templates (optional cloud)** — save documents as templates via Firebase Firestore when configured (see `.env.example`).
+- **Client-side editing** — conversion and export run in the browser; static-export ready.
 
 ## Quick start
 
@@ -44,7 +45,7 @@ npm run build
 #   - any S3 / nginx / static host
 ```
 
-No environment variables. No runtime config. No backend.
+Optional Firebase env vars for cloud templates (see [`.env.example`](./.env.example)). History snapshots always stay in the browser's localStorage.
 
 ## Tech stack
 
@@ -64,10 +65,11 @@ No environment variables. No runtime config. No backend.
 |---|---|
 | [`CLAUDE.md`](./CLAUDE.md) | Architecture, conventions, pagination, and how to extend |
 | [`docs/placeholder-system.md`](./docs/placeholder-system.md) | Placeholder registry, `{{variables}}`, header/footer tokens, panel, export health |
+| [`docs/firebase-cloud-sync-design.md`](./docs/firebase-cloud-sync-design.md) | History vs Templates storage, planned Auth + cross-device sync |
 
 ## Privacy
 
-Everything happens in your browser. No telemetry. No third-party requests for document content. Your cleaner preferences (which toggles are on, which image mode you prefer) are saved in `localStorage`; the document itself is gone on reload.
+Everything happens in your browser for editing and export. No telemetry. Document **history** (ปุ่ม ประวัติ) is saved only in this browser's `localStorage` — it will not appear on another PC or device. **Templates** may sync via Firebase when the deployed site has Firebase configured. Cleaner preferences are also in `localStorage`. The in-progress document is gone on reload unless you saved a snapshot or template.
 
 ## License
 

@@ -374,6 +374,10 @@ export function TemplatePanel() {
                 เปิดหรือสร้างเอกสารก่อนบันทึก template
               </p>
             )}
+            <p className="mt-3 text-[11px] text-[color:var(--color-muted-foreground)]">
+              Templates ซิงก์ผ่าน Firebase (เมื่อ deploy ตั้งค่าแล้ว) — ต่างจากประวัติ (History)
+              ที่เก็บในเครื่องเท่านั้น
+            </p>
             </div>
           </footer>
         </Dialog.Content>
