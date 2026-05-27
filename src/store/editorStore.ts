@@ -27,6 +27,7 @@ import {
   getCloudHistoryUid,
   setPauseCloudHistoryMerge,
 } from "@/lib/cloudHistoryBridge";
+import { firestoreErrorMessage } from "@/lib/firestoreError";
 import {
   saveSnapshotToCloud,
   deleteSnapshotFromCloud,
@@ -62,10 +63,31 @@ async function clearCloudHistory(uid: string): Promise<boolean> {
   try {
     await clearSnapshotsInCloud(uid);
     return true;
-  } catch {
+  } catch (err) {
     useToastStore
       .getState()
-      .show("ไม่สามารถล้างประวัติบนคลาวด์ได้", "warning");
+      .show(
+        firestoreErrorMessage(err, "ไม่สามารถล้างประวัติบนคลาวด์ได้"),
+        "warning"
+      );
+    return false;
+  } finally {
+    setPauseCloudHistoryMerge(false);
+  }
+}
+
+async function deleteCloudSnapshot(uid: string, id: string): Promise<boolean> {
+  setPauseCloudHistoryMerge(true);
+  try {
+    await deleteSnapshotFromCloud(uid, id);
+    return true;
+  } catch (err) {
+    useToastStore
+      .getState()
+      .show(
+        firestoreErrorMessage(err, "ไม่สามารถลบประวัติบนคลาวด์ได้"),
+        "warning"
+      );
     return false;
   } finally {
     setPauseCloudHistoryMerge(false);
@@ -444,14 +466,8 @@ export const useEditorStore = create<EditorState>()(
       deleteSnapshot: async (id) => {
         const uid = getCloudHistoryUid();
         if (uid) {
-          try {
-            await deleteSnapshotFromCloud(uid, id);
-          } catch {
-            useToastStore
-              .getState()
-              .show("ไม่สามารถลบประวัติบนคลาวด์ได้", "warning");
-            return;
-          }
+          const ok = await deleteCloudSnapshot(uid, id);
+          if (!ok) return;
         }
         set((state) => ({
           history: state.history.filter((s) => s.id !== id),
