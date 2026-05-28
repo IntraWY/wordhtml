@@ -67,6 +67,8 @@ const PAGINATION_TYPING_IDLE_MS = 450;
 /** Wait for bulk HTML loads (snapshot/file) before measuring pages. */
 const BULK_LOAD_PAGINATION_PAUSE_MS = 750;
 const RESIZE_DEBOUNCE_MS = 150;
+/** Cap queued auto-splits per idle cycle to avoid runaway page creation. */
+const MAX_PENDING_SPLITS = 5;
 
 /* ------------------------------------------------------------------ */
 /* Hook                                                                */
@@ -220,6 +222,7 @@ export function usePagination(
 
     const engine = new PaginationEngine(editor, engineOptions, {
       onSplit: (candidate) => {
+        if (pendingSplitsRef.current.length >= MAX_PENDING_SPLITS) return;
         pendingSplitsRef.current.push(candidate);
         scheduleStableCheck();
       },

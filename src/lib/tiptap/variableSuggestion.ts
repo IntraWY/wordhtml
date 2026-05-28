@@ -27,8 +27,11 @@ export const variableSuggestion = {
     let component: ReactRenderer<unknown>;
     let popup: TippyInstance[];
 
+    let exited = false;
+
     return {
       onStart: (props: SuggestionProps) => {
+        exited = false;
         component = new ReactRenderer(VariableSuggestionList, {
           props: props as unknown as Record<string, unknown>,
           editor: props.editor,
@@ -72,8 +75,10 @@ export const variableSuggestion = {
       },
 
       onExit() {
-        popup[0].destroy();
-        component.destroy();
+        if (exited) return;
+        exited = true;
+        popup?.[0]?.destroy();
+        component?.destroy();
       },
     };
   },

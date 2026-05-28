@@ -76,16 +76,20 @@ function createSafeStorage<S>(
       try {
         let result = await base.getItem(name);
         if (!result && name === "wordhtml-editor") {
-          const backup = await idbGetDraft(IDB_EDITOR_BACKUP_KEY);
-          if (backup?.html) {
-            try {
-              result = JSON.parse(backup.html) as StorageValue<S>;
-              useToastStore
-                .getState()
-                .show("โหลดการตั้งค่าจาก IndexedDB สำรอง", "success");
-            } catch {
-              /* ignore corrupt backup */
+          try {
+            const backup = await idbGetDraft(IDB_EDITOR_BACKUP_KEY);
+            if (backup?.html) {
+              try {
+                result = JSON.parse(backup.html) as StorageValue<S>;
+                useToastStore
+                  .getState()
+                  .show("โหลดการตั้งค่าจาก IndexedDB สำรอง", "success");
+              } catch {
+                /* ignore corrupt backup */
+              }
             }
+          } catch {
+            /* IndexedDB unavailable (SSR/tests) — keep localStorage result */
           }
         }
         if (!result) return null;

@@ -21,8 +21,10 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: "Ctrl+O", labelTh: "เปิดไฟล์", labelEn: "Open file" },
   { keys: "Ctrl+Shift+N", labelTh: "เอกสารใหม่", labelEn: "New document" },
   { keys: "Ctrl+F", labelTh: "ค้นหา/แทนที่", labelEn: "Find & Replace" },
-  { keys: "Ctrl+K", labelTh: "แทรกลิงก์", labelEn: "Insert link" },
+  { keys: "Ctrl+K", labelTh: "พาเลตคำสั่ง", labelEn: "Command palette" },
+  { keys: "Ctrl+Shift+K", labelTh: "แทรกลิงก์", labelEn: "Insert link" },
   { keys: "Ctrl+P", labelTh: "พิมพ์", labelEn: "Print" },
+  { keys: "Ctrl+Shift+M", labelTh: "สมการคณิตศาสตร์", labelEn: "Math equation" },
   { keys: "F1", labelTh: "แสดงคีย์ลัด", labelEn: "Keyboard shortcuts" },
   { keys: "F11", labelTh: "เต็มจอ", labelEn: "Toggle fullscreen" },
   { keys: "Ctrl+B", labelTh: "ตัวหนา", labelEn: "Bold" },
@@ -31,8 +33,8 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: "Ctrl+Z", labelTh: "เลิกทำ", labelEn: "Undo" },
   { keys: "Ctrl+Y", labelTh: "ทำซ้ำ", labelEn: "Redo" },
   { keys: "Ctrl+A", labelTh: "เลือกทั้งหมด", labelEn: "Select all" },
-  { keys: "Ctrl+E", labelTh: "จัดกึ่งกลาง", labelEn: "Center align" },
-  { keys: "Ctrl+Enter", labelTh: "ตัวแบ่งหน้า", labelEn: "Page break" },
+  { keys: "Ctrl+E", labelTh: "โค้ดบรรทัด", labelEn: "Inline code" },
+  { keys: "Ctrl+Enter", labelTh: "แบ่งหน้า", labelEn: "Split page / page break" },
 ];
 
 export function ShortcutsPanel({ open, onClose }: ShortcutsPanelProps) {

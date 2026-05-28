@@ -141,7 +141,8 @@ function isAtomicBlock(el: HTMLElement, atomicTags: Set<string>): boolean {
 export interface PageBodyMeasurement {
   pageIndex: number;
   el: HTMLElement;
-  scrollHeight: number;
+  /** Measured block content height inside the page body (px). */
+  contentHeightPx: number;
   clientHeight: number;
   overflowPx: number;
 }
@@ -160,7 +161,6 @@ export function measurePageBodies(
 
   for (let i = 0; i < bodies.length; i++) {
     const el = bodies[i];
-    const scrollHeight = el.scrollHeight;
     const clientHeight = el.clientHeight;
     const contentHeightPx = measurePageBodyContentHeight(el);
     const overflowPx = contentHeightPx - maxHeightPx;
@@ -169,7 +169,7 @@ export function measurePageBodies(
       results.push({
         pageIndex: i,
         el,
-        scrollHeight: contentHeightPx,
+        contentHeightPx,
         clientHeight,
         overflowPx,
       });

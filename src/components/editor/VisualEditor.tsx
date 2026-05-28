@@ -24,6 +24,13 @@ import { SlashCommandsExtension } from "@/lib/tiptap/slashCommandsExtension";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
+
+/** Ctrl+K is reserved for the command palette; links use Ctrl+Shift+K. */
+const EditorLink = Link.extend({
+  addKeyboardShortcuts() {
+    return {};
+  },
+});
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import Color from "@tiptap/extension-color";
@@ -113,6 +120,9 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
   const lastWrittenHtml = useRef<string>("");
   const lastSyncedRevision = useRef(0);
   const editorRef = useRef<Editor | null>(null);
+  const paginationMaintenanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const extensions = useMemo(
     () => [
@@ -126,7 +136,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       HeadingWithId.configure({ levels: [1, 2, 3] }),
       BulletListWithClass,
       Underline,
-      Link.configure({
+      EditorLink.configure({
         openOnClick: false,
         HTMLAttributes: { rel: "noopener noreferrer" },
       }),
@@ -210,6 +220,17 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         const ed = editorRef.current;
         if (!isLiveEditor(ed)) return false;
 
+        // Command palette (overrides Link extension Mod-k in the editor).
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key.toLowerCase() === "k" &&
+          !event.shiftKey
+        ) {
+          event.preventDefault();
+          useUiStore.getState().openCommandPalette();
+          return true;
+        }
+
         // Intercept Ctrl+Enter / Cmd+Enter before HardBreak keymap
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
           event.preventDefault();
@@ -276,19 +297,6 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
           }
         }
 
-        // Delete/Backspace after default edit: prune orphan pages (e.g. empty page left by auto-split).
-        if (
-          (event.key === "Delete" || event.key === "Backspace") &&
-          !event.ctrlKey &&
-          !event.metaKey
-        ) {
-          queueMicrotask(() => {
-            if (!isLiveEditor(ed)) return;
-            const { pruned } = runPaginationMaintenance(ed);
-            if (pruned > 0) dispatchPaginationCooldown();
-          });
-        }
-
         // Backspace: outdent at start of indented paragraph, or delete 4-space tab block
         if (event.key === "Backspace") {
           const { selection } = ed.state;
@@ -329,6 +337,24 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
               }
             }
           }
+        }
+
+        // After default Delete/Backspace: debounced prune of orphan empty pages.
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          !event.ctrlKey &&
+          !event.metaKey
+        ) {
+          if (paginationMaintenanceTimerRef.current) {
+            clearTimeout(paginationMaintenanceTimerRef.current);
+          }
+          paginationMaintenanceTimerRef.current = setTimeout(() => {
+            paginationMaintenanceTimerRef.current = null;
+            const live = editorRef.current;
+            if (!isLiveEditor(live)) return;
+            const { pruned } = runPaginationMaintenance(live);
+            if (pruned > 0) dispatchPaginationCooldown();
+          }, 200);
         }
 
         return false;
