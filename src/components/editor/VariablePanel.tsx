@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useToastStore } from "@/store/toastStore";
 import { extractVariables } from "@/lib/templateEngine";
 import { cn } from "@/lib/utils";
 import type { TemplateVariable } from "@/types";
@@ -35,6 +36,7 @@ export function VariablePanel() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const variables = useEditorStore((s) => s.variables);
   const setVariables = useEditorStore((s) => s.setVariables);
+  const clearVariableValues = useEditorStore((s) => s.clearVariableValues);
   const dataSet = useEditorStore((s) => s.dataSet);
   const setDataSet = useEditorStore((s) => s.setDataSet);
   const previewMode = useEditorStore((s) => s.previewMode);
@@ -81,9 +83,9 @@ export function VariablePanel() {
   );
 
   const handleClear = useCallback(() => {
-    setVariables(variables.map((v) => ({ ...v, value: "", listValues: undefined })));
-    setDataSet(null);
-  }, [variables, setVariables, setDataSet]);
+    clearVariableValues();
+    useToastStore.getState().show("ล้างค่าตัวแปรและข้อมูลแล้ว", "success");
+  }, [clearVariableValues]);
 
   const handleSelectRow = useCallback(
     (index: number) => {
@@ -186,9 +188,11 @@ export function VariablePanel() {
                     <button
                       type="button"
                       onClick={handleClear}
-                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[color:var(--color-muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600"
+                      aria-label="ล้างค่าตัวแปร"
+                      title="ล้างค่าตัวแปรและข้อมูลที่นำเข้า (Clear values & imported data)"
+                      className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[color:var(--color-muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                     >
-                      <Trash2 className="size-3" />
+                      <Trash2 className="size-3" aria-hidden="true" />
                       ล้าง
                     </button>
                   )}

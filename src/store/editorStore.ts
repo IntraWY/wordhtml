@@ -157,6 +157,8 @@ interface EditorState {
   // template actions
   toggleTemplateMode: () => void;
   setVariables: (variables: TemplateVariable[] | ((prev: TemplateVariable[]) => TemplateVariable[])) => void;
+  /** Clears variable values, imported sheet data, and placeholder field values. */
+  clearVariableValues: () => void;
   setDataSet: (dataSet: DataSet | null) => void;
   setPreviewMode: (mode: "edit" | "preview") => void;
   setFieldValue: (fieldId: string, value: string) => void;
@@ -492,6 +494,16 @@ export const useEditorStore = create<EditorState>()(
           previewMode: s.templateMode ? "edit" : s.previewMode,
         })),
       setVariables: (variables) => set((state) => ({ variables: typeof variables === "function" ? variables(state.variables) : variables })),
+      clearVariableValues: () =>
+        set((state) => ({
+          variables: state.variables.map((v) => ({
+            ...v,
+            value: "",
+            listValues: undefined,
+          })),
+          dataSet: null,
+          fieldValues: {},
+        })),
       setDataSet: (dataSet) => set({ dataSet }),
       setPreviewMode: (previewMode) => {
         if (previewMode === "preview") {
