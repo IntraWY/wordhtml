@@ -37,6 +37,7 @@ async function measureImage(page: import("@playwright/test").Page) {
     return {
       imgWidthPx: Math.round(imgRect.width),
       bodyWidthPx: Math.round(bodyRect.width),
+      bodyLeftPx: Math.round(bodyRect.left),
       pct: Math.round((imgRect.width / bodyRect.width) * 1000) / 10,
       style: img.getAttribute("style"),
     };
@@ -77,6 +78,9 @@ test.describe("Image preview scale", () => {
     expect(previewMeasure).not.toBeNull();
     expect(Math.abs(previewMeasure!.imgWidthPx - editMeasure!.imgWidthPx)).toBeLessThanOrEqual(2);
     expect(Math.abs(previewMeasure!.pct - editMeasure!.pct)).toBeLessThanOrEqual(2);
+    expect(Math.abs(previewMeasure!.bodyLeftPx - editMeasure!.bodyLeftPx)).toBeLessThanOrEqual(
+      1
+    );
   });
 
   test("25% preset matches edit and preview via VariablePanel", async ({ page }) => {
@@ -97,5 +101,8 @@ test.describe("Image preview scale", () => {
     expect(previewMeasure).not.toBeNull();
     expect(Math.abs(previewMeasure!.imgWidthPx - editMeasure!.imgWidthPx)).toBeLessThanOrEqual(2);
     expect(Math.abs(previewMeasure!.pct - editMeasure!.pct)).toBeLessThanOrEqual(2);
+    expect(Math.abs(previewMeasure!.bodyLeftPx - editMeasure!.bodyLeftPx)).toBeLessThanOrEqual(
+      1
+    );
   });
 });

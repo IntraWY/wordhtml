@@ -143,8 +143,10 @@ export function PageChromeLayer({
       scrollEl?.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", measure);
       if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      lastReserveRef.current = 0;
+      onReserveHeightChange?.(0);
     };
-  }, [pagesRootRef, scrollContainerRef, measure, pageSetup, pageCount, enabled]);
+  }, [pagesRootRef, scrollContainerRef, measure, pageSetup, pageCount, enabled, onReserveHeightChange]);
 
   if (!enabled || boxes.length === 0) return null;
 

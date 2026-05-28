@@ -32,6 +32,8 @@ export interface UsePaginationResult {
 }
 
 export interface UsePaginationOptions {
+  /** When false, pagination engine does not run (e.g. template preview mode). */
+  enabled?: boolean;
   /** Debounce delay in ms before running the engine. Default 100. */
   debounceMs?: number;
   /** Height reserved for header/footer even when empty (px). Default 0. */
@@ -66,7 +68,8 @@ export function usePagination(
   pageSetup: PageSetup,
   options: UsePaginationOptions = {}
 ): UsePaginationResult {
-  const { debounceMs = DEFAULT_DEBOUNCE_MS, scrollContainerRef } = options;
+  const { debounceMs = DEFAULT_DEBOUNCE_MS, scrollContainerRef, enabled = true } =
+    options;
   const { headerFooterReservePx, atomicTags, tolerancePx } = options;
   const htmlSyncRevision = useEditorStore((s) => s.htmlSyncRevision);
 
@@ -192,7 +195,7 @@ export function usePagination(
   /* -- engine lifecycle -- */
 
   useEffect(() => {
-    if (!editor) return;
+    if (!enabled || !editor) return;
 
     const engineOptions: PaginationOptions = {
       pageSetup,
@@ -223,7 +226,15 @@ export function usePagination(
       engine.destroy();
       engineRef.current = null;
     };
-  }, [editor, pageSetup, headerFooterReservePx, atomicTags, tolerancePx, scheduleStableCheck]);
+  }, [
+    enabled,
+    editor,
+    pageSetup,
+    headerFooterReservePx,
+    atomicTags,
+    tolerancePx,
+    scheduleStableCheck,
+  ]);
 
   /* -- defer pagination after bulk HTML load (snapshot / file open) -- */
 
@@ -243,7 +254,7 @@ export function usePagination(
   /* -- editor updates -- */
 
   useEffect(() => {
-    if (!editor) return;
+    if (!enabled || !editor) return;
     const handler = () => {
       engineRef.current?.reobserve();
       if (typingIdleTimerRef.current) {
@@ -272,7 +283,7 @@ export function usePagination(
         typingIdleTimerRef.current = null;
       }
     };
-  }, [editor]);
+  }, [enabled, editor]);
 
   /* -- window resize -- */
 
@@ -301,6 +312,7 @@ export function usePagination(
   /* -- page setup change explicit re-check -- */
 
   useEffect(() => {
+    if (!enabled) return;
     // When pageSetup changes, force a re-check after a short delay
     // so the DOM has time to update padding / margins.
     const timer = setTimeout(() => {
@@ -310,7 +322,7 @@ export function usePagination(
       setCurrentPage(detectCurrentPage());
     }, debounceMs);
     return () => clearTimeout(timer);
-  }, [pageSetup, debounceMs, countPages, detectCurrentPage]);
+  }, [enabled, pageSetup, debounceMs, countPages, detectCurrentPage]);
 
   /* -- cleanup -- */
 

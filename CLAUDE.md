@@ -96,7 +96,8 @@ src/
 │   │   ├── PaginationManager.tsx # page navigation: total/current + goToPage controls
 │   │   ├── PageCanvas.tsx        # multi-page container: gray canvas + stacked white A4 pages
 │   │   ├── PageWrapper.tsx       # single page wrapper: shadow, page number, margin CSS vars
-│   │   └── IndentRuler.tsx       # horizontal ruler with indent handles (extracted from EditorShell)
+│   │   ├── IndentRuler.tsx       # horizontal ruler with indent handles (extracted from EditorShell)
+│   │   └── EditorPaperLayout.tsx # shared ruler+paper grid (edit + template preview)
 │   ├── landing/                  # Hero, Features, HowItWorks, Footer, Header
 │   ├── help/                     # FAQ, CleanerExplainers, PasteTips
 │   ├── ui/Button.tsx             # primary button primitive (cva variants)
@@ -196,10 +197,11 @@ Tokens live in `src/app/globals.css` under `@theme inline`. Tailwind v4 picks th
 - **Radius:** 4 / 6 / 8 / 12 / 16 px (`--radius-xs` … `--radius-xl`).
 - **Editor IS the paper.** The Tiptap `EditorContent` renders inside `PageCanvas`, which replaces the old single `<article class="paper">` wrapper. Each page is a `PageWrapper` containing a `page-node > page-body` structure. `.prose-editor` and `.paper` share the same typography rules in `globals.css` so exports look identical to what you type.
 - **A4 dimensions:** 794×1123 px @ 96 DPI = 210×297 mm. Conversion `1 cm = 794/21 ≈ 37.81 px` — see `src/lib/page.ts`. Letter is 215.9×279.4 mm. Page setup drives the paper padding and the print stylesheet.
-- **Ruler:** 18 px wide/tall, ticks every 0.5 cm, labels at every 1 cm, faint red guides at margin start/end.
-  - Vertical ruler auto-extends to full content height (multi-page docs) via `ResizeObserver` on `<article>`.
-  - Horizontal ruler has draggable grey square handles at left/right margin guides (adjusts page margins in mm).
-  - Indent triangles (▽ blue for left indent, △ purple for first-line indent) drag to set paragraph indents.
+- **Ruler:** 18 px wide/tall (`RULER_COLUMN_PX`), ticks every 0.5 cm, labels at every 1 cm, faint red guides at margin start/end. Layout shell: [`EditorPaperLayout.tsx`](src/components/editor/EditorPaperLayout.tsx) — shared `widthPx + 18` grid for **edit and template preview** (preview uses empty ruler spacers so paper does not shift horizontally).
+  - **Edit only:** `IndentRuler` (horizontal margins + paragraph indents) and vertical `Ruler` (page margins). `IndentRuler` syncs on `selectionUpdate` + `transaction`; walks ancestor chain for paragraph/heading (including when an image in that block is selected).
+  - Vertical ruler uses measured `contentOffsetPx` from first `.page-node` inside `PageCanvas` (`PAGE_CANVAS_PADDING_PX` default) and `PAGE_STACK_GAP_PX` (20) between stacked pages.
+  - **Template preview:** interactive rulers are **not** shown; margins still come from `pageSetup`. Image width uses toolbar presets; `%` widths are normalized to px on enter preview (`normalizeImagePercentWidths`). Preview stack uses the same canvas padding/gap constants as edit (`MultiPagePreview`).
+  - Manual regression checklist: [`docs/ruler-test-matrix.md`](docs/ruler-test-matrix.md).
 - **i18n style:** Thai labels primary, English in parentheses. Example: `"ไฟล์ (File)"`, `"ตัวหนา (Bold)"`. Keep this consistent for any new menu/toolbar item.
 
 ## Paragraph Formatting (Word-style)

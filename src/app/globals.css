@@ -503,12 +503,8 @@ html[data-theme="dark"] .paper {
     0 12px 28px rgba(0, 0, 0, 0.30);
 }
 
-/* Multi-page preview spacing */
+/* Multi-page preview — gap handled by flex `gap` on .multi-page-preview */
 .multi-page-preview .page-node {
-  margin-bottom: 1.5rem;
-}
-
-.multi-page-preview .page-node:last-child {
   margin-bottom: 0;
 }
 

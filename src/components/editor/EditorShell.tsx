@@ -14,6 +14,7 @@ import { PageCanvas } from "./PageCanvas";
 import { PreviewToggle } from "./PreviewToggle";
 import { VariablePanel } from "./VariablePanel";
 import { IndentRuler } from "./IndentRuler";
+import { EditorPaperLayout } from "./EditorPaperLayout";
 import { TemplatePreview } from "./TemplatePreview";
 import { SourcePane } from "./SourcePane";
 import { useEditorStore } from "@/store/editorStore";
@@ -93,9 +94,12 @@ export function EditorShell() {
   const [contentOffsetPx, setContentOffsetPx] = useState(PAGE_CANVAS_PADDING_PX);
   const [headerFooterReservePx, setHeaderFooterReservePx] = useState(0);
   const placeholderPanelOpen = useUiStore((s) => s.placeholderPanelOpen);
+  const paginationEnabled =
+    !(previewMode === "preview" && templateMode);
   const { pageCount, currentPage, goToPage } = usePagination(editor, pageSetup, {
     scrollContainerRef,
     headerFooterReservePx,
+    enabled: paginationEnabled,
   });
   const currentPageRef = useRef(currentPage);
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
@@ -186,30 +190,18 @@ export function EditorShell() {
 
   const handleMarginChange = useCallback(
     (leftMm: number, rightMm: number) => {
-      setPageSetup({
-        marginMm: {
-          top: pageSetup.marginMm.top,
-          right: rightMm,
-          bottom: pageSetup.marginMm.bottom,
-          left: leftMm,
-        },
-      });
+      const { marginMm } = useEditorStore.getState().pageSetup;
+      setPageSetup({ marginMm: { ...marginMm, left: leftMm, right: rightMm } });
     },
-    [pageSetup, setPageSetup]
+    [setPageSetup]
   );
 
   const handleVerticalMarginChange = useCallback(
     (topMm: number, bottomMm: number) => {
-      setPageSetup({
-        marginMm: {
-          top: topMm,
-          right: pageSetup.marginMm.right,
-          bottom: bottomMm,
-          left: pageSetup.marginMm.left,
-        },
-      });
+      const { marginMm } = useEditorStore.getState().pageSetup;
+      setPageSetup({ marginMm: { ...marginMm, top: topMm, bottom: bottomMm } });
     },
-    [pageSetup, setPageSetup]
+    [setPageSetup]
   );
 
   const handleRulerActive = useCallback(
@@ -227,14 +219,18 @@ export function EditorShell() {
   const marginLeftPx = Math.round(mmToPx(pageSetup.marginMm.left));
 
   useLayoutEffect(() => {
+    if (previewMode === "preview" && templateMode) return;
     const canvas = articleRef.current;
     const pageNode = canvas?.querySelector(".page-node");
-    if (!canvas || !pageNode) return;
+    if (!canvas || !pageNode) {
+      setContentOffsetPx(PAGE_CANVAS_PADDING_PX);
+      return;
+    }
     const measured = Math.round(
       pageNode.getBoundingClientRect().top - canvas.getBoundingClientRect().top
     );
-    if (measured > 0) setContentOffsetPx(measured);
-  }, [contentHeight, pageCount, pageHeightPx]);
+    setContentOffsetPx(measured > 0 ? measured : PAGE_CANVAS_PADDING_PX);
+  }, [contentHeight, pageCount, pageHeightPx, previewMode, templateMode]);
 
   return (
     <>
@@ -317,15 +313,9 @@ export function EditorShell() {
                 {previewMode === "preview" && templateMode ? (
                   <TemplatePreview widthPx={widthPx} />
                 ) : (
-                  <div className="mx-auto" style={{ width: widthPx + 18 }}>
-                    <div
-                      className="grid"
-                      style={{
-                        gridTemplateColumns: `18px ${widthPx}px`,
-                        gridTemplateRows: `18px auto`,
-                      }}
-                    >
-                      <div className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-muted)]" />
+                  <EditorPaperLayout
+                    widthPx={widthPx}
+                    horizontalRuler={
                       <IndentRuler
                         editor={editor}
                         cm={widthMm / 10}
@@ -336,6 +326,8 @@ export function EditorShell() {
                         onMarginChange={handleMarginChange}
                         onRulerActive={handleRulerActive}
                       />
+                    }
+                    verticalRuler={
                       <Ruler
                         orientation="vertical"
                         cm={heightMm / 10}
@@ -349,30 +341,34 @@ export function EditorShell() {
                         pageCount={pageCount}
                         contentOffsetPx={contentOffsetPx}
                       />
-                      <div className="relative" data-tour="editor">
-                        <PageCanvas
-                          ref={articleRef as React.RefObject<HTMLDivElement>}
-                          id="editor-content"
-                          className="printable-paper"
-                        >
-                          <VisualEditor onEditorReady={onEditorReady} />
-                        </PageCanvas>
-                        {previewMode !== "preview" && (
-                          <PageChromeLayer
-                            pagesRootRef={articleRef as React.RefObject<HTMLElement>}
-                            scrollContainerRef={scrollContainerRef}
-                            pageSetup={pageSetup}
-                            pageCount={pageCount}
-                            onReserveHeightChange={setHeaderFooterReservePx}
-                          />
-                        )}
-                      </div>
+                    }
+                  >
+                    <div className="relative" data-tour="editor">
+                      <PageCanvas
+                        ref={articleRef as React.RefObject<HTMLDivElement>}
+                        id="editor-content"
+                        className="printable-paper"
+                      >
+                        <VisualEditor onEditorReady={onEditorReady} />
+                      </PageCanvas>
+                      <PageChromeLayer
+                        pagesRootRef={articleRef as React.RefObject<HTMLElement>}
+                        scrollContainerRef={scrollContainerRef}
+                        pageSetup={pageSetup}
+                        pageCount={pageCount}
+                        onReserveHeightChange={setHeaderFooterReservePx}
+                      />
                     </div>
-                  </div>
+                  </EditorPaperLayout>
                 )}
               </div>
               <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
-                <StatusBar rulerInfo={rulerInfo} pageCount={pageCount} />
+                <StatusBar
+                  rulerInfo={
+                    previewMode === "preview" && templateMode ? null : rulerInfo
+                  }
+                  pageCount={pageCount}
+                />
                 <PaginationManager totalPages={pageCount} currentPage={currentPage} onPageChange={goToPage} />
               </div>
             </div>

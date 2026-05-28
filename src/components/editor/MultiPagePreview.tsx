@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { stripPaginationWrappers } from "@/lib/export/stripPaginationWrappers";
 import { splitHtmlIntoPages } from "@/lib/paginationEngine";
+import { PAGE_CANVAS_PADDING_PX, PAGE_STACK_GAP_PX } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ProcessedContent } from "./ProcessedContent";
 import { resolveHeaderFooter } from "./PageHeaderFooter";
@@ -23,7 +24,14 @@ export function MultiPagePreview({ html, pageSetup, className }: MultiPagePrevie
   const showHF = hf?.enabled ?? false;
 
   return (
-    <div className={cn("multi-page-preview flex flex-col items-center gap-8 py-8", className)}>
+    <div
+      className={cn("multi-page-preview flex flex-col items-center", className)}
+      style={{
+        paddingTop: PAGE_CANVAS_PADDING_PX,
+        paddingBottom: PAGE_CANVAS_PADDING_PX,
+        gap: PAGE_STACK_GAP_PX,
+      }}
+    >
       {pages.map((pageHtml, index) => {
         const pageNumber = index + 1;
         const { header, footer } = resolveHeaderFooter(
