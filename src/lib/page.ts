@@ -5,10 +5,13 @@ export const PX_PER_CM = 794 / 21; // 96 DPI: 21cm = 794px
 export const A4 = { wMm: 210, hMm: 297 };
 export const LETTER = { wMm: 215.9, hMm: 279.4 };
 
+/** Width of the ruler column in the edit/preview paper grid. */
+export const RULER_COLUMN_PX = 18;
+
 /** PageCanvas `py-6` — distance from canvas top to first `.page-node`. */
 export const PAGE_CANVAS_PADDING_PX = 24;
 
-/** PageCanvas `gap-5` between stacked pages (matches `.page-node` margin). */
+/** Gap between stacked pages (matches `.page-node` margin and preview stack). */
 export const PAGE_STACK_GAP_PX = 20;
 
 export function getPageDimensionsPx(pageSetup: PageSetup) {

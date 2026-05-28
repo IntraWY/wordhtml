@@ -9,6 +9,23 @@ function toNum(v: unknown): number {
   return typeof v === "number" && !isNaN(v) ? v : 0;
 }
 
+function readBlockIndent(editor: Editor): {
+  marginLeft: number;
+  textIndent: number;
+} | null {
+  const { $from } = editor.state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    const node = $from.node(d);
+    if (node.type.name === "paragraph" || node.type.name === "heading") {
+      return {
+        marginLeft: toNum(node.attrs.marginLeft),
+        textIndent: toNum(node.attrs.textIndent),
+      };
+    }
+  }
+  return null;
+}
+
 interface IndentRulerProps {
   editor: Editor | null;
   cm: number;
@@ -30,30 +47,25 @@ export function IndentRuler({
   onMarginChange,
   onRulerActive,
 }: IndentRulerProps) {
-  const [currentIndent, setCurrentIndent] = useState({ marginLeft: 0, textIndent: 0 });
+  const [syncTick, setSyncTick] = useState(0);
 
   useEffect(() => {
     if (!isLiveEditor(editor)) return;
-    const update = () => {
-      if (!isLiveEditor(editor)) return;
-      const { state } = editor;
-      const nodeType = state.selection.$from.parent.type.name;
-      const attrs =
-        nodeType === "heading"
-          ? editor.getAttributes("heading")
-          : editor.getAttributes("paragraph");
-      setCurrentIndent({
-        marginLeft: toNum(attrs.marginLeft),
-        textIndent: toNum(attrs.textIndent),
-      });
-    };
-    editor.on("selectionUpdate", update);
+
+    const bump = () => setSyncTick((t) => t + 1);
+    editor.on("selectionUpdate", bump);
+    editor.on("transaction", bump);
     return () => {
-      if (isLiveEditor(editor)) {
-        editor.off("selectionUpdate", update);
-      }
+      editor.off("selectionUpdate", bump);
+      editor.off("transaction", bump);
     };
   }, [editor]);
+
+  const blockIndent = isLiveEditor(editor) ? readBlockIndent(editor) : null;
+  void syncTick;
+
+  const currentIndent = blockIndent ?? { marginLeft: 0, textIndent: 0 };
+  const indentInteractive = blockIndent !== null;
 
   const handleIndentChange = useCallback(
     (marginLeft: number, textIndent: number) => {
@@ -71,7 +83,7 @@ export function IndentRuler({
       marginEnd={marginEnd}
       indentLeft={currentIndent.marginLeft}
       indentFirst={currentIndent.textIndent}
-      onIndentChange={handleIndentChange}
+      onIndentChange={indentInteractive ? handleIndentChange : undefined}
       marginLeftMm={marginLeftMm}
       marginRightMm={marginRightMm}
       onMarginChange={onMarginChange}
