@@ -4,6 +4,7 @@ import type { Node as PMNode, Schema } from "@tiptap/pm/model";
 import { Fragment } from "@tiptap/pm/model";
 import type { Transaction, EditorState } from "@tiptap/pm/state";
 import type { SplitCandidate } from "./engine";
+import { isPageBodyEffectivelyEmpty } from "./pageBodyEmpty";
 import type { PageSetup } from "@/types";
 
 /* ------------------------------------------------------------------ */
@@ -329,12 +330,7 @@ export function applyPageNodeSplit(
   if (splitOffset === 0) {
     // Avoid infinite page creation when the body is empty or a single empty
     // paragraph still measures as overflow (min-height / placeholder).
-    const isEmptyBody =
-      pageBodyNode.textContent.trim() === "" ||
-      (pageBodyNode.childCount === 1 &&
-        pageBodyNode.firstChild?.type.name === "paragraph" &&
-        pageBodyNode.firstChild.textContent.trim() === "");
-    if (isEmptyBody) {
+    if (isPageBodyEffectivelyEmpty(pageBodyNode)) {
       return { tr, splitsInserted: 0 };
     }
 

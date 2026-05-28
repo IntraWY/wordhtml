@@ -10,6 +10,7 @@ import {
   type SplitCandidate,
 } from "@/lib/pagination/engine";
 import { buildSplitTransaction } from "@/lib/pagination/splitter";
+import { buildPruneEmptyPagesTransaction } from "@/lib/pagination/pruneEmptyPages";
 import { isLiveEditor } from "@/lib/editorLive";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import { useEditorStore } from "@/store/editorStore";
@@ -175,6 +176,11 @@ export function usePagination(
       if (result.splitsInserted > 0 && isLiveEditor(editor)) {
         editor.view.dispatch(result.tr);
       }
+
+      const prune = buildPruneEmptyPagesTransaction(editor.state);
+      if (prune && prune.removed > 0 && isLiveEditor(editor)) {
+        editor.view.dispatch(prune.tr);
+      }
     } catch (e) {
       console.error("Pagination split failed", e);
     } finally {
@@ -262,7 +268,13 @@ export function usePagination(
       }
       typingIdleTimerRef.current = setTimeout(() => {
         typingIdleTimerRef.current = null;
-        if (!isApplyingRef.current) {
+        if (!isApplyingRef.current && isLiveEditor(editor)) {
+          const prune = buildPruneEmptyPagesTransaction(editor.state);
+          if (prune && prune.removed > 0) {
+            editor.view.dispatch(prune.tr);
+            setPageCount(countPages());
+            setCurrentPage(detectCurrentPage());
+          }
           engineRef.current?.scheduleCheck();
           // #region agent log
           debugPerfLog(

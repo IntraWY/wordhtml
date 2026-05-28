@@ -29,6 +29,7 @@ declare module "@tiptap/core" {
       insertPage: (attrs?: { pageNumber?: number; pageSetup?: PageSetup }) => ReturnType;
       splitPage: () => ReturnType;
       mergePage: () => ReturnType;
+      mergeWithPreviousPage: () => ReturnType;
       setPageSetup: (pageSetup: Partial<PageSetup>) => ReturnType;
       setDocumentPageSetup: (pageSetup: Partial<PageSetup>) => ReturnType;
     };
@@ -155,6 +156,91 @@ export const PageCommands = Extension.create({
               return true;
             }
           );
+
+          dispatch(tr);
+          return true;
+        },
+
+      mergeWithPreviousPage:
+        () =>
+        ({ tr, state, dispatch }) => {
+          if (!dispatch) return true;
+
+          const { selection } = state;
+          const { $from } = selection;
+
+          let currentPagePos = -1;
+          let currentPageNode = state.doc;
+          let currentPageBody = state.doc;
+
+          for (let d = $from.depth; d >= 0; d--) {
+            const node = $from.node(d);
+            if (node.type.name === "pageBody" && currentPageBody === state.doc) {
+              currentPageBody = node;
+            }
+            if (node.type.name === "pageNode" && currentPagePos < 0) {
+              currentPagePos = $from.before(d);
+              currentPageNode = node;
+            }
+          }
+
+          if (currentPagePos < 0 || currentPageBody === state.doc) return false;
+
+          const currentPageNumber =
+            (currentPageNode.attrs.pageNumber as number) ?? 1;
+          if (currentPageNumber <= 1) return false;
+
+          let previousPagePos = -1;
+          let previousPageNode = state.doc;
+          state.doc.nodesBetween(0, currentPagePos, (node, pos) => {
+            if (node.type.name === "pageNode") {
+              previousPagePos = pos;
+              previousPageNode = node;
+            }
+            return true;
+          });
+
+          if (previousPagePos < 0) return false;
+
+          const previousPageBody = previousPageNode.childAfter(0);
+          if (
+            !previousPageBody.node ||
+            previousPageBody.node.type.name !== "pageBody"
+          ) {
+            return false;
+          }
+
+          const mergedContent = previousPageBody.node.content.append(
+            currentPageBody.content
+          );
+
+          const previousPageBodyPos = previousPagePos + 1 + previousPageBody.offset;
+          tr.replaceWith(
+            previousPageBodyPos,
+            previousPageBodyPos + previousPageBody.node.nodeSize,
+            state.schema.nodes.pageBody.create(
+              previousPageBody.node.attrs,
+              mergedContent
+            )
+          );
+
+          const deletePos = tr.mapping.map(currentPagePos);
+          tr.delete(deletePos, deletePos + currentPageNode.nodeSize);
+
+          const renumberStart = tr.mapping.map(currentPagePos);
+          tr.doc.nodesBetween(renumberStart, tr.doc.content.size, (node, pos) => {
+            if (node.type.name === "pageNode") {
+              const pn = (node.attrs.pageNumber as number) ?? 1;
+              if (pn > currentPageNumber - 1) {
+                tr.setNodeMarkup(pos, undefined, {
+                  ...node.attrs,
+                  pageNumber: pn - 1,
+                });
+              }
+              return false;
+            }
+            return true;
+          });
 
           dispatch(tr);
           return true;

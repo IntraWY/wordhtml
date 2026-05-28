@@ -60,6 +60,8 @@ import { isLiveEditor } from "@/lib/editorLive";
 import { useToastStore } from "@/store/toastStore";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
+import { getPageSelectionContext } from "@/lib/pagination/pageSelection";
+import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -212,6 +214,53 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
           const ok = ed.chain().focus().splitPage().run();
           if (!ok) ed.chain().focus().insertPageBreak().run();
           return true;
+        }
+
+        const pageCtx = getPageSelectionContext(ed.state);
+
+        // Backspace at top of page 2+ → merge into previous page (prevents orphan empty pages).
+        if (event.key === "Backspace" && pageCtx?.atPageBodyStart && pageCtx.pageNumber > 1) {
+          event.preventDefault();
+          const merged = ed.chain().focus().mergeWithPreviousPage().run();
+          if (merged) return true;
+        }
+
+        // Delete at end of page → remove empty next page instead of leaving extra canvas pages.
+        if (event.key === "Delete" && pageCtx?.atPageBodyEnd) {
+          const { state } = ed;
+          const { $from } = state.selection;
+          let currentPagePos = -1;
+          let currentPageNode = state.doc;
+          for (let d = $from.depth; d >= 0; d--) {
+            const node = $from.node(d);
+            if (node.type.name === "pageNode") {
+              currentPagePos = $from.before(d);
+              currentPageNode = node;
+              break;
+            }
+          }
+          if (currentPagePos >= 0) {
+            let nextPageBody = state.doc;
+            state.doc.nodesBetween(
+              currentPagePos + currentPageNode.nodeSize,
+              state.doc.content.size,
+              (node) => {
+                if (node.type.name === "pageBody") {
+                  nextPageBody = node;
+                  return false;
+                }
+                return true;
+              }
+            );
+            if (
+              nextPageBody !== state.doc &&
+              isPageBodyEffectivelyEmpty(nextPageBody)
+            ) {
+              event.preventDefault();
+              const merged = ed.chain().focus().mergePage().run();
+              if (merged) return true;
+            }
+          }
         }
 
         // Backspace: outdent at start of indented paragraph, or delete 4-space tab block
