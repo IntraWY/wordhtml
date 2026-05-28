@@ -70,13 +70,21 @@ export const PaginationAware = Extension.create({
       },
 
       PageDown: () => {
-        this.editor.commands.goToNextPage();
-        return true;
+        const { selection, doc } = this.editor.state;
+        if (selection.to >= doc.content.size - 1) {
+          this.editor.commands.goToNextPage();
+          return true;
+        }
+        return false;
       },
 
       PageUp: () => {
-        this.editor.commands.goToPreviousPage();
-        return true;
+        const { selection } = this.editor.state;
+        if (selection.from <= 1) {
+          this.editor.commands.goToPreviousPage();
+          return true;
+        }
+        return false;
       },
     };
   },

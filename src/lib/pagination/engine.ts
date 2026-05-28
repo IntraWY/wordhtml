@@ -5,6 +5,7 @@ import type { PageSetup } from "@/types";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import { findTableRowSplitPosition } from "./tableSplit";
+import { isDomPageBodyEffectivelyEmpty } from "./domPageBody";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -164,7 +165,7 @@ export function measurePageBodies(
     const contentHeightPx = measurePageBodyContentHeight(el);
     const overflowPx = contentHeightPx - maxHeightPx;
 
-    if (overflowPx > tolerancePx) {
+    if (overflowPx > tolerancePx && !isDomPageBodyEffectivelyEmpty(el)) {
       results.push({
         pageIndex: i,
         el,

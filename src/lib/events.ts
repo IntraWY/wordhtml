@@ -18,6 +18,7 @@ export const EVENT_NAMES = {
   pagePrev: "wordhtml:page-prev",
   insertPageBreak: "wordhtml:insert-page-break",
   enterPreview: "wordhtml:enter-preview",
+  paginationCooldown: "wordhtml:pagination-cooldown",
 } as const;
 
 export type WordhtmlEventName =
@@ -102,6 +103,12 @@ export function dispatchInsertPageBreak(): void {
 export function dispatchEnterPreview(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.enterPreview));
+  }
+}
+
+export function dispatchPaginationCooldown(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(EVENT_NAMES.paginationCooldown));
   }
 }
 

@@ -38,6 +38,22 @@ describe("isPageBodyEffectivelyEmpty", () => {
 });
 
 describe("buildPruneEmptyPagesTransaction", () => {
+  it("merges leading empty page into the next page with content", () => {
+    const doc = schema.nodes.doc.create(null, [page(1, ""), page(2, "Hello")]);
+    const state = EditorState.create({ schema, doc });
+    const result = buildPruneEmptyPagesTransaction(state);
+    expect(result?.removed).toBe(1);
+
+    let pageCount = 0;
+    let text = "";
+    result!.tr.doc.descendants((node) => {
+      if (node.type.name === "pageNode") pageCount += 1;
+      if (node.isText) text += node.text;
+    });
+    expect(pageCount).toBe(1);
+    expect(text).toContain("Hello");
+  });
+
   it("removes trailing empty pages but keeps one", () => {
     const doc = schema.nodes.doc.create(null, [
       page(1, "Hello"),

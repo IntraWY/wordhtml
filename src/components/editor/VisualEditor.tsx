@@ -62,6 +62,8 @@ import { debugPerfLog } from "@/lib/debugPerfLog";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
 import { getPageSelectionContext } from "@/lib/pagination/pageSelection";
 import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
+import { runPaginationMaintenance } from "@/lib/pagination/paginationMaintenance";
+import { dispatchPaginationCooldown } from "@/lib/events";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -218,11 +220,19 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
         const pageCtx = getPageSelectionContext(ed.state);
 
+        const finishPageBoundaryEdit = () => {
+          runPaginationMaintenance(ed);
+          dispatchPaginationCooldown();
+        };
+
         // Backspace at top of page 2+ → merge into previous page (prevents orphan empty pages).
         if (event.key === "Backspace" && pageCtx?.atPageBodyStart && pageCtx.pageNumber > 1) {
           event.preventDefault();
           const merged = ed.chain().focus().mergeWithPreviousPage().run();
-          if (merged) return true;
+          if (merged) {
+            finishPageBoundaryEdit();
+            return true;
+          }
         }
 
         // Delete at end of page → remove empty next page instead of leaving extra canvas pages.
@@ -258,9 +268,25 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
             ) {
               event.preventDefault();
               const merged = ed.chain().focus().mergePage().run();
-              if (merged) return true;
+              if (merged) {
+                finishPageBoundaryEdit();
+                return true;
+              }
             }
           }
+        }
+
+        // Delete/Backspace after default edit: prune orphan pages (e.g. empty page left by auto-split).
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          !event.ctrlKey &&
+          !event.metaKey
+        ) {
+          queueMicrotask(() => {
+            if (!isLiveEditor(ed)) return;
+            const { pruned } = runPaginationMaintenance(ed);
+            if (pruned > 0) dispatchPaginationCooldown();
+          });
         }
 
         // Backspace: outdent at start of indented paragraph, or delete 4-space tab block

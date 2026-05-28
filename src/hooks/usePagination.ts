@@ -10,10 +10,18 @@ import {
   type SplitCandidate,
 } from "@/lib/pagination/engine";
 import { buildSplitTransaction } from "@/lib/pagination/splitter";
-import { buildPruneEmptyPagesTransaction } from "@/lib/pagination/pruneEmptyPages";
+import {
+  runPaginationMaintenance,
+  PAGINATION_COOLDOWN_MS,
+} from "@/lib/pagination/paginationMaintenance";
 import { isLiveEditor } from "@/lib/editorLive";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import { useEditorStore } from "@/store/editorStore";
+import {
+  addEventListener,
+  removeEventListener,
+  EVENT_NAMES,
+} from "@/lib/events";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -177,9 +185,9 @@ export function usePagination(
         editor.view.dispatch(result.tr);
       }
 
-      const prune = buildPruneEmptyPagesTransaction(editor.state);
-      if (prune && prune.removed > 0 && isLiveEditor(editor)) {
-        editor.view.dispatch(prune.tr);
+      const { pruned } = runPaginationMaintenance(editor);
+      if (pruned > 0) {
+        engineRef.current?.pauseFor(PAGINATION_COOLDOWN_MS);
       }
     } catch (e) {
       console.error("Pagination split failed", e);
@@ -269,11 +277,11 @@ export function usePagination(
       typingIdleTimerRef.current = setTimeout(() => {
         typingIdleTimerRef.current = null;
         if (!isApplyingRef.current && isLiveEditor(editor)) {
-          const prune = buildPruneEmptyPagesTransaction(editor.state);
-          if (prune && prune.removed > 0) {
-            editor.view.dispatch(prune.tr);
+          const { pruned } = runPaginationMaintenance(editor);
+          if (pruned > 0) {
             setPageCount(countPages());
             setCurrentPage(detectCurrentPage());
+            engineRef.current?.pauseFor(PAGINATION_COOLDOWN_MS);
           }
           engineRef.current?.scheduleCheck();
           // #region agent log
@@ -295,7 +303,20 @@ export function usePagination(
         typingIdleTimerRef.current = null;
       }
     };
-  }, [enabled, editor]);
+  }, [enabled, editor, countPages, detectCurrentPage]);
+
+  /* -- cooldown after manual page merge / prune -- */
+
+  useEffect(() => {
+    if (!enabled) return;
+    const onCooldown = () => {
+      engineRef.current?.pauseFor(PAGINATION_COOLDOWN_MS);
+    };
+    addEventListener(EVENT_NAMES.paginationCooldown, onCooldown);
+    return () => {
+      removeEventListener(EVENT_NAMES.paginationCooldown, onCooldown);
+    };
+  }, [enabled]);
 
   /* -- window resize -- */
 
