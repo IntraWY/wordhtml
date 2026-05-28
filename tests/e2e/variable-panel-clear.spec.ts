@@ -9,7 +9,9 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("VariablePanel clear button empties variable values", async ({ page }) => {
+test("VariablePanel clear button removes all variables after confirm", async ({
+  page,
+}) => {
   await page.goto("/");
   await expect(page.locator(".ProseMirror").first()).toBeVisible();
   await page.getByRole("button", { name: "แทรก (Insert)" }).click();
@@ -22,8 +24,12 @@ test("VariablePanel clear button empties variable values", async ({ page }) => {
   await valueInput.fill("ACME");
   await expect(valueInput).toHaveValue("ACME");
 
-  const clearBtn = page.getByRole("button", { name: "ล้างค่าตัวแปร" });
-  await expect(clearBtn).toBeVisible();
-  await clearBtn.click();
-  await expect(valueInput).toHaveValue("");
+  await page.getByRole("button", { name: "ลบตัวแปรทั้งหมด" }).click();
+  await expect(
+    page.getByRole("dialog").getByText("ลบตัวแปรทั้งหมด (Clear All Variables)")
+  ).toBeVisible();
+  await page.getByRole("button", { name: "ยืนยัน (Confirm)" }).click();
+
+  await expect(valueInput).toHaveCount(0);
+  await expect(page.getByText("ตัวแปร (0)")).toBeVisible();
 });

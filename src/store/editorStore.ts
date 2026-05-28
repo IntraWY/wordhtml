@@ -159,6 +159,8 @@ interface EditorState {
   setVariables: (variables: TemplateVariable[] | ((prev: TemplateVariable[]) => TemplateVariable[])) => void;
   /** Clears variable values, imported sheet data, and placeholder field values. */
   clearVariableValues: () => void;
+  /** Removes all variables from the panel and clears related template data. */
+  clearAllVariables: () => void;
   setDataSet: (dataSet: DataSet | null) => void;
   setPreviewMode: (mode: "edit" | "preview") => void;
   setFieldValue: (fieldId: string, value: string) => void;
@@ -504,6 +506,13 @@ export const useEditorStore = create<EditorState>()(
           dataSet: null,
           fieldValues: {},
         })),
+      clearAllVariables: () =>
+        set({
+          variables: [],
+          dataSet: null,
+          fieldValues: {},
+          previewMode: "edit",
+        }),
       setDataSet: (dataSet) => set({ dataSet }),
       setPreviewMode: (previewMode) => {
         if (previewMode === "preview") {

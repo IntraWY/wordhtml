@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useDialogStore } from "@/store/dialogStore";
 import { useToastStore } from "@/store/toastStore";
 import { extractVariables } from "@/lib/templateEngine";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ export function VariablePanel() {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const variables = useEditorStore((s) => s.variables);
   const setVariables = useEditorStore((s) => s.setVariables);
-  const clearVariableValues = useEditorStore((s) => s.clearVariableValues);
+  const clearAllVariables = useEditorStore((s) => s.clearAllVariables);
   const dataSet = useEditorStore((s) => s.dataSet);
   const setDataSet = useEditorStore((s) => s.setDataSet);
   const previewMode = useEditorStore((s) => s.previewMode);
@@ -83,9 +84,18 @@ export function VariablePanel() {
   );
 
   const handleClear = useCallback(() => {
-    clearVariableValues();
-    useToastStore.getState().show("ล้างค่าตัวแปรและข้อมูลแล้ว", "success");
-  }, [clearVariableValues]);
+    const count = useEditorStore.getState().variables.length;
+    if (count === 0) return;
+
+    useDialogStore.getState().openConfirm(
+      "ลบตัวแปรทั้งหมด (Clear All Variables)",
+      `ต้องการลบตัวแปรทั้งหมด (${count} รายการ) ออกจากรายการหรือไม่? ค่าและข้อมูลที่นำเข้าจะถูกล้างด้วย ตัวแปร {{...}} ในเอกสารยังคงอยู่และอาจถูกเพิ่มกลับในรายการเมื่อแก้ไขเอกสาร`,
+      () => {
+        clearAllVariables();
+        useToastStore.getState().show("ลบตัวแปรทั้งหมดแล้ว", "success");
+      }
+    );
+  }, [clearAllVariables]);
 
   const handleSelectRow = useCallback(
     (index: number) => {
@@ -188,8 +198,8 @@ export function VariablePanel() {
                     <button
                       type="button"
                       onClick={handleClear}
-                      aria-label="ล้างค่าตัวแปร"
-                      title="ล้างค่าตัวแปรและข้อมูลที่นำเข้า (Clear values & imported data)"
+                      aria-label="ลบตัวแปรทั้งหมด"
+                      title="ลบตัวแปรทั้งหมดออกจากรายการ (Remove all variables)"
                       className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[color:var(--color-muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                     >
                       <Trash2 className="size-3" aria-hidden="true" />
