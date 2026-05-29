@@ -625,7 +625,8 @@ html[data-theme="dark"] .paper {
   }
 
   .page-number-label,
-  .page-node[data-page-number]::after {
+  .page-node[data-page-number]::after,
+  .page-node::before {
     display: none !important;
   }
 
@@ -650,6 +651,20 @@ html[data-theme="dark"] .paper {
   border-radius: 2px;
   overflow: hidden;
   margin: 0 auto 20px;
+}
+
+/* Word-style dashed margin guides — editor-only decoration */
+.page-node::before {
+  content: "";
+  position: absolute;
+  inset:
+    var(--page-margin-top, 0)
+    var(--page-margin-right, 0)
+    var(--page-margin-bottom, 0)
+    var(--page-margin-left, 0);
+  border: 1px dashed oklch(55% 0.02 250 / 0.28);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .page-node:last-child {

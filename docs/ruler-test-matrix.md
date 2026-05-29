@@ -9,6 +9,28 @@ Use this checklist when changing ruler, preview layout, or pagination.
 | Drag left/right margin handles on horizontal ruler | Red guides align with `.page-body` left/right padding; StatusBar shows mm |
 | Drag top/bottom on vertical ruler | Content inset matches `pageSetup.marginMm` |
 | Change margins in Page Setup dialog | Ruler handles jump to new positions without reload |
+| Open edit mode with default margins | Dashed `.page-node::before` rectangle visible on each page; inset matches `.page-body` padding |
+| Drag margin handles | Dashed guide moves with margin; stays aligned with content inset |
+| Print preview (Ctrl+P) | Margin guides hidden; page numbers hidden |
+
+## Margin guides (Word-style)
+
+| Step | Expected |
+|------|----------|
+| Single page in edit mode | Light dashed rectangle inside each `.page-node` at margin inset |
+| Multi-page document | Each page has its own dashed guide; guides do not bleed between pages |
+| Dark mode | Guides visible on white paper (contrast OK) |
+| Click/type inside guide area | Clicks pass through to editor (`pointer-events: none`) |
+| Template preview | No margin guides (preview uses ProcessedContent, not edit chrome) |
+
+## Sticky horizontal ruler
+
+| Step | Expected |
+|------|----------|
+| Scroll down on multi-page doc | Horizontal ruler (IndentRuler) stays pinned at top of scroll area |
+| Scroll down | Vertical ruler scrolls with paper stack |
+| Scroll down | Paper content scrolls; H-ruler does not drift horizontally |
+| Resize window | Sticky ruler still aligned with paper column (widthPx) |
 
 ## Paragraph indents (text)
 

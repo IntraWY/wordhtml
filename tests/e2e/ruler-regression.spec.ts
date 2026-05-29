@@ -108,4 +108,60 @@ test.describe("Ruler regression", () => {
     expect(widthAfter).not.toBeNull();
     expect(Math.abs(widthAfter! - widthBefore!)).toBeLessThanOrEqual(2);
   });
+
+  test("margin guides visible and sticky horizontal ruler on scroll", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator("[contenteditable='true']").first()).toBeVisible();
+
+    const editor = page.locator("[contenteditable='true']").first();
+    await editor.click();
+    // Type enough content to enable scrolling
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.type(
+        `Line ${i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit.`
+      );
+      await page.keyboard.press("Enter");
+    }
+
+    await expect(page.locator(".page-node").first()).toBeVisible({ timeout: 15_000 });
+
+    // Margin guide (::before) should exist and have dashed border
+    const hasMarginGuide = await page.evaluate(() => {
+      const node = document.querySelector(".page-node");
+      if (!node) return false;
+      const before = getComputedStyle(node, "::before");
+      return before.content !== "none" && before.borderStyle.includes("dashed");
+    });
+    expect(hasMarginGuide).toBe(true);
+
+    const scrollContainer = page.locator(".overflow-auto.p-8").first();
+    const stickyRow = page.locator(".sticky.top-0").first();
+    await expect(stickyRow).toBeVisible();
+
+    const yBeforeScroll = await stickyRow.boundingBox().then((b) => b?.y ?? 0);
+    const pageNodeYBefore = await page
+      .locator(".page-node")
+      .first()
+      .boundingBox()
+      .then((b) => b?.y ?? 0);
+
+    await scrollContainer.evaluate((el) => {
+      el.scrollTop = 400;
+    });
+    await page.waitForTimeout(300);
+
+    const yAfterScroll = await stickyRow.boundingBox().then((b) => b?.y ?? 0);
+    // Sticky H-ruler row should stay at same viewport Y (within 2px tolerance)
+    expect(Math.abs(yAfterScroll - yBeforeScroll)).toBeLessThanOrEqual(2);
+
+    // Paper should have scrolled up relative to viewport
+    const pageNodeYAfter = await page
+      .locator(".page-node")
+      .first()
+      .boundingBox()
+      .then((b) => b?.y ?? 0);
+    expect(pageNodeYAfter).toBeLessThan(pageNodeYBefore);
+  });
 });

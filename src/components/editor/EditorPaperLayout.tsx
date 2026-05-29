@@ -25,16 +25,19 @@ export function EditorPaperLayout({
   children,
   className,
 }: EditorPaperLayoutProps) {
+  const gridColumns = `${RULER_COLUMN_PX}px ${widthPx}px`;
+
   return (
     <div
       className={cn("mx-auto", className)}
       style={{ width: widthPx + RULER_COLUMN_PX }}
     >
+      {/* Row 1: sticky horizontal ruler (Word-style — stays at top when scrolling) */}
       <div
-        className="grid"
+        className="sticky top-0 z-20 grid border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)]"
         style={{
-          gridTemplateColumns: `${RULER_COLUMN_PX}px ${widthPx}px`,
-          gridTemplateRows: `${RULER_COLUMN_PX}px auto`,
+          gridTemplateColumns: gridColumns,
+          gridTemplateRows: `${RULER_COLUMN_PX}px`,
         }}
       >
         <div className={cornerClass} aria-hidden="true" />
@@ -45,6 +48,15 @@ export function EditorPaperLayout({
             aria-hidden="true"
           />
         )}
+      </div>
+
+      {/* Row 2: vertical ruler + paper (scrolls with content) */}
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: gridColumns,
+        }}
+      >
         {verticalRuler ?? (
           <div
             className={cn(cornerClass, "border-r")}
