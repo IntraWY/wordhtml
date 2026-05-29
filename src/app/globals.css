@@ -245,7 +245,8 @@ html[data-theme="dark"] .placeholder-missing {
 }
 .prose-editor p,
 .paper p {
-  margin: 0 0 1em;
+  margin-block: 0 1em;
+  margin-inline: 0;
 }
 .prose-editor ul,
 .paper ul,

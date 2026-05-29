@@ -63,6 +63,7 @@ export function StatusBar({
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const history = useEditorStore((s) => s.history);
+  const activeSnapshotId = useEditorStore((s) => s.activeSnapshotId);
   const autoSave = useEditorStore((s) => s.autoSave);
   const lastAction = useUiStore((s) => s.lastAction);
   const templateMode = useEditorStore((s) => s.templateMode);
@@ -93,13 +94,19 @@ export function StatusBar({
       `${Math.round(autoSave.idleMs / 1000)}s`
     : null;
 
-  const lastSnapshotHtml = history[0]?.html ?? "";
+  const baselineHtml = useMemo(() => {
+    if (activeSnapshotId) {
+      return history.find((s) => s.id === activeSnapshotId)?.html ?? "";
+    }
+    return history[0]?.html ?? "";
+  }, [activeSnapshotId, history]);
+
   const modifiedCheck = useDebouncedMemo(
     () => ({
       hasContent: documentHtml.trim().length > 0,
-      isModified: documentHtml.trim().length > 0 && documentHtml !== lastSnapshotHtml,
+      isModified: documentHtml.trim().length > 0 && documentHtml !== baselineHtml,
     }),
-    [documentHtml, lastSnapshotHtml],
+    [documentHtml, baselineHtml],
     300
   );
   const isModified = modifiedCheck.isModified;

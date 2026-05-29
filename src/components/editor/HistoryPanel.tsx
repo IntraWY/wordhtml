@@ -27,6 +27,7 @@ export function HistoryPanel() {
   const open = useUiStore((s) => s.historyPanelOpen);
   const close = useUiStore((s) => s.closeHistoryPanel);
   const history = useEditorStore((s) => s.history);
+  const activeSnapshotId = useEditorStore((s) => s.activeSnapshotId);
   const loadSnapshot = useEditorStore((s) => s.loadSnapshot);
   const duplicateSnapshot = useEditorStore((s) => s.duplicateSnapshot);
   const deleteSnapshot = useEditorStore((s) => s.deleteSnapshot);
@@ -118,7 +119,7 @@ export function HistoryPanel() {
                   ยังไม่มีประวัติเอกสาร
                 </p>
                 <p className="text-xs text-[color:var(--color-muted-foreground)]">
-                  ระบบจะบันทึกอัตโนมัติทุกครั้งที่กด Export หรือ Ctrl+S
+                  บันทึกซ้ำจะอัปเดตรายการที่กำลังแก้ — ใช้ &quot;ทำสำเนา&quot; หากต้องการเวอร์ชันใหม่
                 </p>
                 <p className="max-w-sm text-xs text-[color:var(--color-muted-foreground)]">
                   เก็บใน localStorage คีย์ <code className="font-mono text-[10px]">wordhtml-editor</code>{" "}
@@ -131,6 +132,7 @@ export function HistoryPanel() {
                   <SnapshotRow
                     key={snap.id}
                     snap={snap}
+                    active={snap.id === activeSnapshotId}
                     loading={loadingSnapshotId === snap.id}
                     onLoad={() => handleLoadSnapshot(snap.id)}
                     onDuplicate={() => duplicateSnapshot(snap.id)}
@@ -144,7 +146,7 @@ export function HistoryPanel() {
 
           <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-3 space-y-2">
             <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-              เก็บล่าสุด {history.length}/20 รายการ · บันทึกอัตโนมัติเมื่อ Export หรือ Ctrl+S
+              เก็บล่าสุด {history.length}/20 รายการ · บันทึกซ้ำอัปเดตรายการที่กำลังแก้ · ใช้ทำสำเนาสำหรับเวอร์ชันใหม่
             </p>
             <div className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-[11px] text-[color:var(--color-muted-foreground)] space-y-1">
               <p className="font-medium text-[color:var(--color-foreground)]">
@@ -191,6 +193,7 @@ export function HistoryPanel() {
 
 interface SnapshotRowProps {
   snap: DocumentSnapshot;
+  active?: boolean;
   loading?: boolean;
   onLoad: () => void;
   onDuplicate: () => void;
@@ -200,6 +203,7 @@ interface SnapshotRowProps {
 
 function SnapshotRow({
   snap,
+  active = false,
   loading = false,
   onLoad,
   onDuplicate,
@@ -237,8 +241,11 @@ function SnapshotRow({
 
   return (
     <li
+      aria-current={active ? "true" : undefined}
       className={cn(
         "group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-[color:var(--color-muted)] focus-within:bg-[color:var(--color-muted)]",
+        active &&
+          "border-l-2 border-[color:var(--color-accent)] bg-[color:var(--color-muted)]/60",
         loading && "opacity-70"
       )}
     >

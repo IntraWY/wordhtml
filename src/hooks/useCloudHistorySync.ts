@@ -16,7 +16,10 @@ import {
 } from "@/lib/historyFirestore";
 import { mergeSnapshotsWithConflicts } from "@/lib/mergeSnapshots";
 import { useAuthStore } from "@/store/authStore";
-import { useEditorStore } from "@/store/editorStore";
+import {
+  setActiveSnapshotSession,
+  useEditorStore,
+} from "@/store/editorStore";
 
 function resolveSyncStatus(
   isOnline: boolean,
@@ -60,7 +63,16 @@ export function useCloudHistorySync(): void {
         const current = useEditorStore.getState().history;
         const { merged, conflicts } = mergeSnapshotsWithConflicts(current, remote);
 
-        useEditorStore.setState({ history: merged });
+        useEditorStore.setState((s) => {
+          const activeStillExists =
+            s.activeSnapshotId !== null &&
+            merged.some((snap) => snap.id === s.activeSnapshotId);
+          const activeSnapshotId = activeStillExists
+            ? s.activeSnapshotId
+            : null;
+          if (!activeSnapshotId) setActiveSnapshotSession(null);
+          return { history: merged, activeSnapshotId };
+        });
 
         if (conflicts.length > 0) {
           setCloudConflicts(conflicts);

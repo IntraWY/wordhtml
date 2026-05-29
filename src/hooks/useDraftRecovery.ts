@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useEditorStore } from "@/store/editorStore";
+import {
+  setActiveSnapshotSession,
+  useEditorStore,
+} from "@/store/editorStore";
 import {
   clearRecoveryDraft,
   flushRecoveryDraft,
@@ -63,12 +66,30 @@ export function useDraftRecovery() {
 
   const handleRestore = useCallback(() => {
     if (!pendingDraft) return;
-    useEditorStore.setState((state) => ({
-      documentHtml: pendingDraft.html,
-      fileName: pendingDraft.fileName,
-      pageSetup: pendingDraft.pageSetup ?? state.pageSetup,
-      htmlSyncRevision: state.htmlSyncRevision + 1,
-    }));
+    useEditorStore.setState((state) => {
+      const exact = state.history.find(
+        (s) =>
+          s.html === pendingDraft.html && s.fileName === pendingDraft.fileName
+      );
+      const byFileName = state.history.filter(
+        (s) => s.fileName === pendingDraft.fileName
+      );
+      const activeSnapshotId =
+        exact?.id ??
+        byFileName.find((s) => s.html === pendingDraft.html)?.id ??
+        byFileName[0]?.id ??
+        null;
+
+      if (activeSnapshotId) setActiveSnapshotSession(activeSnapshotId);
+
+      return {
+        documentHtml: pendingDraft.html,
+        fileName: pendingDraft.fileName,
+        pageSetup: pendingDraft.pageSetup ?? state.pageSetup,
+        activeSnapshotId,
+        htmlSyncRevision: state.htmlSyncRevision + 1,
+      };
+    });
     clearRecoveryDraft();
     setRecoveryOpen(false);
     setPendingDraft(null);

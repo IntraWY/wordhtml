@@ -40,6 +40,45 @@ import { clearRecoveryDraft, scheduleRecoveryDraft } from "@/lib/draftRecovery";
 const MAX_HISTORY = 20;
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
 
+/** Session-scoped binding so refresh keeps in-place save target (not in partialize). */
+export const ACTIVE_SNAPSHOT_SESSION_KEY = "wordhtml-active-snapshot-id";
+
+export function setActiveSnapshotSession(id: string | null): void {
+  if (typeof sessionStorage === "undefined") return;
+  if (id) sessionStorage.setItem(ACTIVE_SNAPSHOT_SESSION_KEY, id);
+  else sessionStorage.removeItem(ACTIVE_SNAPSHOT_SESSION_KEY);
+}
+
+export function getActiveSnapshotSession(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  return sessionStorage.getItem(ACTIVE_SNAPSHOT_SESSION_KEY);
+}
+
+/** Restore or clear active snapshot after persisted state hydrates. */
+export function restoreActiveSnapshotFromSession(): void {
+  const { documentHtml, history } = useEditorStore.getState();
+  const sessionId = getActiveSnapshotSession();
+  const validSession =
+    sessionId !== null && history.some((s) => s.id === sessionId);
+
+  if (!documentHtml.trim()) {
+    if (validSession) {
+      useEditorStore.setState({ activeSnapshotId: sessionId });
+      return;
+    }
+    setActiveSnapshotSession(null);
+    useEditorStore.setState({ activeSnapshotId: null });
+    return;
+  }
+
+  if (validSession) {
+    useEditorStore.setState({ activeSnapshotId: sessionId });
+  } else {
+    setActiveSnapshotSession(null);
+    useEditorStore.setState({ activeSnapshotId: null });
+  }
+}
+
 function syncSnapshotToCloud(snapshot: DocumentSnapshot): void {
   const uid = getCloudHistoryUid();
   if (!uid) return;
@@ -103,6 +142,8 @@ interface EditorState {
   pendingExportFormat: ExportFormat | null;
   // history
   history: DocumentSnapshot[];
+  /** Snapshot being edited in this session (not persisted). */
+  activeSnapshotId: string | null;
   // page setup
   pageSetup: PageSetup;
   // editing telemetry
@@ -209,6 +250,7 @@ export const useEditorStore = create<EditorState>()(
       imageMode: "inline",
       pendingExportFormat: null,
       history: [],
+      activeSnapshotId: null,
       pageSetup: DEFAULT_PAGE_SETUP,
       lastEditAt: 0,
       isLoadingFile: false,
@@ -241,8 +283,11 @@ export const useEditorStore = create<EditorState>()(
           const current = get();
           const html = current.getDocumentHtml();
           if (!current.autoSave.enabled || !html.trim()) return;
-          const last = current.history[0];
-          if (last && last.html === html) return;
+          const { activeSnapshotId, history } = current;
+          const baseline = activeSnapshotId
+            ? history.find((s) => s.id === activeSnapshotId)
+            : history[0];
+          if (baseline && baseline.html === html) return;
           current.saveSnapshot({ source: "auto" });
         }, state.autoSave.idleMs);
 
@@ -352,9 +397,11 @@ export const useEditorStore = create<EditorState>()(
             throw new Error("ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, หรือ .md");
           }
           clearRecoveryDraft();
+          setActiveSnapshotSession(null);
           set((state) => ({
             documentHtml: html,
             fileName: name,
+            activeSnapshotId: null,
             isLoadingFile: false,
             lastLoadWarnings: warnings,
             htmlSyncRevision: state.htmlSyncRevision + 1,
@@ -369,9 +416,11 @@ export const useEditorStore = create<EditorState>()(
         clearHtmlDebounce();
         pendingDocumentHtml = null;
         clearRecoveryDraft();
+        setActiveSnapshotSession(null);
         set((state) => ({
           documentHtml: "",
           fileName: null,
+          activeSnapshotId: null,
           loadError: null,
           lastLoadWarnings: [],
           pendingExportFormat: null,
@@ -386,39 +435,73 @@ export const useEditorStore = create<EditorState>()(
       saveSnapshot: (options) => {
         get().flushDocumentHtml();
         const source = options?.source ?? "manual";
-        const { documentHtml, fileName, history, autoSave } = get();
-        if (!documentHtml.trim()) return;
-        if (history[0]?.html === documentHtml) return;
-        const snapshot: DocumentSnapshot = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          fileName,
-          savedAt: new Date().toISOString(),
-          html: documentHtml,
-          wordCount: countWords(documentHtml),
-        };
-        let updated = [snapshot, ...history].slice(0, MAX_HISTORY);
 
-        while (
-          updated.length > 1 &&
-          JSON.stringify(updated).length > SNAPSHOT_SIZE_LIMIT
-        ) {
-          updated = updated.slice(0, -1);
-        }
+        let snapshotForCloud: DocumentSnapshot | null = null;
+        let showFeedback = false;
+        let feedbackLabel = "";
 
-        set({ history: updated });
-        syncSnapshotToCloud(snapshot);
+        set((state) => {
+          const documentHtml = state.documentHtml;
+          if (!documentHtml.trim()) return state;
+
+          const activeSnap = state.activeSnapshotId
+            ? state.history.find((s) => s.id === state.activeSnapshotId)
+            : undefined;
+
+          let snapshot: DocumentSnapshot;
+          let rest: DocumentSnapshot[];
+
+          if (activeSnap) {
+            if (activeSnap.html === documentHtml) return state;
+            snapshot = {
+              ...activeSnap,
+              fileName: state.fileName,
+              savedAt: new Date().toISOString(),
+              html: documentHtml,
+              wordCount: countWords(documentHtml),
+            };
+            rest = state.history.filter((s) => s.id !== state.activeSnapshotId);
+          } else {
+            snapshot = {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              fileName: state.fileName,
+              savedAt: new Date().toISOString(),
+              html: documentHtml,
+              wordCount: countWords(documentHtml),
+            };
+            rest = state.history;
+          }
+
+          let updated = [snapshot, ...rest].slice(0, MAX_HISTORY);
+
+          while (
+            updated.length > 1 &&
+            JSON.stringify(updated).length > SNAPSHOT_SIZE_LIMIT
+          ) {
+            updated = updated.slice(0, -1);
+          }
+
+          snapshotForCloud = snapshot;
+          showFeedback = source === "manual" || state.autoSave.notifyOnSave;
+          feedbackLabel =
+            source === "auto" ? "บันทึกอัตโนมัติแล้ว" : "บันทึก Snapshot แล้ว";
+
+          setActiveSnapshotSession(snapshot.id);
+          return { history: updated, activeSnapshotId: snapshot.id };
+        });
+
+        if (!snapshotForCloud) return;
+
+        syncSnapshotToCloud(snapshotForCloud);
         if (source === "manual") {
           clearRecoveryDraft();
         }
 
-        const showFeedback = source === "manual" || autoSave.notifyOnSave;
         if (showFeedback) {
-          const label =
-            source === "auto" ? "บันทึกอัตโนมัติแล้ว" : "บันทึก Snapshot แล้ว";
-          useToastStore.getState().show(label);
+          useToastStore.getState().show(feedbackLabel);
           useUiStore
             .getState()
-            .setLastAction(`${label} — ${new Date().toLocaleTimeString()}`);
+            .setLastAction(`${feedbackLabel} — ${new Date().toLocaleTimeString()}`);
         }
       },
 
@@ -429,9 +512,11 @@ export const useEditorStore = create<EditorState>()(
         if (!snap) return;
         clearHtmlDebounce();
         pendingDocumentHtml = null;
+        setActiveSnapshotSession(id);
         set((state) => ({
           documentHtml: snap.html,
           fileName: snap.fileName,
+          activeSnapshotId: id,
           htmlSyncRevision: state.htmlSyncRevision + 1,
         }));
         // #region agent log
@@ -469,9 +554,14 @@ export const useEditorStore = create<EditorState>()(
             return;
           }
         }
-        set((state) => ({
-          history: state.history.filter((s) => s.id !== id),
-        }));
+        set((state) => {
+          const clearingActive = state.activeSnapshotId === id;
+          if (clearingActive) setActiveSnapshotSession(null);
+          return {
+            history: state.history.filter((s) => s.id !== id),
+            activeSnapshotId: clearingActive ? null : state.activeSnapshotId,
+          };
+        });
       },
 
       renameSnapshot: (id, fileName) => {
@@ -490,7 +580,8 @@ export const useEditorStore = create<EditorState>()(
           const ok = await clearCloudHistory(uid);
           if (!ok) return;
         }
-        set({ history: [] });
+        setActiveSnapshotSession(null);
+        set({ history: [], activeSnapshotId: null });
       },
 
       // template actions
@@ -612,3 +703,7 @@ export const useEditorStore = create<EditorState>()(
     }
   )
 );
+
+useEditorStore.persist.onFinishHydration(() => {
+  restoreActiveSnapshotFromSession();
+});

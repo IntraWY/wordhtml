@@ -109,6 +109,36 @@ export function parseLineHeight(
 }
 
 /** Convert a CSS length value to centimetres. */
+/** Merge paragraph/heading inline styles so getHTML does not drop margin-left. */
+export function buildParagraphStyle(
+  attrs: Record<string, unknown>
+): string | undefined {
+  const parts: string[] = [];
+
+  const marginLeft = (attrs.marginLeft as number) ?? 0;
+  if (marginLeft) parts.push(`margin-left:${marginLeft}cm`);
+
+  const marginRight = (attrs.marginRight as number) ?? 0;
+  if (marginRight) parts.push(`margin-right:${marginRight}cm`);
+
+  const textIndent = (attrs.textIndent as number) ?? 0;
+  if (textIndent) parts.push(`text-indent:${textIndent}cm`);
+
+  const spaceBefore = (attrs.spaceBefore as number) ?? 0;
+  if (spaceBefore) parts.push(`margin-top:${spaceBefore}pt`);
+
+  const spaceAfter = (attrs.spaceAfter as number) ?? 0;
+  if (spaceAfter) parts.push(`margin-bottom:${spaceAfter}pt`);
+
+  const lh = lineHeightFromMode(
+    attrs.lineHeightMode as LineHeightMode | undefined,
+    attrs.lineHeight as number | undefined
+  );
+  if (lh) parts.push(`line-height:${lh}`);
+
+  return parts.length > 0 ? parts.join(";") : undefined;
+}
+
 export function parseCssLengthToCm(value: string): number {
   const trimmed = value.trim().toLowerCase();
   const num = parseFloat(trimmed);
@@ -137,9 +167,8 @@ export const ParagraphFormatExtension = Extension.create({
           marginLeft: {
             default: 0,
             renderHTML: (attrs) => {
-              const v = attrs.marginLeft as number;
-              if (!v) return {};
-              return { style: `margin-left:${v}cm` };
+              const style = buildParagraphStyle(attrs);
+              return style ? { style } : {};
             },
             parseHTML: (el): number => {
               const legacy = el.getAttribute("data-indent");
@@ -150,11 +179,7 @@ export const ParagraphFormatExtension = Extension.create({
           },
           marginRight: {
             default: 0,
-            renderHTML: (attrs) => {
-              const v = attrs.marginRight as number;
-              if (!v) return {};
-              return { style: `margin-right:${v}cm` };
-            },
+            renderHTML: () => ({}),
             parseHTML: (el): number => {
               const raw = el.style.marginRight;
               return raw ? parseCssLengthToCm(raw) : 0;
@@ -162,11 +187,7 @@ export const ParagraphFormatExtension = Extension.create({
           },
           textIndent: {
             default: 0,
-            renderHTML: (attrs) => {
-              const v = attrs.textIndent as number;
-              if (!v) return {};
-              return { style: `text-indent:${v}cm` };
-            },
+            renderHTML: () => ({}),
             parseHTML: (el): number => {
               if (el.getAttribute("data-indent")) return 0;
               const raw = el.style.textIndent;
@@ -175,11 +196,7 @@ export const ParagraphFormatExtension = Extension.create({
           },
           spaceBefore: {
             default: 0,
-            renderHTML: (attrs) => {
-              const v = attrs.spaceBefore as number;
-              if (!v) return {};
-              return { style: `margin-top:${v}pt` };
-            },
+            renderHTML: () => ({}),
             parseHTML: (el): number => {
               const mt = el.style.marginTop;
               if (mt && mt.endsWith("pt")) return parseFloat(mt);
@@ -188,11 +205,7 @@ export const ParagraphFormatExtension = Extension.create({
           },
           spaceAfter: {
             default: 0,
-            renderHTML: (attrs) => {
-              const v = attrs.spaceAfter as number;
-              if (!v) return {};
-              return { style: `margin-bottom:${v}pt` };
-            },
+            renderHTML: () => ({}),
             parseHTML: (el): number => {
               const mb = el.style.marginBottom;
               if (mb && mb.endsWith("pt")) return parseFloat(mb);
@@ -201,13 +214,7 @@ export const ParagraphFormatExtension = Extension.create({
           },
           lineHeightMode: {
             default: null,
-            renderHTML: (attrs) => {
-              const mode = attrs.lineHeightMode as LineHeightMode | undefined;
-              const value = attrs.lineHeight as number | undefined;
-              const css = lineHeightFromMode(mode, value);
-              if (!css) return {};
-              return { style: `line-height:${css}` };
-            },
+            renderHTML: () => ({}),
             parseHTML: (el): LineHeightMode | null => {
               const lh = el.style.lineHeight;
               if (!lh) return null;
@@ -290,14 +297,23 @@ export const ParagraphFormatExtension = Extension.create({
 
     return {
       Tab: () => {
+        if (this.editor.isActive("codeBlock")) {
+          return this.editor.commands.insertContent("    ");
+        }
         if (this.editor.isActive("listItem")) {
           return this.editor.commands.sinkListItem("listItem");
         }
         const { selection } = this.editor.state;
-        if (selection.empty && selection.$from.parentOffset > 0) {
-          return this.editor.commands.insertContent("    ");
+        if (selection.empty) {
+          const { $from } = selection;
+          for (let d = $from.depth; d > 0; d--) {
+            const node = $from.node(d);
+            if (node.type.name === "paragraph" || node.type.name === "heading") {
+              return blockIndent(0.5);
+            }
+          }
         }
-        return blockIndent(0.5);
+        return false;
       },
 
       "Shift-Tab": () => {
