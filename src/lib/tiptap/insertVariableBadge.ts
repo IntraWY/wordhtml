@@ -48,7 +48,7 @@ export function insertVariableBadge(
   name: string
 ): void {
   const cleared = deleteEmptyBracePlaceholderAtPos(editor, pos);
-  let { state } = cleared;
+  const { state } = cleared;
   const { view } = editor;
   pos = cleared.pos;
 
