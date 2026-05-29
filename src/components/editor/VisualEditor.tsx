@@ -218,7 +218,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       transformPastedHTML(html: string) {
         return cleanPastedHtml(html);
       },
-      handleTextInput(view, from, to, text) {
+      handleTextInput(view: EditorView, from: number, to: number, text: string) {
         return handleVariableAdjacentTextInput(view, from, to, text);
       },
       handleKeyDown(_view: EditorView, event: KeyboardEvent) {
