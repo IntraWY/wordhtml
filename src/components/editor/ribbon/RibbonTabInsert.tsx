@@ -147,9 +147,7 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     if (!useEditorStore.getState().templateMode) {
       useEditorStore.getState().toggleTemplateMode();
     }
-    editor.chain().focus().insertContent("{{}}").run();
-    const pos = editor.state.selection.from;
-    editor.chain().focus().setTextSelection(pos - 2).run();
+    editor.chain().focus().insertContent("{{").run();
   }, [editor]);
   const handlePlaceholderField = useCallback(() => {
     editor?.chain().focus().insertPlaceholderField({ label: "ช่องกรอก" }).run();

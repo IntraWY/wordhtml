@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactRenderer, type Editor } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
+import { ReactRenderer } from "@tiptap/react";
 import { exitSuggestion } from "@tiptap/suggestion";
 import tippy, { Instance as TippyInstance, GetReferenceClientRect } from "tippy.js";
 import { VariableSuggestionList } from "@/components/editor/VariableSuggestionList";
@@ -15,10 +16,33 @@ interface SuggestionProps {
   items: string[];
 }
 
+function suggestionOverlapsVariableBadge(
+  state: import("@tiptap/pm/state").EditorState,
+  range: { from: number; to: number }
+): boolean {
+  const variableMark = state.schema.marks.variable;
+  if (!variableMark) return false;
+
+  let overlaps = false;
+  state.doc.nodesBetween(range.from, range.to, (node, pos) => {
+    if (!node.isText) return;
+    const hasVariable = node.marks.some((m) => m.type === variableMark);
+    if (!hasVariable) return;
+    const from = pos;
+    const to = pos + node.nodeSize;
+    if (range.from < to && range.to > from) {
+      overlaps = true;
+    }
+  });
+  return overlaps;
+}
+
 export const variableSuggestion = {
   char: "{{",
   allowSpaces: false,
   startOfLine: false,
+  shouldShow: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
+    !suggestionOverlapsVariableBadge(editor.state, range),
   items: ({ query }: { query: string }) => {
     const variables = useEditorStore.getState().variables.map((v) => v.name);
     return variables

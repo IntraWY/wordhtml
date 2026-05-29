@@ -25,7 +25,7 @@ export function findVariableMarkRangeAtPos(
     if (!hasMark) return;
     const from = parentStart + offset;
     const to = from + child.nodeSize;
-    if (pos >= from && pos <= to) {
+    if (pos >= from && pos < to) {
       rangeFrom = from;
       rangeTo = to;
     }

@@ -133,6 +133,7 @@ export function EditorShell() {
       const name = e.detail as string;
       const ed = editorRef.current;
       if (!isLiveEditor(ed) || !name) return;
+      ed.chain().focus().run();
       insertVariableBadge(ed, ed.state.selection.from, name);
     };
     const onOpenMath = () => setMathOpen(true);

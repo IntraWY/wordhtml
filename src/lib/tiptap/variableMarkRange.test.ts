@@ -23,6 +23,15 @@ describe("variable mark typing", () => {
     editor?.destroy();
   });
 
+  it("replaces plain {{}} placeholder before inserting the badge", () => {
+    editor = createEditor("<p>{{}}</p>");
+    editor.commands.setTextSelection(3);
+    insertVariableBadge(editor, editor.state.selection.from, "customer");
+    expect(editor.state.doc.textContent).toBe("{{customer}}");
+    expect(editor.getHTML()).toMatch(/data-variable="customer"/);
+    expect(editor.getHTML()).not.toContain("{{}}");
+  });
+
   it("places the caret after insertVariableBadge", () => {
     editor = createEditor();
     insertVariableBadge(editor, 1, "customer");
@@ -72,5 +81,31 @@ describe("variable mark typing", () => {
     expect(html).toContain('data-variable="customer"');
     expect(html).not.toMatch(/data-variable="customer"[^>]*>[^<]*ทดสอบ/);
     expect(html).toContain("ทดสอบ");
+  });
+
+  it("renders variable badge without duplicating token in HTML", () => {
+    editor = createEditor();
+    insertVariableBadge(editor, 1, "อนุมัติ");
+    const html = editor.getHTML();
+    expect(html).toMatch(
+      /<span[^>]*data-variable="อนุมัติ"[^>]*>\{\{อนุมัติ\}\}<\/span>/
+    );
+    expect(html).not.toMatch(/\{\{อนุมัติ\}\}\{\{อนุมัติ\}\}/);
+  });
+
+  it("types at caret after badge without corrupting variable inner text", () => {
+    editor = createEditor();
+    insertVariableBadge(editor, 1, "อนุมัติ");
+    const after = editor.state.selection.from;
+    const $after = editor.state.doc.resolve(after);
+    const marksAtCursor = $after.marks().map((m) => m.type.name);
+    expect(marksAtCursor).not.toContain("variable");
+    // Simulate keyboard typing via plain transaction (default PM path)
+    const { state, view } = editor;
+    view.dispatch(state.tr.insertText("ข้อความ", after, after));
+    const html = editor.getHTML();
+    expect(editor.state.doc.textContent).toBe("{{อนุมัติ}}ข้อความ");
+    const badgeInner = html.match(/data-variable="อนุมัติ"[^>]*>([^<]*)</)?.[1];
+    expect(badgeInner, html).toBe("{{อนุมัติ}}");
   });
 });

@@ -1,4 +1,4 @@
-import { Mark, markInputRule } from "@tiptap/core";
+import { Mark } from "@tiptap/core";
 
 export const VariableMark = Mark.create({
   name: "variable",
@@ -28,7 +28,7 @@ export const VariableMark = Mark.create({
         "data-variable": name,
         ...HTMLAttributes,
       },
-      `{{${name}}}`,
+      0,
     ];
   },
 
@@ -40,15 +40,4 @@ export const VariableMark = Mark.create({
     };
   },
 
-  addInputRules() {
-    return [
-      markInputRule({
-        find: /\{\{([A-Za-z_\u0E00-\u0E7F][\w\u0E00-\u0E7F_]*)\}\}/g,
-        type: this.type,
-        getAttributes: (match) => ({
-          name: match[1],
-        }),
-      }),
-    ];
-  },
 });

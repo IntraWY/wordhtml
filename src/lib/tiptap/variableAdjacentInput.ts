@@ -13,24 +13,55 @@ import {
  * When typing inside a variable badge, insert plain text after the mark instead
  * of extending the badge styling to new characters.
  */
+function dispatchPlainInsert(
+  view: EditorView,
+  insertPos: number,
+  text: string
+): boolean {
+  const { state } = view;
+  const variableMark = state.schema.marks.variable;
+  let tr = state.tr;
+  if (variableMark) {
+    tr = tr.removeStoredMark(variableMark);
+  }
+  tr = tr.insert(insertPos, state.schema.text(text));
+  const after = insertPos + text.length;
+  tr.setSelection(TextSelection.create(tr.doc, after, after));
+  view.dispatch(tr);
+  exitSuggestion(view, variableSuggestionPluginKey);
+  return true;
+}
+
 export function handleVariableAdjacentTextInput(
   view: EditorView,
   from: number,
   to: number,
   text: string
 ): boolean {
-  if (!text || from !== to) return false;
+  if (!text) return false;
 
   const { state } = view;
-  const insideRange = findVariableMarkRangeAtPos(state, from);
-  if (!insideRange) return false;
 
-  const insertPos = insideRange.to;
-  const tr = state.tr.insert(insertPos, state.schema.text(text));
-  tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + text.length), 1));
-  view.dispatch(tr);
-  exitSuggestion(view, variableSuggestionPluginKey);
-  return true;
+  if (from === to && isCursorAfterCompleteVariable(state)) {
+    return dispatchPlainInsert(view, from, text);
+  }
+
+  const insideFrom = findVariableMarkRangeAtPos(state, from);
+  if (!insideFrom) return false;
+
+  if (to !== from) {
+    const insideTo = findVariableMarkRangeAtPos(state, to);
+    if (!insideTo || insideFrom.from !== insideTo.from || insideFrom.to !== insideTo.to) {
+      return false;
+    }
+  }
+
+  let tr = state.tr;
+  if (from !== to) {
+    tr = tr.delete(from, to);
+  }
+  const insertPos = tr.mapping.map(insideFrom.to);
+  return dispatchPlainInsert(view, insertPos, text);
 }
 
 /**
@@ -65,9 +96,6 @@ export function handleVariableAdjacentSpace(
   }
 
   event.preventDefault();
-  const tr = state.tr.insert(insertPos, state.schema.text(" "));
-  tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 1), 1));
-  view.dispatch(tr);
-  exitSuggestion(view, variableSuggestionPluginKey);
+  dispatchPlainInsert(view, insertPos, " ");
   return true;
 }

@@ -42,6 +42,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import FontFamily from "@tiptap/extension-font-family";
 import { VariableSuggestion } from "@/lib/tiptap/variableSuggestionExtension";
+import { VariableTypingGuard } from "@/lib/tiptap/variableTypingGuard";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
@@ -72,7 +73,6 @@ import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
 import { runPaginationMaintenance } from "@/lib/pagination/paginationMaintenance";
 import { dispatchPaginationCooldown } from "@/lib/events";
 import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
-import { handleVariableAdjacentSpace, handleVariableAdjacentTextInput } from "@/lib/tiptap/variableAdjacentInput";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -158,6 +158,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TableHeader,
       TableCell,
       VariableMark,
+      VariableTypingGuard,
       PageBreak,
       SearchAndReplace.configure({
         searchResultClass: "search-result",
@@ -218,16 +219,9 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       transformPastedHTML(html: string) {
         return cleanPastedHtml(html);
       },
-      handleTextInput(view: EditorView, from: number, to: number, text: string) {
-        return handleVariableAdjacentTextInput(view, from, to, text);
-      },
       handleKeyDown(_view: EditorView, event: KeyboardEvent) {
         const ed = editorRef.current;
         if (!isLiveEditor(ed)) return false;
-
-        if (handleVariableAdjacentSpace(ed, event)) {
-          return true;
-        }
 
         // Command palette (overrides Link extension Mod-k in the editor).
         if (
