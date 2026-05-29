@@ -6,7 +6,7 @@ import { useToastStore } from "@/store/toastStore";
 import { stripPaginationWrappers } from "@/lib/export/stripPaginationWrappers";
 import { processTemplate } from "@/lib/templateEngine";
 import { MultiPagePreview } from "./MultiPagePreview";
-import { EditorPaperLayout } from "./EditorPaperLayout";
+import { EditorPaperScrollBody } from "./EditorPaperLayout";
 
 interface TemplatePreviewProps {
   widthPx: number;
@@ -44,12 +44,12 @@ export function TemplatePreview({
 
   if (previewMode !== "preview" || !templateMode) return null;
   return (
-    <EditorPaperLayout widthPx={widthPx}>
+    <EditorPaperScrollBody widthPx={widthPx}>
       <MultiPagePreview
         html={processedHtml}
         pageSetup={pageSetup}
         headerFooterReservePx={headerFooterReservePx}
       />
-    </EditorPaperLayout>
+    </EditorPaperScrollBody>
   );
 }

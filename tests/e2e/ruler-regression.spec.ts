@@ -109,7 +109,7 @@ test.describe("Ruler regression", () => {
     expect(Math.abs(widthAfter! - widthBefore!)).toBeLessThanOrEqual(2);
   });
 
-  test("margin guides visible and sticky horizontal ruler on scroll", async ({
+  test("margin guides visible and fixed horizontal ruler on scroll", async ({
     page,
   }) => {
     await page.goto("/");
@@ -138,9 +138,9 @@ test.describe("Ruler regression", () => {
     });
     expect(hasMarginGuide).toBe(true);
 
-    const scrollContainer = page.locator(".overflow-auto.p-8").first();
-    const stickyRow = page.locator(".sticky.top-0").first();
-    await expect(stickyRow).toBeVisible();
+    const scrollContainer = page.locator("main .flex-1.overflow-auto").first();
+    const rulerH = page.locator(".ruler-h").first();
+    await expect(rulerH).toBeVisible();
 
     // Reset scroll — typing may auto-scroll so viewport Y can be negative
     await scrollContainer.evaluate((el) => {
@@ -149,20 +149,20 @@ test.describe("Ruler regression", () => {
     await page.waitForTimeout(100);
 
     type ScrollMeasures = {
-      stickyRelY: number;
+      rulerTop: number;
       pageRelY: number;
       scrollTop: number;
     };
 
-    const before = await scrollContainer.evaluate((scrollEl): ScrollMeasures | null => {
-      const sticky = scrollEl.querySelector(".sticky.top-0");
-      const pageNode = scrollEl.querySelector(".page-node");
-      if (!sticky || !pageNode) return null;
+    const before = await page.evaluate((): ScrollMeasures | null => {
+      const scrollEl = document.querySelector("main .flex-1.overflow-auto");
+      const ruler = document.querySelector(".ruler-h");
+      const pageNode = scrollEl?.querySelector(".page-node");
+      if (!scrollEl || !ruler || !pageNode) return null;
       const scrollRect = scrollEl.getBoundingClientRect();
-      const stickyRect = sticky.getBoundingClientRect();
       const pageRect = pageNode.getBoundingClientRect();
       return {
-        stickyRelY: stickyRect.top - scrollRect.top,
+        rulerTop: ruler.getBoundingClientRect().top,
         pageRelY: pageRect.top - scrollRect.top,
         scrollTop: scrollEl.scrollTop,
       };
@@ -176,23 +176,23 @@ test.describe("Ruler regression", () => {
       .poll(async () => scrollContainer.evaluate((el) => el.scrollTop))
       .toBeGreaterThanOrEqual(400);
 
-    const after = await scrollContainer.evaluate((scrollEl): ScrollMeasures | null => {
-      const sticky = scrollEl.querySelector(".sticky.top-0");
-      const pageNode = scrollEl.querySelector(".page-node");
-      if (!sticky || !pageNode) return null;
+    const after = await page.evaluate((): ScrollMeasures | null => {
+      const scrollEl = document.querySelector("main .flex-1.overflow-auto");
+      const ruler = document.querySelector(".ruler-h");
+      const pageNode = scrollEl?.querySelector(".page-node");
+      if (!scrollEl || !ruler || !pageNode) return null;
       const scrollRect = scrollEl.getBoundingClientRect();
-      const stickyRect = sticky.getBoundingClientRect();
       const pageRect = pageNode.getBoundingClientRect();
       return {
-        stickyRelY: stickyRect.top - scrollRect.top,
+        rulerTop: ruler.getBoundingClientRect().top,
         pageRelY: pageRect.top - scrollRect.top,
         scrollTop: scrollEl.scrollTop,
       };
     });
     expect(after).not.toBeNull();
 
-    // Sticky H-ruler stays pinned to scroll container top
-    expect(Math.abs(after!.stickyRelY - before!.stickyRelY)).toBeLessThanOrEqual(2);
+    // H-ruler sits outside scroll container — viewport Y stays fixed while scrolling
+    expect(Math.abs(after!.rulerTop - before!.rulerTop)).toBeLessThanOrEqual(2);
     // Paper moves up inside the scrollport when scrolling down
     expect(after!.pageRelY).toBeLessThan(before!.pageRelY);
   });

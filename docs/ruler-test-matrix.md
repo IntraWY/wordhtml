@@ -23,14 +23,15 @@ Use this checklist when changing ruler, preview layout, or pagination.
 | Click/type inside guide area | Clicks pass through to editor (`pointer-events: none`) |
 | Template preview | No margin guides (preview uses ProcessedContent, not edit chrome) |
 
-## Sticky horizontal ruler
+## Fixed horizontal ruler (outside scroll)
 
 | Step | Expected |
 |------|----------|
-| Scroll down on multi-page doc | Corner + horizontal ruler (IndentRuler) stay pinned at top of scroll area (single 2×2 grid, sticky cells) |
+| Scroll down on multi-page doc | Corner + horizontal ruler (`EditorRulerBar`) stay fixed above scroll area; only `EditorPaperScrollBody` scrolls |
 | Scroll down | Vertical ruler scrolls with paper stack (same grid row as paper) |
 | Scroll down | Paper content scrolls; H-ruler does not drift horizontally |
-| Resize window | Sticky ruler still aligned with paper column (widthPx) |
+| Resize window | H-ruler bar still aligned with paper column (widthPx) |
+| F11 fullscreen | Root editor uses `overflow-hidden`; scroll only on inner `scrollContainerRef` — H-ruler does not move with page scroll |
 | Multi-page stack | Page gap is `PageCanvas` `gap-5` only (20px) — matches `PAGE_STACK_GAP_PX` / vertical ruler tick segments |
 
 ## Paragraph indents (text)

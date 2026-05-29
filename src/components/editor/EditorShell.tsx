@@ -14,7 +14,7 @@ import { PageCanvas } from "./PageCanvas";
 import { PreviewToggle } from "./PreviewToggle";
 import { VariablePanel } from "./VariablePanel";
 import { IndentRuler } from "./IndentRuler";
-import { EditorPaperLayout } from "./EditorPaperLayout";
+import { EditorRulerBar, EditorPaperScrollBody } from "./EditorPaperLayout";
 import { TemplatePreview } from "./TemplatePreview";
 import { SourcePane } from "./SourcePane";
 import { useEditorStore } from "@/store/editorStore";
@@ -245,7 +245,7 @@ export function EditorShell() {
       <div
         className={cn(
           "relative flex h-screen flex-col",
-          isFullscreen && "fixed inset-0 z-50 overflow-auto bg-[color:var(--color-background)]"
+          isFullscreen && "fixed inset-0 z-50 overflow-hidden bg-[color:var(--color-background)]"
         )}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -312,62 +312,77 @@ export function EditorShell() {
                   <PreviewToggle />
                 </div>
               )}
-              <div ref={scrollContainerRef} className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
-                {previewMode === "preview" && templateMode ? (
+              {previewMode === "preview" && templateMode ? (
+                <div
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-auto bg-[color:var(--color-muted)] px-8 pb-8"
+                >
                   <TemplatePreview
                     widthPx={widthPx}
                     headerFooterReservePx={headerFooterReservePx}
                   />
-                ) : (
-                  <EditorPaperLayout
-                    widthPx={widthPx}
-                    horizontalRuler={
-                      <IndentRuler
-                        editor={editor}
-                        cm={widthMm / 10}
-                        marginStart={marginLeftPx}
-                        marginEnd={marginRightPx}
-                        marginLeftMm={pageSetup.marginMm.left}
-                        marginRightMm={pageSetup.marginMm.right}
-                        onMarginChange={handleMarginChange}
-                        onRulerActive={handleRulerActive}
-                      />
-                    }
-                    verticalRuler={
-                      <Ruler
-                        orientation="vertical"
-                        cm={heightMm / 10}
-                        marginStart={marginTopPx}
-                        marginEnd={marginBottomPx}
-                        marginTopMm={pageSetup.marginMm.top}
-                        marginBottomMm={pageSetup.marginMm.bottom}
-                        onMarginChange={handleVerticalMarginChange}
-                        onRulerActive={handleRulerActive}
-                        pageHeightPx={pageHeightPx}
-                        pageCount={pageCount}
-                        contentOffsetPx={contentOffsetPx}
-                      />
-                    }
+                </div>
+              ) : (
+                <>
+                  <div className="shrink-0 bg-[color:var(--color-muted)] px-8 pt-8">
+                    <EditorRulerBar
+                      widthPx={widthPx}
+                      horizontalRuler={
+                        <IndentRuler
+                          editor={editor}
+                          cm={widthMm / 10}
+                          marginStart={marginLeftPx}
+                          marginEnd={marginRightPx}
+                          marginLeftMm={pageSetup.marginMm.left}
+                          marginRightMm={pageSetup.marginMm.right}
+                          onMarginChange={handleMarginChange}
+                          onRulerActive={handleRulerActive}
+                        />
+                      }
+                    />
+                  </div>
+                  <div
+                    ref={scrollContainerRef}
+                    className="flex-1 overflow-auto bg-[color:var(--color-muted)] px-8 pb-8"
                   >
-                    <div className="relative" data-tour="editor">
-                      <PageCanvas
-                        ref={articleRef as React.RefObject<HTMLDivElement>}
-                        id="editor-content"
-                        className="printable-paper"
-                      >
-                        <VisualEditor onEditorReady={onEditorReady} />
-                      </PageCanvas>
-                      <PageChromeLayer
-                        pagesRootRef={articleRef as React.RefObject<HTMLElement>}
-                        scrollContainerRef={scrollContainerRef}
-                        pageSetup={pageSetup}
-                        pageCount={pageCount}
-                        onReserveHeightChange={setHeaderFooterReservePx}
-                      />
-                    </div>
-                  </EditorPaperLayout>
-                )}
-              </div>
+                    <EditorPaperScrollBody
+                      widthPx={widthPx}
+                      verticalRuler={
+                        <Ruler
+                          orientation="vertical"
+                          cm={heightMm / 10}
+                          marginStart={marginTopPx}
+                          marginEnd={marginBottomPx}
+                          marginTopMm={pageSetup.marginMm.top}
+                          marginBottomMm={pageSetup.marginMm.bottom}
+                          onMarginChange={handleVerticalMarginChange}
+                          onRulerActive={handleRulerActive}
+                          pageHeightPx={pageHeightPx}
+                          pageCount={pageCount}
+                          contentOffsetPx={contentOffsetPx}
+                        />
+                      }
+                    >
+                      <div className="relative" data-tour="editor">
+                        <PageCanvas
+                          ref={articleRef as React.RefObject<HTMLDivElement>}
+                          id="editor-content"
+                          className="printable-paper"
+                        >
+                          <VisualEditor onEditorReady={onEditorReady} />
+                        </PageCanvas>
+                        <PageChromeLayer
+                          pagesRootRef={articleRef as React.RefObject<HTMLElement>}
+                          scrollContainerRef={scrollContainerRef}
+                          pageSetup={pageSetup}
+                          pageCount={pageCount}
+                          onReserveHeightChange={setHeaderFooterReservePx}
+                        />
+                      </div>
+                    </EditorPaperScrollBody>
+                  </div>
+                </>
+              )}
               <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
                 <StatusBar
                   rulerInfo={
