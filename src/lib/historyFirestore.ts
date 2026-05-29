@@ -98,7 +98,14 @@ export async function clearSnapshotsInCloud(uid: string): Promise<void> {
 
 export async function uploadLocalSnapshotsToCloud(
   uid: string,
-  local: DocumentSnapshot[]
+  local: DocumentSnapshot[],
+  remote: DocumentSnapshot[] = []
 ): Promise<void> {
-  await Promise.allSettled(local.map((s) => saveSnapshotToCloud(uid, s)));
+  const remoteById = new Map(remote.map((s) => [s.id, s]));
+  const toUpload = local.filter((s) => {
+    const r = remoteById.get(s.id);
+    return !r || Date.parse(s.savedAt) > Date.parse(r.savedAt);
+  });
+  if (toUpload.length === 0) return;
+  await Promise.allSettled(toUpload.map((s) => saveSnapshotToCloud(uid, s)));
 }

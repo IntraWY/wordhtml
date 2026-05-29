@@ -4,6 +4,7 @@ import {
   setDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   onSnapshot,
   query,
   orderBy,
@@ -136,9 +137,12 @@ export async function migrateLegacyTemplatesToUser(uid: string): Promise<number>
 
   let copied = 0;
   for (const legacyDoc of legacySnap.docs) {
+    const userRef = doc(userTemplatesCollection(uid), legacyDoc.id);
+    const existing = await getDoc(userRef);
+    if (existing.exists()) continue;
+
     const data = legacyDoc.data() as FirestoreTemplate;
-    const ref = doc(userTemplatesCollection(uid), legacyDoc.id);
-    await setDoc(ref, data);
+    await setDoc(userRef, data);
     copied += 1;
   }
   markLegacyTemplatesMigrated(uid);

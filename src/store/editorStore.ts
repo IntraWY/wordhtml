@@ -10,6 +10,7 @@ import { useUiStore } from "./uiStore";
 import { editorStorage } from "@/lib/storage";
 import { dispatchOpenFile, dispatchEnterPreview } from "@/lib/events";
 import { normalizeImagePercentWidths } from "@/lib/imageScale";
+import { measurePageBodyWidthFromDom } from "@/lib/pageContentWidth";
 import type {
   CleanerKey,
   ImageMode,
@@ -23,6 +24,7 @@ import type {
 import { DEFAULT_AUTO_SAVE } from "@/types";
 import { debugPerfLog } from "@/lib/debugPerfLog";
 import type { ExportMissingPolicy } from "@/lib/placeholders";
+import { removeMergeFieldFromHtml } from "@/lib/placeholders/removeMergeField";
 import {
   getCloudHistoryUid,
   setPauseCloudHistoryMerge,
@@ -161,6 +163,8 @@ interface EditorState {
   clearVariableValues: () => void;
   /** Removes all variables from the panel and clears related template data. */
   clearAllVariables: () => void;
+  /** Removes one variable from the panel, document, and related template data. */
+  removeVariable: (name: string) => void;
   setDataSet: (dataSet: DataSet | null) => void;
   setPreviewMode: (mode: "edit" | "preview") => void;
   setFieldValue: (fieldId: string, value: string) => void;
@@ -513,6 +517,35 @@ export const useEditorStore = create<EditorState>()(
           fieldValues: {},
           previewMode: "edit",
         }),
+      removeVariable: (name) => {
+        get().flushDocumentHtml();
+        const html = removeMergeFieldFromHtml(get().documentHtml, name);
+        clearHtmlDebounce();
+        pendingDocumentHtml = null;
+        set((state) => {
+          const fieldValues = Object.fromEntries(
+            Object.entries(state.fieldValues).filter(([key]) => key !== name)
+          );
+          let dataSet = state.dataSet;
+          if (dataSet) {
+            const headers = dataSet.headers.filter((h) => h !== name);
+            const rows = dataSet.rows.map((row) => {
+              const next = { ...row };
+              delete next[name];
+              return next;
+            });
+            dataSet = { ...dataSet, headers, rows };
+          }
+          return {
+            documentHtml: html,
+            variables: state.variables.filter((v) => v.name !== name),
+            dataSet,
+            fieldValues,
+            htmlSyncRevision: state.htmlSyncRevision + 1,
+            lastEditAt: Date.now(),
+          };
+        });
+      },
       setDataSet: (dataSet) => set({ dataSet }),
       setPreviewMode: (previewMode) => {
         if (previewMode === "preview") {
@@ -520,7 +553,8 @@ export const useEditorStore = create<EditorState>()(
           get().flushDocumentHtml();
           const normalized = normalizeImagePercentWidths(
             get().documentHtml,
-            get().pageSetup
+            get().pageSetup,
+            measurePageBodyWidthFromDom()
           );
           get().setHtml(normalized);
         }

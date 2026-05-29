@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     // Temporary worktrees and coverage
     ".claude/**",
     "coverage/**",
+    // Playwright artifacts
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

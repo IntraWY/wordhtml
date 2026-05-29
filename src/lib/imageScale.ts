@@ -54,10 +54,14 @@ export function formatImageWidthLabel(
 /** Convert img percentage widths to px for consistent preview/export. */
 export function normalizeImagePercentWidths(
   html: string,
-  pageSetup: PageSetup
+  pageSetup: PageSetup,
+  contentWidthPx?: number
 ): string {
   if (!html.includes("%")) return html;
-  const contentW = getPageContentWidthPx(pageSetup);
+  const contentW =
+    contentWidthPx && contentWidthPx > 0
+      ? contentWidthPx
+      : getPageContentWidthPx(pageSetup);
   const doc = new DOMParser().parseFromString(
     `<!doctype html><html><body>${html}</body></html>`,
     "text/html"

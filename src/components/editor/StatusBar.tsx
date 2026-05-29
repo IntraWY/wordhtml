@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { FileText, Type, Sparkles, AlignLeft, Ruler, Save, AlertTriangle, Timer } from "lucide-react";
 import { AUTO_SAVE_IDLE_OPTIONS } from "@/types";
 import { countMissingFields, getMergeFieldStatuses } from "@/lib/placeholders";
+import { CloudSyncIndicator } from "./CloudSyncIndicator";
 
 function useDebouncedMemo<T>(factory: () => T, deps: React.DependencyList, delay = 300): T {
   const [value, setValue] = useState<T>(factory);
@@ -174,6 +175,7 @@ export function StatusBar({
             {missingFieldCount} ช่องว่าง
           </button>
         )}
+        <CloudSyncIndicator />
         <span className="text-[color:var(--color-border-strong)]">
           {sizeLabel} · {orientationLabel}
         </span>

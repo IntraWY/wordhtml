@@ -39,7 +39,9 @@ import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
 import { normalizeImagePercentWidths } from "@/lib/imageScale";
+import { measurePageBodyWidthFromDom } from "@/lib/pageContentWidth";
 import { isLiveEditor } from "@/lib/editorLive";
+import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
 import { PaginationManager } from "./PaginationManager";
 import { EditorContextMenu } from "./EditorContextMenu";
 import { Tour } from "@/components/onboarding/Tour";
@@ -47,9 +49,12 @@ import { PageChromeLayer } from "./PageChromeLayer";
 import { PlaceholderPanel } from "./PlaceholderPanel";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useCloudHistorySync } from "@/hooks/useCloudHistorySync";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { CloudConflictBanner } from "./CloudConflictBanner";
 
 export function EditorShell() {
   useFirebaseAuth();
+  useOnlineStatus();
   useCloudHistorySync();
   const editorRef = useRef<Editor | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -128,12 +133,7 @@ export function EditorShell() {
       const name = e.detail as string;
       const ed = editorRef.current;
       if (!isLiveEditor(ed) || !name) return;
-      const { state } = ed;
-      const pos = state.selection.from;
-      const mark = state.schema.marks.variable.create({ name });
-      const text = state.schema.text(`{{${name}}}`, [mark]);
-      ed.view.dispatch(state.tr.insert(pos, text));
-      ed.commands.focus();
+      insertVariableBadge(ed, ed.state.selection.from, name);
     };
     const onOpenMath = () => setMathOpen(true);
     const onPageNext = () => goToPage(currentPageRef.current + 1);
@@ -144,7 +144,8 @@ export function EditorShell() {
         const pageSetup = useEditorStore.getState().pageSetup;
         const html = normalizeImagePercentWidths(
           unwrapPageNode(ed.getHTML()),
-          pageSetup
+          pageSetup,
+          measurePageBodyWidthFromDom()
         );
         useEditorStore.getState().setHtml(html);
       } else {
@@ -250,6 +251,7 @@ export function EditorShell() {
         onDrop={onDrop}
       >
         <TopBar />
+        <CloudConflictBanner />
         <div className="hidden md:block">
           <Ribbon editor={ribbonEditor} />
         </div>
@@ -311,7 +313,10 @@ export function EditorShell() {
               )}
               <div ref={scrollContainerRef} className="flex-1 overflow-auto bg-[color:var(--color-muted)] p-8">
                 {previewMode === "preview" && templateMode ? (
-                  <TemplatePreview widthPx={widthPx} />
+                  <TemplatePreview
+                    widthPx={widthPx}
+                    headerFooterReservePx={headerFooterReservePx}
+                  />
                 ) : (
                   <EditorPaperLayout
                     widthPx={widthPx}

@@ -36,3 +36,5 @@ export { resolveHtmlPlaceholders } from "./resolve";
 export { PLACEHOLDER_KINDS, type PlaceholderKindId } from "./registry";
 
 export { jumpToMergeField } from "./jumpToMergeField";
+
+export { removeMergeFieldFromHtml } from "./removeMergeField";

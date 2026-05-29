@@ -7,8 +7,8 @@ import { X, Clock, FileText, RotateCcw, Copy, Trash2, Trash, Pencil, Loader2 } f
 import { useEditorStore } from "@/store/editorStore";
 import { useAuthStore } from "@/store/authStore";
 import { useUiStore } from "@/store/uiStore";
-import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import { useDialogStore } from "@/store/dialogStore";
+import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import { cn } from "@/lib/utils";
 import type { DocumentSnapshot } from "@/types";
 
@@ -36,7 +36,9 @@ export function HistoryPanel() {
   const user = useAuthStore((s) => s.user);
   const cloudSyncStatus = useAuthStore((s) => s.cloudSyncStatus);
   const cloudSyncError = useAuthStore((s) => s.cloudSyncError);
+  const isOnline = useAuthStore((s) => s.isOnline);
   const firebaseEnabled = isFirebaseConfigured();
+  const uidShort = user?.uid ? `${user.uid.slice(0, 8)}…` : null;
 
   const [loadingSnapshotId, setLoadingSnapshotId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -119,8 +121,8 @@ export function HistoryPanel() {
                   ระบบจะบันทึกอัตโนมัติทุกครั้งที่กด Export หรือ Ctrl+S
                 </p>
                 <p className="max-w-sm text-xs text-[color:var(--color-muted-foreground)]">
-                  เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น — ไม่ซิงก์ข้าม PC หรือ notebook
-                  ต้องการใช้บนเครื่องอื่นให้ส่งออกไฟล์หรือบันทึกเป็น Template
+                  เก็บใน localStorage คีย์ <code className="font-mono text-[10px]">wordhtml-editor</code>{" "}
+                  บนเครื่องนี้เท่านั้น — ไม่ซิงก์ข้าม PC
                 </p>
               </div>
             ) : (
@@ -140,25 +142,46 @@ export function HistoryPanel() {
             )}
           </div>
 
-          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-3 space-y-1">
+          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-3 space-y-2">
             <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
               เก็บล่าสุด {history.length}/20 รายการ · บันทึกอัตโนมัติเมื่อ Export หรือ Ctrl+S
             </p>
-            {firebaseEnabled && user ? (
-              <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-                {cloudSyncStatus === "syncing"
-                  ? "กำลังซิงก์ประวัติกับคลาวด์…"
-                  : cloudSyncStatus === "error"
-                    ? `ซิงก์คลาวด์ไม่สำเร็จ: ${cloudSyncError ?? "ไม่ทราบสาเหตุ"}`
-                    : "เข้าสู่ระบบแล้ว — ประวัติซิงก์ข้ามเครื่องที่ใช้บัญชีเดียวกัน"}
+            <div className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-[11px] text-[color:var(--color-muted-foreground)] space-y-1">
+              <p className="font-medium text-[color:var(--color-foreground)]">
+                ที่เก็บข้อมูล (Storage)
               </p>
-            ) : (
-              <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-                {firebaseEnabled
-                  ? "ยังไม่ได้เข้าสู่ระบบ — ประวัติเก็บในเครื่องนี้เท่านั้น · กดเข้าสู่ระบบบนแถบด้านบนเพื่อซิงก์ข้ามอุปกรณ์"
-                  : "เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น — ใช้ Template หรือส่งออกไฟล์เพื่อย้ายไปเครื่องอื่น"}
+              <p>
+                <span className="font-medium">เครื่องนี้ (Local):</span>{" "}
+                <code className="font-mono text-[10px]">localStorage → wordhtml-editor → history[]</code>
               </p>
-            )}
+              <p>
+                <span className="font-medium">คลาวด์ (Cloud):</span>{" "}
+                {firebaseEnabled && user ? (
+                  <>
+                    <code className="font-mono text-[10px]">users/{uidShort}/snapshots</code>
+                    {cloudSyncStatus === "syncing"
+                      ? " · กำลังซิงก์…"
+                      : cloudSyncStatus === "offline" || !isOnline
+                        ? " · ออฟไลน์ — จะซิงก์เมื่อกลับมาออนไลน์"
+                        : cloudSyncStatus === "error"
+                          ? ` · ผิดพลาด: ${cloudSyncError ?? "ไม่ทราบสาเหตุ"}`
+                          : cloudSyncStatus === "synced"
+                            ? " · ซิงก์แล้ว"
+                            : null}
+                  </>
+                ) : (
+                  <>
+                    <code className="font-mono text-[10px]">users/&#123;uid&#125;/snapshots</code>
+                    {firebaseEnabled
+                      ? " · เข้าสู่ระบบเพื่อซิงก์"
+                      : " · ปิดใช้งาน (Firebase ไม่ได้ตั้งค่า)"}
+                  </>
+                )}
+              </p>
+              <p className="text-[10px]">
+                เอกสารที่กำลังแก้ไม่ซิงก์อัตโนมัติ — เฉพาะ snapshot ที่บันทึก · ย้ายเครื่องได้ด้วยส่งออกไฟล์หรือ Template
+              </p>
+            </div>
           </footer>
         </Dialog.Content>
       </Dialog.Portal>

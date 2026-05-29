@@ -1,0 +1,27 @@
+import { test, expect } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "wordhtml-onboarding",
+      JSON.stringify({ hasSeenTour: true })
+    );
+  });
+});
+
+test.describe("Cloud sync UX (M1 / D1)", () => {
+  test("status bar shows local-only hint when Firebase not configured", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByLabel(/เครื่องนี้เท่านั้น|Local only|ยังไม่ซิงก์/i).first()
+    ).toBeVisible({ timeout: 10000 });
+  });
+
+  test("history panel explains local vs cloud storage paths", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /ประวัติ/i }).first().click();
+    await expect(page.getByText("ที่เก็บข้อมูล (Storage)")).toBeVisible();
+    await expect(page.getByText(/localStorage → wordhtml-editor/)).toBeVisible();
+    await expect(page.getByText(/users\/\{uid\}\/snapshots/)).toBeVisible();
+  });
+});

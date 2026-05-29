@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Editor } from "@tiptap/react";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
 import { Ruler } from "./Ruler";
 import { isLiveEditor } from "@/lib/editorLive";
 
@@ -9,19 +11,82 @@ function toNum(v: unknown): number {
   return typeof v === "number" && !isNaN(v) ? v : 0;
 }
 
+function indentFromBlock(node: ProseMirrorNode): {
+  marginLeft: number;
+  textIndent: number;
+} | null {
+  if (node.type.name === "paragraph" || node.type.name === "heading") {
+    return {
+      marginLeft: toNum(node.attrs.marginLeft),
+      textIndent: toNum(node.attrs.textIndent),
+    };
+  }
+  return null;
+}
+
+function indentFromListItem(listItem: ProseMirrorNode): {
+  marginLeft: number;
+  textIndent: number;
+} | null {
+  for (let i = 0; i < listItem.childCount; i++) {
+    const ind = indentFromBlock(listItem.child(i));
+    if (ind) return ind;
+  }
+  return null;
+}
+
+function indentFromSiblingBlocks(
+  parent: ProseMirrorNode,
+  index: number
+): { marginLeft: number; textIndent: number } | null {
+  for (let i = index - 1; i >= 0; i--) {
+    const child = parent.child(i);
+    const ind =
+      indentFromBlock(child) ??
+      (child.type.name === "listItem" ? indentFromListItem(child) : null);
+    if (ind) return ind;
+  }
+  for (let i = index + 1; i < parent.childCount; i++) {
+    const child = parent.child(i);
+    const ind =
+      indentFromBlock(child) ??
+      (child.type.name === "listItem" ? indentFromListItem(child) : null);
+    if (ind) return ind;
+  }
+  return null;
+}
+
 function readBlockIndent(editor: Editor): {
   marginLeft: number;
   textIndent: number;
 } | null {
-  const { $from } = editor.state.selection;
+  const { selection, doc } = editor.state;
+
+  if (selection instanceof NodeSelection) {
+    const node = selection.node;
+    if (node.type.name === "image") {
+      const $pos = doc.resolve(selection.from);
+      const parent = $pos.parent;
+      const index = $pos.index();
+      return (
+        indentFromSiblingBlocks(parent, index) ?? {
+          marginLeft: 0,
+          textIndent: 0,
+        }
+      );
+    }
+  }
+
+  const { $from } = selection;
   for (let d = $from.depth; d > 0; d--) {
     const node = $from.node(d);
-    if (node.type.name === "paragraph" || node.type.name === "heading") {
-      return {
-        marginLeft: toNum(node.attrs.marginLeft),
-        textIndent: toNum(node.attrs.textIndent),
-      };
+    if (node.type.name === "listItem") {
+      return (
+        indentFromListItem(node) ?? { marginLeft: 0, textIndent: 0 }
+      );
     }
+    const ind = indentFromBlock(node);
+    if (ind) return ind;
   }
   return null;
 }

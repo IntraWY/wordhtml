@@ -87,17 +87,19 @@ test.describe("Smoke", () => {
     const editor = page.locator("[contenteditable='true']").first();
     await expect(editor).toBeVisible();
 
-    // Intercept file chooser via the hidden input
-    const fileInput = page.locator('input[type="file"]').first();
-    await expect(fileInput).toBeHidden();
-
     const fixturePath = path.resolve(__dirname, "../fixtures/sample.docx");
-    await fileInput.setInputFiles(fixturePath);
+
+    const uploadButton = page.locator("button[aria-label*='อัปโหลด' i]").first();
+
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      uploadButton.click(),
+    ]);
+    await fileChooser.setFiles(fixturePath);
 
     // Wait for the upload button to become disabled (loading) then re-enabled (done)
-    const uploadButton = page.locator("button[aria-label*='อัปโหลด' i]").first();
-    await expect(uploadButton).toHaveAttribute("disabled", "", { timeout: 5000 });
-    await expect(uploadButton).not.toHaveAttribute("disabled", "");
+    await expect(uploadButton).toBeDisabled({ timeout: 5000 });
+    await expect(uploadButton).toBeEnabled();
 
     // Assert converted content appears in the editor
     await expect(editor).toContainText("Hello from docx", { timeout: 10000 });

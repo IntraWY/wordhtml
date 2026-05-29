@@ -1,9 +1,11 @@
 "use client";
 
 import { ReactRenderer, type Editor } from "@tiptap/react";
+import { exitSuggestion } from "@tiptap/suggestion";
 import tippy, { Instance as TippyInstance, GetReferenceClientRect } from "tippy.js";
 import { VariableSuggestionList } from "@/components/editor/VariableSuggestionList";
 import { useEditorStore } from "@/store/editorStore";
+import { variableSuggestionPluginKey } from "./suggestionPluginKeys";
 
 interface SuggestionProps {
   editor: Editor;
@@ -68,6 +70,11 @@ export const variableSuggestion = {
         if (props.event.key === "Escape") {
           popup[0].hide();
           return true;
+        }
+
+        if (props.event.key === " ") {
+          exitSuggestion(props.editor.view, variableSuggestionPluginKey);
+          return false;
         }
 
         const ref = component.ref as { onKeyDown?: (p: SuggestionProps) => boolean | void } | undefined;

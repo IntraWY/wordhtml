@@ -1,19 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { LogIn, LogOut, Loader2, Cloud } from "lucide-react";
+import { LogIn, LogOut, Loader2 } from "lucide-react";
 
 import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import { signInWithGoogle, signOut } from "@/lib/firebaseAuth";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/lib/utils";
+import { CloudSyncIndicator } from "./CloudSyncIndicator";
 
 export function AuthButton() {
   const user = useAuthStore((s) => s.user);
   const authReady = useAuthStore((s) => s.authReady);
   const authLoading = useAuthStore((s) => s.authLoading);
-  const cloudSyncStatus = useAuthStore((s) => s.cloudSyncStatus);
   const setAuthLoading = useAuthStore((s) => s.setAuthLoading);
   const [busy, setBusy] = useState(false);
 
@@ -60,15 +60,7 @@ export function AuthButton() {
     const label = user.displayName ?? user.email ?? "บัญชี";
     return (
       <div className="flex items-center gap-1">
-        {cloudSyncStatus === "syncing" && (
-          <span
-            className="inline-flex h-8 items-center gap-1 px-1.5 text-[10px] text-[color:var(--color-muted-foreground)]"
-            title="กำลังซิงก์ประวัติ"
-          >
-            <Loader2 className="size-3 animate-spin" aria-hidden />
-            <Cloud className="size-3 hidden sm:block" aria-hidden />
-          </span>
-        )}
+        <CloudSyncIndicator compact />
         <button
           type="button"
           onClick={() => void handleSignOut()}

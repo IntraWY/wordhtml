@@ -10,9 +10,13 @@ import { EditorPaperLayout } from "./EditorPaperLayout";
 
 interface TemplatePreviewProps {
   widthPx: number;
+  headerFooterReservePx?: number;
 }
 
-export function TemplatePreview({ widthPx }: TemplatePreviewProps) {
+export function TemplatePreview({
+  widthPx,
+  headerFooterReservePx,
+}: TemplatePreviewProps) {
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const templateMode = useEditorStore((s) => s.templateMode);
@@ -41,7 +45,11 @@ export function TemplatePreview({ widthPx }: TemplatePreviewProps) {
   if (previewMode !== "preview" || !templateMode) return null;
   return (
     <EditorPaperLayout widthPx={widthPx}>
-      <MultiPagePreview html={processedHtml} pageSetup={pageSetup} />
+      <MultiPagePreview
+        html={processedHtml}
+        pageSetup={pageSetup}
+        headerFooterReservePx={headerFooterReservePx}
+      />
     </EditorPaperLayout>
   );
 }

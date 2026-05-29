@@ -1,11 +1,12 @@
 "use client";
 
 import { useLayoutEffect, useState, useCallback, useRef, type RefObject } from "react";
-import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { measureHeaderFooterReservePx } from "@/lib/pageChromeReserve";
 import { resolveHeaderFooter } from "./PageHeaderFooter";
 import { replacePageTokens } from "@/lib/placeholders";
 import type { HeaderFooterConfig, PageSetup } from "@/types";
 import { debugPerfLog } from "@/lib/debugPerfLog";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface PageChromeLayerProps {
   /** Element that contains `.page-node` elements (usually PageCanvas). */
@@ -102,14 +103,10 @@ export function PageChromeLayer({
     });
     // #endregion
 
-    const probe = document.createElement("div");
-    probe.className = "page-chrome-header";
-    probe.style.cssText = "visibility:hidden;position:fixed;top:-9999px;left:-9999px";
-    probe.innerHTML = sanitizeHtml(hf.headerHtml || hf.footerHtml || "X");
-    document.body.appendChild(probe);
-    const measured = probe.offsetHeight;
-    document.body.removeChild(probe);
-    const reserve = Math.min(120, Math.max(24, measured * 2));
+    const reserve = measureHeaderFooterReservePx(
+      hf.headerHtml,
+      hf.footerHtml
+    );
     if (reserve !== lastReserveRef.current) {
       lastReserveRef.current = reserve;
       onReserveHeightChange?.(reserve);

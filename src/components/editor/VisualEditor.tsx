@@ -71,6 +71,8 @@ import { getPageSelectionContext } from "@/lib/pagination/pageSelection";
 import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
 import { runPaginationMaintenance } from "@/lib/pagination/paginationMaintenance";
 import { dispatchPaginationCooldown } from "@/lib/events";
+import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
+import { handleVariableAdjacentSpace, handleVariableAdjacentTextInput } from "@/lib/tiptap/variableAdjacentInput";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -216,9 +218,16 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       transformPastedHTML(html: string) {
         return cleanPastedHtml(html);
       },
+      handleTextInput(view, from, to, text) {
+        return handleVariableAdjacentTextInput(view, from, to, text);
+      },
       handleKeyDown(_view: EditorView, event: KeyboardEvent) {
         const ed = editorRef.current;
         if (!isLiveEditor(ed)) return false;
+
+        if (handleVariableAdjacentSpace(ed, event)) {
+          return true;
+        }
 
         // Command palette (overrides Link extension Mod-k in the editor).
         if (
@@ -368,10 +377,14 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         const name = match[1];
         const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
         if (!coords) return false;
-        const pos = coords.pos;
-        const mark = view.state.schema.marks.variable.create({ name });
-        const node = view.state.schema.text(text, [mark]);
-        view.dispatch(view.state.tr.insert(pos, node));
+        const ed = editorRef.current;
+        if (isLiveEditor(ed)) {
+          insertVariableBadge(ed, coords.pos, name);
+        } else {
+          const mark = view.state.schema.marks.variable.create({ name });
+          const node = view.state.schema.text(text, [mark]);
+          view.dispatch(view.state.tr.insert(coords.pos, node));
+        }
         return true;
       },
       handlePaste(_view: unknown, event: ClipboardEvent) {

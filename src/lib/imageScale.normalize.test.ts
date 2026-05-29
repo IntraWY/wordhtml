@@ -16,4 +16,11 @@ describe("normalizeImagePercentWidths", () => {
     expect(out).toMatch(/width="\d+"/);
     expect(out).toMatch(/width:\s*\d+px/);
   });
+
+  it("uses measured content width when provided", () => {
+    const html = '<img src="x" width="50%" style="width:50%" />';
+    const out = normalizeImagePercentWidths(html, TEST_PAGE_SETUP, 400);
+    expect(out).toContain('width="200"');
+    expect(out).toMatch(/width:\s*200px/);
+  });
 });

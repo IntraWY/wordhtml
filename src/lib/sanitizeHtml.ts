@@ -2,7 +2,12 @@
  * Sanitize HTML by parsing it and removing dangerous elements/attributes.
  * Strips <script>, event handlers (on*), and javascript: URLs.
  */
-export function sanitizeHtml(raw: string): string {
+export function sanitizeHtml(
+  raw: string,
+  options?: {
+    onError?: "empty" | "throw";
+  }
+): string {
   if (!raw) return "";
   try {
     const parser = new DOMParser();
@@ -34,7 +39,11 @@ export function sanitizeHtml(raw: string): string {
 
     return doc.body.innerHTML;
   } catch {
-    // Fallback: if DOMParser fails, return empty string to avoid security risk
+    const mode = options?.onError ?? "empty";
+    if (mode === "throw") {
+      throw new Error("Sanitize failed");
+    }
+    // Fallback: if DOMParser fails, return empty string to avoid security risk.
     return "";
   }
 }

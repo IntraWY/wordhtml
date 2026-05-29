@@ -9,7 +9,10 @@ import {
   normalizeImagePercentWidths,
   resolveImagePresetWidth,
 } from "@/lib/imageScale";
-import { getPageContentWidthPx } from "@/lib/pageContentWidth";
+import {
+  getPageContentWidthPx,
+  measurePageBodyWidthFromDom,
+} from "@/lib/pageContentWidth";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
 import { useEditorStore } from "@/store/editorStore";
 
@@ -122,7 +125,8 @@ export function ImageResizeView({
     // Sync store immediately so Preview never reads stale debounced HTML.
     const html = normalizeImagePercentWidths(
       unwrapPageNode(editor.getHTML()),
-      pageSetup
+      pageSetup,
+      measuredW > 0 ? Math.round(measuredW) : measurePageBodyWidthFromDom()
     );
     useEditorStore.getState().setHtml(html);
   };

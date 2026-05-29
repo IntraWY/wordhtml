@@ -21,6 +21,8 @@ export interface SplitOptions {
   minLinesBeforeBreak?: number;    // default: 2 (orphan)
   minLinesAfterBreak?: number;     // default: 2 (widow)
   keepHeadingWithNext?: boolean;   // default: true
+  /** Header+footer reserve subtracted from content height (edit-mode parity). */
+  headerFooterReservePx?: number;
 }
 
 const DEFAULT_AVOID_BREAK_INSIDE = ["table", "img", "figure", "svg"];
@@ -325,7 +327,15 @@ export function splitHtmlIntoPages(
     return [""];
   }
 
-  const metrics = calculatePageMetrics(pageSetup);
+  const baseMetrics = calculatePageMetrics(pageSetup);
+  const hfReserve = options?.headerFooterReservePx ?? 0;
+  const metrics: PageMetrics = {
+    ...baseMetrics,
+    contentHeightPx: Math.max(
+      1,
+      baseMetrics.contentHeightPx - hfReserve
+    ),
+  };
   const { children, host, hostTop, contentTopOffset } = measureHtml(
     html,
     metrics
@@ -380,12 +390,19 @@ export function calculatePageBreaks(
     return [0];
   }
 
-  const metrics = calculatePageMetrics(pageSetup);
+  const baseMetrics = calculatePageMetrics(pageSetup);
+  const hfReserve = options?.headerFooterReservePx ?? 0;
+  const metrics: PageMetrics = {
+    ...baseMetrics,
+    contentHeightPx: Math.max(
+      1,
+      baseMetrics.contentHeightPx - hfReserve
+    ),
+  };
   const { children, host, hostTop, contentTopOffset } = measureHtml(
     html,
     metrics
   );
-
 
   let breaks: number[];
   try {

@@ -5,10 +5,12 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload, Loader2 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
+import { useAuthStore } from "@/store/authStore";
 import type { PageSetup } from "@/types";
 import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/store/templateStore";
 import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
+import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
@@ -39,6 +41,9 @@ export function TemplatePanel() {
   const setFileName = useEditorStore((s) => s.setFileName);
   const clearError = useEditorStore((s) => s.clearError);
   const clearLoadWarnings = useEditorStore((s) => s.clearLoadWarnings);
+  const user = useAuthStore((s) => s.user);
+  const firebaseEnabled = isFirebaseConfigured();
+  const uidShort = user?.uid ? `${user.uid.slice(0, 8)}…` : null;
 
   const [saveName, setSaveName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -375,8 +380,22 @@ export function TemplatePanel() {
               </p>
             )}
             <p className="mt-3 text-[11px] text-[color:var(--color-muted-foreground)]">
-              Templates ซิงก์ผ่าน Firebase (เมื่อ deploy ตั้งค่าแล้ว) — ต่างจากประวัติ (History)
-              ที่เก็บในเครื่องเท่านั้น
+              {firebaseEnabled && user ? (
+                <>
+                  Templates ซิงก์ไป{" "}
+                  <code className="font-mono text-[10px]">users/{uidShort}/templates</code> — ต่างจาก
+                  ประวัติ (History) ที่เก็บ localStorage ด้วย
+                </>
+              ) : firebaseEnabled ? (
+                <>
+                  ยังไม่ได้เข้าสู่ระบบ — อ่าน/เขียน{" "}
+                  <code className="font-mono text-[10px]">templates/&#123;id&#125;</code> (ร่วม) ·
+                  เข้าสู่ระบบเพื่อย้ายไป{" "}
+                  <code className="font-mono text-[10px]">users/&#123;uid&#125;/templates</code>
+                </>
+              ) : (
+                <>Firebase ไม่ได้ตั้งค่า — ใช้ส่งออก/นำเข้า JSON แทน</>
+              )}
             </p>
             </div>
           </footer>

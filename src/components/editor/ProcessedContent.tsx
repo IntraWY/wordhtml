@@ -19,6 +19,8 @@ interface ProcessedContentProps {
   headerHtml?: string;
   footerHtml?: string;
   showHeaderFooter?: boolean;
+  /** Total header+footer reserve (px); halves applied per chrome band when exactHeight. */
+  headerFooterReservePx?: number;
 }
 
 export function ProcessedContent({
@@ -32,6 +34,7 @@ export function ProcessedContent({
   headerHtml,
   footerHtml,
   showHeaderFooter = false,
+  headerFooterReservePx = 0,
 }: ProcessedContentProps) {
   const base = pageSetup.size === "Letter" ? LETTER : A4;
   const isLandscape = pageSetup.orientation === "landscape";
@@ -61,8 +64,22 @@ export function ProcessedContent({
     [footerHtml, pageNumber, totalPages]
   );
 
-  const headerOffset = showHeaderFooter && headerHtml ? 35 : 0;
-  const footerOffset = showHeaderFooter && footerHtml ? 35 : 0;
+  const chromeHalf =
+    headerFooterReservePx > 0
+      ? Math.ceil(headerFooterReservePx / 2)
+      : 0;
+  const headerOffset =
+    showHeaderFooter && headerHtml
+      ? chromeHalf > 0
+        ? chromeHalf
+        : 35
+      : 0;
+  const footerOffset =
+    showHeaderFooter && footerHtml
+      ? chromeHalf > 0
+        ? chromeHalf
+        : 35
+      : 0;
 
   return (
     <div

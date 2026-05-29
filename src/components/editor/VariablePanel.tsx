@@ -38,6 +38,7 @@ export function VariablePanel() {
   const variables = useEditorStore((s) => s.variables);
   const setVariables = useEditorStore((s) => s.setVariables);
   const clearAllVariables = useEditorStore((s) => s.clearAllVariables);
+  const removeVariable = useEditorStore((s) => s.removeVariable);
   const dataSet = useEditorStore((s) => s.dataSet);
   const setDataSet = useEditorStore((s) => s.setDataSet);
   const previewMode = useEditorStore((s) => s.previewMode);
@@ -96,6 +97,17 @@ export function VariablePanel() {
       }
     );
   }, [clearAllVariables]);
+
+  const handleRemoveVariable = useCallback((name: string) => {
+    useDialogStore.getState().openConfirm(
+      "ลบตัวแปร (Remove Variable)",
+      `ต้องการลบ {{${name}}} ออกจากรายการและเอกสารหรือไม่? การลบนี้ไม่สามารถ undo ได้โดยตรง — ใช้ Ctrl+Z หากต้องการย้อนกลับ`,
+      () => {
+        removeVariable(name);
+        useToastStore.getState().show(`ลบตัวแปร {{${name}}} แล้ว`, "success");
+      }
+    );
+  }, [removeVariable]);
 
   const handleSelectRow = useCallback(
     (index: number) => {
@@ -276,6 +288,7 @@ export function VariablePanel() {
                         variable={v}
                         onUpdate={(patch) => handleUpdateVariable(v.name, patch)}
                         onInsert={() => handleInsertVariable(v.name)}
+                        onRemove={() => handleRemoveVariable(v.name)}
                         onDragStart={(e) => handleDragStart(e, v.name)}
                       />
                     ))}
@@ -340,10 +353,11 @@ interface VariableRowProps {
   variable: TemplateVariable;
   onUpdate: (patch: Partial<TemplateVariable>) => void;
   onInsert?: () => void;
+  onRemove?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
 }
 
-function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowProps) {
+function VariableRow({ variable, onUpdate, onInsert, onRemove, onDragStart }: VariableRowProps) {
   const { name, value, isList, delimiter } = variable;
 
   const activeDelimiter = delimiter || ",";
@@ -401,6 +415,19 @@ function VariableRow({ variable, onUpdate, onInsert, onDragStart }: VariableRowP
             รายการ
           </span>
         )}
+        <button
+          type="button"
+          draggable={false}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove?.();
+          }}
+          aria-label="ลบตัวแปร (Remove variable)"
+          title="ลบตัวแปร (Remove variable)"
+          className="ml-auto inline-flex cursor-pointer items-center rounded-md p-1 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+        </button>
       </div>
 
       <input
