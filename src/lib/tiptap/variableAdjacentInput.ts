@@ -54,14 +54,11 @@ export function handleVariableAdjacentTextInput(
     if (!insideTo || insideFrom.from !== insideTo.from || insideFrom.to !== insideTo.to) {
       return false;
     }
+    // Never delete inside the badge (would corrupt {{name}}); append after the mark.
+    return dispatchPlainInsert(view, insideFrom.to, text);
   }
 
-  let tr = state.tr;
-  if (from !== to) {
-    tr = tr.delete(from, to);
-  }
-  const insertPos = tr.mapping.map(insideFrom.to);
-  return dispatchPlainInsert(view, insertPos, text);
+  return dispatchPlainInsert(view, insideFrom.to, text);
 }
 
 /**

@@ -23,14 +23,15 @@ function suggestionOverlapsVariableBadge(
   const variableMark = state.schema.marks.variable;
   if (!variableMark) return false;
 
+  const doc = state.doc;
+  const from = Math.max(0, range.from);
+  const to = Math.min(doc.content.size, range.to);
+  if (from >= to) return false;
+
   let overlaps = false;
-  state.doc.nodesBetween(range.from, range.to, (node, pos) => {
+  doc.nodesBetween(from, to, (node) => {
     if (!node.isText) return;
-    const hasVariable = node.marks.some((m) => m.type === variableMark);
-    if (!hasVariable) return;
-    const from = pos;
-    const to = pos + node.nodeSize;
-    if (range.from < to && range.to > from) {
+    if (node.marks.some((m) => m.type === variableMark)) {
       overlaps = true;
     }
   });

@@ -1,4 +1,7 @@
+import type { Editor } from "@tiptap/core";
 import { Extension } from "@tiptap/core";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import type { EditorState } from "@tiptap/pm/state";
 import Suggestion, {
   findSuggestionMatch as defaultFindSuggestionMatch,
   type Trigger,
@@ -8,7 +11,7 @@ import { variableSuggestionPluginKey } from "./suggestionPluginKeys";
 import { insertVariableBadge } from "./insertVariableBadge";
 
 function matchOverlapsVariableBadge(
-  doc: import("@tiptap/pm/model").Node,
+  doc: ProseMirrorNode,
   range: { from: number; to: number }
 ): boolean {
   const variableType = doc.type.schema.marks.variable;
@@ -24,15 +27,11 @@ function matchOverlapsVariableBadge(
   return overlaps;
 }
 
-import type { Editor } from "@tiptap/core";
-
 interface SuggestionCommandProps {
   editor: Editor;
   range: { from: number; to: number };
   props: { name: string };
 }
-
-import type { EditorState } from "@tiptap/pm/state";
 
 interface SuggestionAllowProps {
   state: EditorState;

@@ -31,4 +31,33 @@ describe("removeMergeFieldFromHtml", () => {
       '<p><span class="variable-badge" data-variable="keep">{{keep}}</span> </p>'
     );
   });
+
+  it("removes multiple occurrences of the same name", () => {
+    const html =
+      '<p>{{dup}} <span class="variable-badge" data-variable="dup">{{dup}}</span> and {{dup}} again</p>';
+    const result = removeMergeFieldFromHtml(html, "dup");
+    expect(result).not.toContain("{{dup}}");
+    expect(result).not.toContain("data-variable");
+    expect(result).toBe("<p>  and  again</p>");
+  });
+
+  it("handles Thai variable names in badge and plain text", () => {
+    const html =
+      '<p><span class="variable-badge" data-variable="รหัส">{{รหัส}}</span>{{รหัส}}</p>';
+    const result = removeMergeFieldFromHtml(html, "รหัส");
+    expect(result).toBe("<p></p>");
+  });
+
+  it("leaves document unchanged when name is not present", () => {
+    const html = "<p>{{only}}</p>";
+    expect(removeMergeFieldFromHtml(html, "missing")).toBe(html);
+  });
+
+  it("removes badge even when inner text does not match data-variable", () => {
+    const html =
+      '<p><span class="variable-badge" data-variable="a">{{wrong}}</span></p>';
+    const result = removeMergeFieldFromHtml(html, "a");
+    expect(result).toBe("<p></p>");
+    expect(result).not.toContain("data-variable");
+  });
 });

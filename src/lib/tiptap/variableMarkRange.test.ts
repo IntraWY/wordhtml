@@ -65,6 +65,21 @@ describe("variable mark typing", () => {
     expect(editor.state.doc.textContent).toBe("{{name}} ");
   });
 
+  it("appends after badge when a partial in-mark selection is typed over", () => {
+    editor = createEditor();
+    insertVariableBadge(editor, 1, "customer");
+    editor.commands.setTextSelection({ from: 3, to: 5 });
+    const handled = handleVariableAdjacentTextInput(
+      editor.view,
+      editor.state.selection.from,
+      editor.state.selection.to,
+      "X"
+    );
+    expect(handled).toBe(true);
+    expect(editor.state.doc.textContent).toBe("{{customer}}X");
+    expect(editor.getHTML()).toMatch(/data-variable="customer"/);
+  });
+
   it("types plain text outside the badge when caret is inside the mark", () => {
     editor = createEditor();
     insertVariableBadge(editor, 1, "customer");
