@@ -17,7 +17,10 @@ interface EditorPaperLayoutProps {
   className?: string;
 }
 
-/** Shared Word-style grid: ruler column + paper column (edit and preview). */
+/**
+ * Shared Word-style 2×2 grid: corner + horizontal ruler / vertical ruler + paper.
+ * Corner and horizontal ruler are sticky so they stay aligned while scrolling.
+ */
 export function EditorPaperLayout({
   widthPx,
   horizontalRuler,
@@ -32,38 +35,35 @@ export function EditorPaperLayout({
       className={cn("mx-auto", className)}
       style={{ width: widthPx + RULER_COLUMN_PX }}
     >
-      {/* Row 1: sticky horizontal ruler (Word-style — stays at top when scrolling) */}
       <div
-        className="sticky top-0 z-20 grid border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)]"
+        className="grid items-start"
         style={{
           gridTemplateColumns: gridColumns,
-          gridTemplateRows: `${RULER_COLUMN_PX}px`,
+          gridTemplateRows: `${RULER_COLUMN_PX}px auto`,
         }}
       >
-        <div className={cornerClass} aria-hidden="true" />
-        {horizontalRuler ?? (
-          <div
-            className={cn(cornerClass, "border-b")}
-            style={{ height: RULER_COLUMN_PX }}
-            aria-hidden="true"
-          />
-        )}
-      </div>
-
-      {/* Row 2: vertical ruler + paper (scrolls with content) */}
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: gridColumns,
-        }}
-      >
-        {verticalRuler ?? (
-          <div
-            className={cn(cornerClass, "border-r")}
-            style={{ width: RULER_COLUMN_PX }}
-            aria-hidden="true"
-          />
-        )}
+        <div
+          className={cn(cornerClass, "sticky top-0 z-20")}
+          aria-hidden="true"
+        />
+        <div className="sticky top-0 z-20 bg-[color:var(--color-muted)]">
+          {horizontalRuler ?? (
+            <div
+              className={cn(cornerClass, "border-b")}
+              style={{ height: RULER_COLUMN_PX }}
+              aria-hidden="true"
+            />
+          )}
+        </div>
+        <div className="self-start">
+          {verticalRuler ?? (
+            <div
+              className={cn(cornerClass, "border-r")}
+              style={{ width: RULER_COLUMN_PX }}
+              aria-hidden="true"
+            />
+          )}
+        </div>
         {children}
       </div>
     </div>

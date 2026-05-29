@@ -639,7 +639,6 @@ html[data-theme="dark"] .paper {
 /* ── Real-time pagination (Word-style page display) ── */
 .page-canvas {
   background-color: var(--color-muted);
-  min-height: 100%;
 }
 
 .page-node {
@@ -650,7 +649,7 @@ html[data-theme="dark"] .paper {
     0 1px 2px rgba(0, 0, 0, 0.06);
   border-radius: 2px;
   overflow: hidden;
-  margin: 0 auto 20px;
+  margin: 0 auto;
 }
 
 /* Word-style dashed margin guides — editor-only decoration */
@@ -665,10 +664,6 @@ html[data-theme="dark"] .paper {
   border: 1px dashed oklch(55% 0.02 250 / 0.28);
   pointer-events: none;
   z-index: 1;
-}
-
-.page-node:last-child {
-  margin-bottom: 0;
 }
 
 html[data-theme="dark"] .page-node {

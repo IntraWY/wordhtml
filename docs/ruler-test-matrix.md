@@ -27,10 +27,11 @@ Use this checklist when changing ruler, preview layout, or pagination.
 
 | Step | Expected |
 |------|----------|
-| Scroll down on multi-page doc | Horizontal ruler (IndentRuler) stays pinned at top of scroll area |
-| Scroll down | Vertical ruler scrolls with paper stack |
+| Scroll down on multi-page doc | Corner + horizontal ruler (IndentRuler) stay pinned at top of scroll area (single 2×2 grid, sticky cells) |
+| Scroll down | Vertical ruler scrolls with paper stack (same grid row as paper) |
 | Scroll down | Paper content scrolls; H-ruler does not drift horizontally |
 | Resize window | Sticky ruler still aligned with paper column (widthPx) |
+| Multi-page stack | Page gap is `PageCanvas` `gap-5` only (20px) — matches `PAGE_STACK_GAP_PX` / vertical ruler tick segments |
 
 ## Paragraph indents (text)
 

@@ -126,6 +126,8 @@ test.describe("Ruler regression", () => {
     }
 
     await expect(page.locator(".page-node").first()).toBeVisible({ timeout: 15_000 });
+    // Let auto-pagination settle (typing idle + cooldown) before scroll measurements
+    await page.waitForTimeout(1_200);
 
     // Margin guide (::before) should exist and have dashed border
     const hasMarginGuide = await page.evaluate(() => {
@@ -140,28 +142,58 @@ test.describe("Ruler regression", () => {
     const stickyRow = page.locator(".sticky.top-0").first();
     await expect(stickyRow).toBeVisible();
 
-    const yBeforeScroll = await stickyRow.boundingBox().then((b) => b?.y ?? 0);
-    const pageNodeYBefore = await page
-      .locator(".page-node")
-      .first()
-      .boundingBox()
-      .then((b) => b?.y ?? 0);
+    // Reset scroll — typing may auto-scroll so viewport Y can be negative
+    await scrollContainer.evaluate((el) => {
+      el.scrollTop = 0;
+    });
+    await page.waitForTimeout(100);
+
+    type ScrollMeasures = {
+      stickyRelY: number;
+      pageRelY: number;
+      scrollTop: number;
+    };
+
+    const before = await scrollContainer.evaluate((scrollEl): ScrollMeasures | null => {
+      const sticky = scrollEl.querySelector(".sticky.top-0");
+      const pageNode = scrollEl.querySelector(".page-node");
+      if (!sticky || !pageNode) return null;
+      const scrollRect = scrollEl.getBoundingClientRect();
+      const stickyRect = sticky.getBoundingClientRect();
+      const pageRect = pageNode.getBoundingClientRect();
+      return {
+        stickyRelY: stickyRect.top - scrollRect.top,
+        pageRelY: pageRect.top - scrollRect.top,
+        scrollTop: scrollEl.scrollTop,
+      };
+    });
+    expect(before).not.toBeNull();
 
     await scrollContainer.evaluate((el) => {
       el.scrollTop = 400;
     });
-    await page.waitForTimeout(300);
+    await expect
+      .poll(async () => scrollContainer.evaluate((el) => el.scrollTop))
+      .toBeGreaterThanOrEqual(400);
 
-    const yAfterScroll = await stickyRow.boundingBox().then((b) => b?.y ?? 0);
-    // Sticky H-ruler row should stay at same viewport Y (within 2px tolerance)
-    expect(Math.abs(yAfterScroll - yBeforeScroll)).toBeLessThanOrEqual(2);
+    const after = await scrollContainer.evaluate((scrollEl): ScrollMeasures | null => {
+      const sticky = scrollEl.querySelector(".sticky.top-0");
+      const pageNode = scrollEl.querySelector(".page-node");
+      if (!sticky || !pageNode) return null;
+      const scrollRect = scrollEl.getBoundingClientRect();
+      const stickyRect = sticky.getBoundingClientRect();
+      const pageRect = pageNode.getBoundingClientRect();
+      return {
+        stickyRelY: stickyRect.top - scrollRect.top,
+        pageRelY: pageRect.top - scrollRect.top,
+        scrollTop: scrollEl.scrollTop,
+      };
+    });
+    expect(after).not.toBeNull();
 
-    // Paper should have scrolled up relative to viewport
-    const pageNodeYAfter = await page
-      .locator(".page-node")
-      .first()
-      .boundingBox()
-      .then((b) => b?.y ?? 0);
-    expect(pageNodeYAfter).toBeLessThan(pageNodeYBefore);
+    // Sticky H-ruler stays pinned to scroll container top
+    expect(Math.abs(after!.stickyRelY - before!.stickyRelY)).toBeLessThanOrEqual(2);
+    // Paper moves up inside the scrollport when scrolling down
+    expect(after!.pageRelY).toBeLessThan(before!.pageRelY);
   });
 });

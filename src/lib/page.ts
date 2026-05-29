@@ -11,7 +11,7 @@ export const RULER_COLUMN_PX = 18;
 /** PageCanvas `py-6` — distance from canvas top to first `.page-node`. */
 export const PAGE_CANVAS_PADDING_PX = 24;
 
-/** Gap between stacked pages (matches `.page-node` margin and preview stack). */
+/** Gap between stacked pages (PageCanvas `gap-5` and preview stack). */
 export const PAGE_STACK_GAP_PX = 20;
 
 export function getPageDimensionsPx(pageSetup: PageSetup) {
