@@ -96,7 +96,7 @@ export function HistoryPanel() {
                       }
                     );
                   }}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[color:var(--color-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[color:var(--color-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)] transition-colors hover:border-[color:var(--color-danger)]/40 hover:bg-[color:var(--color-danger-surface)] hover:text-[color:var(--color-danger)]"
                 >
                   <Trash className="size-3" />
                   ล้างทั้งหมด
@@ -324,7 +324,7 @@ function ActionBtn({ label, onClick, danger, children }: ActionBtnProps) {
       className={cn(
         "grid h-8 w-8 place-items-center rounded-md transition-colors",
         danger
-          ? "text-[color:var(--color-muted-foreground)] hover:bg-red-100 hover:text-red-600"
+          ? "text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-danger-surface)] hover:text-[color:var(--color-danger)]"
           : "text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-border)] hover:text-[color:var(--color-foreground)]"
       )}
     >

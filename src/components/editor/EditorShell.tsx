@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { AlertTriangle, X, Loader2, FileUp, Image as ImageIcon, FileText } from "lucide-react";
 import { StatusBar } from "./StatusBar";
 import type { Editor } from "@tiptap/react";
@@ -33,8 +34,6 @@ import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { useEditorResize } from "@/hooks/useEditorResize";
 import { usePagination } from "@/hooks/usePagination";
 import { DialogManager } from "./DialogManager";
-import { ParagraphDialog } from "./ParagraphDialog";
-import { MathInputDialog } from "./MathInputDialog";
 import { MobileBlock } from "@/components/MobileBlock";
 import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
@@ -43,14 +42,32 @@ import { measurePageBodyWidthFromDom } from "@/lib/pageContentWidth";
 import { isLiveEditor } from "@/lib/editorLive";
 import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
 import { PaginationManager } from "./PaginationManager";
-import { EditorContextMenu } from "./EditorContextMenu";
-import { Tour } from "@/components/onboarding/Tour";
 import { PageChromeLayer } from "./PageChromeLayer";
-import { PlaceholderPanel } from "./PlaceholderPanel";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useCloudHistorySync } from "@/hooks/useCloudHistorySync";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CloudConflictBanner } from "./CloudConflictBanner";
+
+const ParagraphDialog = dynamic(
+  () => import("./ParagraphDialog").then((m) => m.ParagraphDialog),
+  { ssr: false, loading: () => null }
+);
+const MathInputDialog = dynamic(
+  () => import("./MathInputDialog").then((m) => m.MathInputDialog),
+  { ssr: false, loading: () => null }
+);
+const PlaceholderPanel = dynamic(
+  () => import("./PlaceholderPanel").then((m) => m.PlaceholderPanel),
+  { ssr: false, loading: () => null }
+);
+const EditorContextMenu = dynamic(
+  () => import("./EditorContextMenu").then((m) => m.EditorContextMenu),
+  { ssr: false, loading: () => null }
+);
+const Tour = dynamic(
+  () => import("@/components/onboarding/Tour").then((m) => m.Tour),
+  { ssr: false, loading: () => null }
+);
 
 export function EditorShell() {
   useFirebaseAuth();
@@ -260,7 +277,7 @@ export function EditorShell() {
         {loadError && (
           <div
             role="alert"
-            className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--color-border)] bg-red-50 px-5 py-2.5 text-sm text-red-900"
+            className="banner-danger flex shrink-0 items-center justify-between gap-3 border-b px-5 py-2.5 text-sm"
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="size-4 shrink-0" />
@@ -270,7 +287,7 @@ export function EditorShell() {
               type="button"
               onClick={clearError}
               aria-label="ปิดข้อความผิดพลาด"
-              className="rounded-md p-1 text-red-700 transition-colors hover:bg-red-100"
+              className="rounded-md p-1 text-current transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-danger)_12%,transparent)]"
             >
               <X className="size-3.5" />
             </button>
@@ -279,7 +296,7 @@ export function EditorShell() {
         {lastLoadWarnings.length > 0 && (
           <div
             role="status"
-            className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--color-border)] bg-amber-50 px-5 py-2.5 text-sm text-amber-900"
+            className="banner-warning flex shrink-0 items-center justify-between gap-3 border-b px-5 py-2.5 text-sm"
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="size-4 shrink-0" />
@@ -293,7 +310,7 @@ export function EditorShell() {
               type="button"
               onClick={clearLoadWarnings}
               aria-label="ปิดคำเตือน"
-              className="rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
+              className="rounded-md p-1 text-current transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-warning)_12%,transparent)]"
             >
               <X className="size-3.5" />
             </button>
@@ -401,7 +418,7 @@ export function EditorShell() {
 
         {isDragging && (
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[color:var(--color-background)]/70 backdrop-blur-[2px]">
-            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[color:var(--color-accent)] bg-[color:var(--color-background)] px-10 py-8 shadow-xl">
+            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[color:var(--color-accent)] bg-[color:var(--color-surface)] px-10 py-8 shadow-xl">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[color:var(--color-muted)]">
                   <FileUp className="size-6 text-[color:var(--color-accent)]" />
@@ -429,7 +446,7 @@ export function EditorShell() {
               role="status"
               aria-live="polite"
               aria-label="กำลังโหลด (Loading)"
-              className="flex items-center gap-3 rounded-xl bg-[color:var(--color-background)] px-6 py-4 shadow-xl border border-[color:var(--color-border)]"
+              className="flex items-center gap-3 rounded-xl bg-[color:var(--color-surface)] px-6 py-4 shadow-xl border border-[color:var(--color-border)]"
             >
               <Loader2 className="size-5 animate-spin text-[color:var(--color-accent)]" />
               <span className="text-sm font-medium text-[color:var(--color-foreground)]">กำลังโหลดไฟล์…</span>

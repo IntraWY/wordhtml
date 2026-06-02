@@ -58,7 +58,7 @@ function MobileBtn({
       className={cn(
         "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors",
         active
-          ? "bg-[color:var(--color-accent)] text-white"
+          ? "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
           : "text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]",
         disabled && "pointer-events-none opacity-40"
       )}
@@ -171,7 +171,7 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
   };
 
   return (
-    <div className="flex items-center gap-1 border-b border-[color:var(--color-border)] bg-gradient-to-b from-slate-50 to-white px-2 py-1.5 md:hidden">
+    <div className="surface-chrome flex items-center gap-1 border-b px-2 py-1.5 shadow-sm md:hidden">
       <div className="flex flex-1 items-center gap-0.5 overflow-x-auto scrollbar-hide">
         <MobileBtn
           active={active.bold}
@@ -293,7 +293,7 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
         </MobileBtn>
 
         {showMore && (
-          <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-2 shadow-xl">
+          <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-2 shadow-xl">
             <div className="grid grid-cols-4 gap-1">
               <MobileBtn
                 onClick={() => {
@@ -376,7 +376,7 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
                   handleCleanNow();
                   setShowMore(false);
                 }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1.5 text-xs font-semibold text-white"
+                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-[color:var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-accent-foreground)] transition-colors hover:bg-[color:var(--color-accent-hover)]"
               >
                 <Sparkles className="size-3.5" />
                 ล้างตอนนี้

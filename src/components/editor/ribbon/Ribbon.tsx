@@ -30,7 +30,7 @@ export const Ribbon = memo(function Ribbon({ editor }: { editor: Editor | null }
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]["key"]>("home");
 
   return (
-    <div className="flex flex-col border-b border-[color:var(--color-border)] bg-gradient-to-b from-slate-50 to-white shadow-sm shadow-slate-200/50">
+    <div className="surface-chrome flex flex-col border-b shadow-sm">
       {/* Tab strip */}
       <div className="flex items-end gap-1 px-3 pt-1">
         {TABS.map((tab) => (
@@ -39,15 +39,15 @@ export const Ribbon = memo(function Ribbon({ editor }: { editor: Editor | null }
             type="button"
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "relative rounded-t-md px-4 py-1.5 text-[11px] font-semibold transition-all",
+              "relative rounded-t-md px-4 py-1.5 text-[11px] font-semibold transition-colors",
               activeTab === tab.key
-                ? "bg-white text-[color:var(--color-accent)] shadow-[0_-1px_2px_rgba(0,0,0,0.05)]"
-                : "text-[color:var(--color-muted-foreground)] hover:bg-white/60 hover:text-[color:var(--color-foreground)]"
+                ? "bg-[color:var(--color-background)] text-[color:var(--color-accent)] shadow-[0_-1px_2px_rgba(0,0,0,0.05)]"
+                : "text-[color:var(--color-muted-foreground)] hover:bg-[color:color-mix(in_srgb,var(--color-background)_65%,transparent)] hover:text-[color:var(--color-foreground)]"
             )}
           >
             {tab.label}
             {activeTab === tab.key && (
-              <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+              <span className="ribbon-tab-underline absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-[color:var(--color-accent)]" />
             )}
           </button>
         ))}

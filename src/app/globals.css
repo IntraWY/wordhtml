@@ -1,23 +1,34 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #18181b;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #52525b;
-  --color-border: #e4e4e7;
-  --color-border-strong: #d4d4d8;
-  --color-accent: #4f46e5;
-  --color-accent-foreground: #fafafa;
-  --color-accent-hover: #4338ca;
-  --color-ring: #6366f1;
+  --color-background: #faf8f5;
+  --color-foreground: #1c1917;
+  --color-muted: #f0ebe3;
+  --color-muted-foreground: #57534e;
+  --color-border: #e7e0d6;
+  --color-border-strong: #d6cec3;
+  --color-accent: #b45309;
+  --color-accent-foreground: #fffefb;
+  --color-accent-hover: #92400e;
+  --color-ring: #d97706;
   --color-success: #16a34a;
   --color-danger: #dc2626;
-  --color-selected-cell: rgba(79, 70, 229, 0.07);
+  --color-warning: #d97706;
+  --color-danger-surface: #fef2f2;
+  --color-danger-foreground: #7f1d1d;
+  --color-warning-surface: #fffbeb;
+  --color-warning-foreground: #78350f;
+  --color-selected-cell: rgba(180, 83, 9, 0.08);
   --color-paper: #ffffff;
+  --color-surface: #fffefb;
+  --color-canvas: #e8e2d9;
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ibm-plex-sans-thai), system-ui, sans-serif;
+  --font-display: var(--font-lora), Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --shadow-page: 0 1px 2px rgba(28, 25, 23, 0.06), 0 8px 24px rgba(28, 25, 23, 0.08);
+  --texture-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -27,20 +38,29 @@
 }
 
 html[data-theme="dark"] {
-  --color-background: #09090b;
-  --color-foreground: #fafafa;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-border: #27272a;
-  --color-border-strong: #3f3f46;
-  --color-accent: #818cf8;
-  --color-accent-foreground: #18181b;
-  --color-accent-hover: #a5b4fc;
-  --color-ring: #6366f1;
+  --color-background: #141210;
+  --color-foreground: #faf8f5;
+  --color-muted: #292524;
+  --color-muted-foreground: #a8a29e;
+  --color-border: #3c3834;
+  --color-border-strong: #57534e;
+  --color-accent: #d97706;
+  --color-accent-foreground: #1c1917;
+  --color-accent-hover: #f59e0b;
+  --color-ring: #f59e0b;
   --color-success: #22c55e;
   --color-danger: #ef4444;
-  --color-selected-cell: rgba(129, 140, 248, 0.12);
+  --color-warning: #f59e0b;
+  --color-danger-surface: #450a0a;
+  --color-danger-foreground: #fecaca;
+  --color-warning-surface: #451a03;
+  --color-warning-foreground: #fde68a;
+  --color-selected-cell: rgba(217, 119, 6, 0.14);
   --color-paper: #1f1f23;
+  --color-surface: #1c1917;
+  --color-canvas: #0c0a09;
+
+  --shadow-page: 0 2px 4px rgba(0, 0, 0, 0.25), 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 html,
@@ -66,8 +86,125 @@ body {
 }
 
 ::selection {
-  background: var(--color-foreground);
-  color: var(--color-accent-foreground);
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  color: var(--color-foreground);
+}
+
+/* Firefox scrollbar */
+html {
+  scrollbar-color: color-mix(in srgb, var(--color-border-strong) 80%, var(--color-accent))
+    transparent;
+}
+
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+.surface-chrome {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.text-display {
+  font-family: var(--font-display);
+}
+
+.bg-canvas {
+  background-color: var(--color-canvas);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.banner-danger {
+  background: var(--color-danger-surface);
+  color: var(--color-danger-foreground);
+  border-color: color-mix(in srgb, var(--color-danger) 25%, var(--color-border));
+}
+
+.banner-warning {
+  background: var(--color-warning-surface);
+  color: var(--color-warning-foreground);
+  border-color: color-mix(in srgb, var(--color-warning) 25%, var(--color-border));
+}
+
+@keyframes help-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.help-stagger > * {
+  animation: help-fade-up 0.5s ease-out both;
+}
+
+.help-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.help-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.help-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.help-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.help-stagger > *:nth-child(5) { animation-delay: 320ms; }
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-stagger > * {
+  animation: landing-fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.landing-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.landing-stagger > *:nth-child(2) { animation-delay: 90ms; }
+.landing-stagger > *:nth-child(3) { animation-delay: 180ms; }
+.landing-stagger > *:nth-child(4) { animation-delay: 270ms; }
+.landing-stagger > *:nth-child(5) { animation-delay: 360ms; }
+.landing-stagger > *:nth-child(6) { animation-delay: 450ms; }
+
+@keyframes landing-float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+
+.landing-grain {
+  position: relative;
+}
+
+.landing-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--texture-grain);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.editorial-rule {
+  height: 1px;
+  border: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 60%, transparent) 20%,
+    color-mix(in srgb, var(--color-accent) 60%, transparent) 80%,
+    transparent
+  );
+}
+
+.ribbon-tab-underline {
+  transition: width 150ms ease, opacity 150ms ease;
 }
 
 /* Scrollbar polish (light mode) */
@@ -84,7 +221,15 @@ body {
   border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted-foreground);
+  background: color-mix(in srgb, var(--color-accent) 45%, var(--color-border-strong));
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-border-strong) 75%, black);
+  border-color: var(--color-background);
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-accent) 55%, var(--color-border-strong));
 }
 
 /* Tiptap ProseMirror baseline styles */
@@ -126,16 +271,11 @@ body {
 
 /* Missing merge-field placeholder (template preview) */
 .placeholder-missing {
-  color: #dc2626;
-  background: #fee2e2;
+  color: var(--color-danger);
+  background: var(--color-danger-surface);
   padding: 0 4px;
   border-radius: 2px;
   font-size: 12px;
-}
-
-html[data-theme="dark"] .placeholder-missing {
-  color: #fca5a5;
-  background: #450a0a;
 }
 
 .placeholder-field {
@@ -156,7 +296,7 @@ html[data-theme="dark"] .placeholder-missing {
 }
 
 .placeholder-field.is-required.is-empty {
-  border-color: #f59e0b;
+  border-color: var(--color-warning);
 }
 
 /* Live page chrome overlays (header/footer on canvas) */
@@ -196,9 +336,29 @@ html[data-theme="dark"] .placeholder-missing {
 
 /* Dot grid "desk" canvas behind the editor content card */
 .editor-canvas {
-  background-color: var(--color-muted);
-  background-image: radial-gradient(circle, var(--color-border-strong) 1px, transparent 1px);
+  position: relative;
+  background-color: var(--color-canvas);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-border-strong) 22%, transparent) 1px,
+    transparent 1px
+  );
   background-size: 20px 20px;
+}
+
+.editor-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--texture-grain);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.editor-canvas > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Shared document typography — used in both .prose-editor (Tiptap)
@@ -646,11 +806,22 @@ html[data-theme="dark"] .paper {
   position: relative;
   background: #fff;
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.10),
-    0 1px 2px rgba(0, 0, 0, 0.06);
+    var(--shadow-page),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   border-radius: 2px;
   overflow: hidden;
   margin: 0 auto;
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-node:hover {
+    box-shadow:
+      var(--shadow-page),
+      0 2px 4px rgba(28, 25, 23, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+  }
 }
 
 /* Word-style dashed margin guides — editor-only decoration */
@@ -685,14 +856,23 @@ html[data-theme="dark"] .page-node {
 .page-node[data-page-number]::after {
   content: attr(data-page-number);
   position: absolute;
-  bottom: 8px;
-  left: 0;
-  right: 0;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
-  font-size: 12px;
-  color: var(--color-muted-foreground);
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+  opacity: 0.95;
   pointer-events: none;
   user-select: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-muted) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 /* Virtual scrolling optimization */
@@ -726,9 +906,9 @@ html[data-theme="dark"] .page-node {
 
 /* ── Driver.js onboarding theme overrides ── */
 .wordhtml-driver-popover .driver-popover {
-  background: var(--color-background);
+  background: var(--color-surface);
   color: var(--color-foreground);
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border));
   border-radius: var(--radius-lg);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.04),
@@ -747,6 +927,7 @@ html[data-theme="dark"] .wordhtml-driver-popover .driver-popover {
 }
 
 .wordhtml-driver-popover .driver-popover-title {
+  font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.35;

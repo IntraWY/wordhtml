@@ -27,21 +27,24 @@ const steps: Step[] = [
 
 export function HowItWorks() {
   return (
-    <section className="border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] py-20">
+    <section className="border-b border-[color:var(--color-border)] bg-[color:var(--color-surface)] py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex flex-col gap-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
             วิธีใช้งาน
           </p>
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             3 ขั้นตอน ง่ายมาก
           </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[color:var(--color-muted-foreground)]">
+            โฟลว์สั้น ๆ แต่ครบ: นำเข้า → เลือกการทำความสะอาด → ส่งออกในรูปแบบที่ทีมของคุณใช้งานจริง
+          </p>
         </div>
         <ol className="mt-12 grid gap-6 sm:grid-cols-3">
           {steps.map(({ icon: Icon, title, body }, index) => (
             <li
               key={title}
-              className="relative flex flex-col gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-6"
+              className="relative flex flex-col gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-6 shadow-sm shadow-black/5 transition-[transform,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-[color:var(--color-surface)] hover:shadow-md hover:shadow-black/5"
             >
               <div className="flex items-center gap-3">
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-[color:var(--color-accent)] text-xs font-semibold text-[color:var(--color-accent-foreground)]">

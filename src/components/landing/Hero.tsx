@@ -5,15 +5,19 @@ import { Button } from "@/components/ui/Button";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-[color:var(--color-border)]">
-      <div className="mx-auto grid max-w-6xl gap-14 px-6 pt-20 pb-24 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-20 lg:pt-28 lg:pb-32">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)]">
+    <section className="landing-grain relative overflow-hidden border-b border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+      <div className="mx-auto grid max-w-6xl gap-14 px-6 pt-20 pb-24 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-18 lg:pt-28 lg:pb-32">
+        <div className="landing-stagger">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)]/70 bg-[color:var(--color-background)]/70 px-3 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)] backdrop-blur">
             <ShieldCheck className="size-3.5 text-[color:var(--color-success)]" />
             ทำงาน 100% ในเบราว์เซอร์ · ไม่มีการอัปโหลดข้อมูล
           </span>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-            แปลง Word เป็น HTML สะอาด ในเบราว์เซอร์ของคุณ
+          <h1 className="font-display mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+            แปลง Word เป็น HTML ที่สะอาด{" "}
+            <span className="relative inline-block">
+              ในเบราว์เซอร์
+              <span className="pointer-events-none absolute inset-x-0 -bottom-1 h-px bg-[color:var(--color-accent)]/50" />
+            </span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-[color:var(--color-muted-foreground)]">
             วางจาก Word หรืออัปโหลดไฟล์ .docx แก้ไขในโปรแกรมแก้ไขแบบ Visual พร้อม A4 Preview แล้วส่งออกเป็น HTML ที่สะอาด, ZIP หรือ .docx — โดยไฟล์ไม่เคยออกจากเครื่องของคุณ
@@ -42,16 +46,18 @@ export function Hero() {
 
 function HeroMockup() {
   return (
-    <div className="relative">
-      <div className="absolute inset-x-12 -bottom-6 h-12 rounded-full bg-zinc-900/10 blur-2xl" />
-      <div className="relative overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-[0_30px_60px_-25px_rgba(24,24,27,0.18)]">
+    <div className="relative motion-reduce:transform-none motion-reduce:transition-none lg:animate-[landing-float_7s_ease-in-out_infinite]">
+      <div className="absolute inset-x-12 -bottom-6 h-12 rounded-full bg-[color:var(--color-border-strong)]/35 blur-2xl" />
+      <div className="relative overflow-hidden rounded-xl border border-[color:var(--color-border)]/90 bg-[color:var(--color-background)] shadow-[0_30px_60px_-25px_rgba(0,0,0,0.18)] transition-transform duration-200 ease-out hover:-translate-y-0.5">
         {/* Top bar */}
         <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="grid h-5 w-5 place-items-center rounded-[5px] bg-[color:var(--color-accent)] text-[10px] font-bold text-[color:var(--color-accent-foreground)]">
               wh
             </span>
-            <span className="text-xs font-semibold">wordhtml</span>
+            <span className="font-display text-xs font-semibold tracking-tight">
+              wordhtml
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="rounded-md bg-[color:var(--color-muted)] px-2 py-1 text-[10px] font-medium text-[color:var(--color-muted-foreground)]">

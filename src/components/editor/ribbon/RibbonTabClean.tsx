@@ -89,8 +89,8 @@ export function RibbonTabClean() {
           disabled={!hasDoc || isCleaning}
           className={cn(
             "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-white transition-all",
-            "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1",
+            "bg-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-hover)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-1",
             "disabled:pointer-events-none disabled:opacity-40"
           )}
         >
@@ -127,7 +127,7 @@ export function RibbonTabClean() {
                 "inline-flex cursor-pointer shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-1",
                 enabled
-                  ? "border-transparent bg-amber-500 text-white"
+                  ? "border-transparent bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
                   : "border-[color:var(--color-border)] bg-[color:var(--color-background)] text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
               )}
             >
@@ -141,11 +141,11 @@ export function RibbonTabClean() {
       {showPreview && hasDoc && (
         <RibbonGroup label="ตัวอย่าง" className="flex-1">
           <div className="flex max-h-14 flex-1 gap-2 overflow-hidden">
-            <div className="flex-1 overflow-auto rounded border border-[color:var(--color-border)] bg-white px-2 py-1 text-[10px] text-[color:var(--color-muted-foreground)]">
+            <div className="flex-1 overflow-auto rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2 py-1 text-[10px] text-[color:var(--color-muted-foreground)]">
               <div className="font-semibold text-[color:var(--color-foreground)]">ก่อน:</div>
               <div className="line-clamp-2">{useEditorStore.getState().documentHtml.slice(0, 300)}</div>
             </div>
-            <div className="flex-1 overflow-auto rounded border border-[color:var(--color-border)] bg-white px-2 py-1 text-[10px] text-[color:var(--color-muted-foreground)]">
+            <div className="flex-1 overflow-auto rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2 py-1 text-[10px] text-[color:var(--color-muted-foreground)]">
               <div className="font-semibold text-[color:var(--color-foreground)]">หลัง:</div>
               <div className="line-clamp-2">{previewHtml.slice(0, 300)}</div>
             </div>

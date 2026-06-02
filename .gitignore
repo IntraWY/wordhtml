@@ -53,6 +53,12 @@ next-env.d.ts
 # superpowers (brainstorming session artifacts)
 .superpowers/
 
+# cursor (editor logs/artifacts)
+.cursor/
+
+# claude/cursor agent artifacts
+.claude/
+
 # git worktrees
 .worktrees/
 

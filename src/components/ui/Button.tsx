@@ -7,12 +7,12 @@ import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-[background-color,box-shadow,transform,color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         primary:
-          "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)] hover:bg-[color:var(--color-accent-hover)]",
+          "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)] shadow-sm shadow-black/10 hover:bg-[color:var(--color-accent-hover)] hover:shadow-md hover:shadow-black/10",
         secondary:
           "border border-[color:var(--color-border)] bg-[color:var(--color-background)] text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]",
         ghost:
@@ -20,7 +20,7 @@ const buttonVariants = cva(
         outline:
           "border border-[color:var(--color-border)] bg-transparent text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]",
         danger:
-          "bg-[color:var(--color-danger)] text-white hover:bg-red-700",
+          "bg-[color:var(--color-danger)] text-white shadow-sm shadow-black/10 hover:bg-[color:var(--color-danger)]/90 hover:shadow-md hover:shadow-black/10",
       },
       size: {
         sm: "h-8 px-3 text-xs",

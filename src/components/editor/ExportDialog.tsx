@@ -332,8 +332,8 @@ export function ExportDialog() {
                       <li
                         key={issue.code}
                         className={cn(
-                          issue.severity === "error" && "text-red-600",
-                          issue.severity === "warning" && "text-amber-700",
+                          issue.severity === "error" && "text-[color:var(--color-danger)]",
+                          issue.severity === "warning" && "text-[color:var(--color-warning-foreground)]",
                           issue.severity === "info" && "text-[color:var(--color-muted-foreground)]"
                         )}
                       >
@@ -466,9 +466,9 @@ export function ExportDialog() {
           >
             {effectiveTab === "preview" ? (
               <div className="flex min-h-0 flex-col overflow-hidden bg-[color:var(--color-muted)] p-6">
-                <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-inner shadow-slate-200">
+                <div className="mx-auto h-full w-full max-w-[800px] overflow-auto rounded-lg border border-[color:var(--color-border)] bg-white p-8 shadow-[inset_0_1px_0_rgba(0,0,0,0.05)]">
                   <div
-                    className="prose prose-slate max-w-none"
+                    className="prose prose-stone max-w-none"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(cleanedHtml) }}
                   />
                 </div>

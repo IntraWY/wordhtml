@@ -80,7 +80,7 @@ export function DialogSystem() {
                 if (e.key === "Enter") handleSubmit();
                 if (e.key === "Escape") handleCancel();
               }}
-              className="mt-3 w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-foreground)] focus:ring-2 focus:ring-[color:var(--color-foreground)]"
+              className="mt-3 w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-accent)] focus:ring-2 focus:ring-[color:var(--color-ring)]"
             />
           )}
 
@@ -100,7 +100,7 @@ export function DialogSystem() {
               className={cn(
                 "inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 type === "confirm"
-                  ? "bg-red-600 text-white hover:bg-red-700"
+                  ? "bg-[color:var(--color-danger)] text-white hover:bg-[color:var(--color-danger)]/90"
                   : "bg-[color:var(--color-foreground)] text-[color:var(--color-background)] hover:bg-[color:var(--color-accent-hover)]"
               )}
             >

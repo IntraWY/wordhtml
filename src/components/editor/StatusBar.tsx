@@ -114,7 +114,7 @@ export function StatusBar({
 
   return (
     <div
-      className="flex h-7 shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-white/80 px-4 text-[11px] text-[color:var(--color-muted-foreground)] backdrop-blur"
+      className="surface-chrome flex h-7 shrink-0 items-center justify-between border-t px-4 text-[11px] font-medium text-[color:var(--color-muted-foreground)]"
       aria-live="polite"
       aria-atomic="true"
     >
@@ -160,14 +160,14 @@ export function StatusBar({
           </span>
         )}
         {isSaved && (
-          <span className="inline-flex items-center gap-1 text-emerald-600" title="บันทึกแล้ว (Saved)">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
+          <span className="inline-flex items-center gap-1 text-[color:var(--color-success)]" title="บันทึกแล้ว (Saved)">
+            <span className="size-1.5 rounded-full bg-[color:var(--color-success)]" />
             บันทึกแล้ว (Saved)
           </span>
         )}
         {isModified && (
-          <span className="inline-flex items-center gap-1 text-amber-600" title="มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก (Unsaved changes)">
-            <span className="size-1.5 rounded-full bg-amber-500" />
+          <span className="inline-flex items-center gap-1 text-[color:var(--color-warning)]" title="มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก (Unsaved changes)">
+            <span className="size-1.5 rounded-full bg-[color:var(--color-warning)]" />
             ยังไม่บันทึก (Unsaved)
           </span>
         )}
@@ -175,7 +175,7 @@ export function StatusBar({
           <button
             type="button"
             onClick={openPlaceholderPanel}
-            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-amber-700 hover:bg-amber-50"
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[color:var(--color-warning)] hover:bg-[color:var(--color-warning-surface)]"
             title="ตัวแปรที่ยังไม่มีค่า (Missing placeholders)"
           >
             <AlertTriangle className="size-3" />

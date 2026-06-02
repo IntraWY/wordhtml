@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Download, Clock, Bookmark, Save, Split, Layers, LayoutTemplate } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
-import { HistoryPanel } from "./HistoryPanel";
 import { AuthButton } from "./AuthButton";
 import {
   dispatchOpenTemplates,
@@ -17,11 +18,17 @@ import {
 } from "@/lib/events";
 import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
 
+const HistoryPanel = dynamic(
+  () => import("./HistoryPanel").then((m) => m.HistoryPanel),
+  { ssr: false, loading: () => null }
+);
+
 export function TopBar() {
   const enabledCleaners = useEditorStore((s) => s.enabledCleaners);
   const prepareExport = useEditorStore((s) => s.prepareExport);
   const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
   const openHistoryPanel = useUiStore((s) => s.openHistoryPanel);
+  const historyPanelOpen = useUiStore((s) => s.historyPanelOpen);
   const openExportDialog = useUiStore((s) => s.openExportDialog);
   const fileName = useEditorStore((s) => s.fileName);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
@@ -29,21 +36,12 @@ export function TopBar() {
 
   return (
     <>
-      <header data-tour="welcome" className="flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-background)] px-5">
+      <header
+        data-tour="welcome"
+        className="flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-5"
+      >
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-md bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)] text-xs font-bold tracking-tighter">
-              wh
-            </span>
-            <span className="text-sm font-semibold tracking-tight">wordhtml</span>
-            <span
-              className="rounded px-1.5 py-0.5 text-[10px] font-mono font-medium text-[color:var(--color-muted-foreground)] bg-[color:var(--color-muted)]"
-              title={APP_VERSION_LABEL}
-              aria-label={`เวอร์ชัน (Version) ${APP_VERSION}`}
-            >
-              v{APP_VERSION}
-            </span>
-          </Link>
+          <BrandLogo showVersion />
           {fileName && (
             <>
               <span className="text-[color:var(--color-border-strong)]">/</span>
@@ -131,6 +129,7 @@ export function TopBar() {
           <Button
             data-tour="export"
             size="sm"
+            className="bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)] shadow-sm transition-shadow hover:bg-[color:var(--color-accent-hover)] hover:shadow-md"
             onClick={() => {
               prepareExport();
               openExportDialog();
@@ -151,7 +150,7 @@ export function TopBar() {
           </Button>
         </div>
       </header>
-      <HistoryPanel />
+      {historyPanelOpen && <HistoryPanel />}
     </>
   );
 }

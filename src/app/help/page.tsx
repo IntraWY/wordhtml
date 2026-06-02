@@ -18,15 +18,15 @@ export const metadata: Metadata = {
 export default function HelpPage() {
   return (
     <>
-      <Header />
+      <Header active="help" />
       <main className="flex flex-1 flex-col">
         <section className="border-b border-[color:var(--color-border)] bg-[color:var(--color-muted)] py-16">
-          <div className="mx-auto max-w-3xl px-6">
+          <div className="mx-auto max-w-3xl px-6 help-stagger">
             <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1 text-xs font-medium text-[color:var(--color-muted-foreground)]">
               <ShieldCheck className="size-3.5 text-[color:var(--color-success)]" />
               ทุกอย่างทำงานในเบราว์เซอร์ของคุณ
             </span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="font-display mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
               วิธีการทำงานของ wordhtml
             </h1>
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[color:var(--color-muted-foreground)]">
@@ -37,16 +37,20 @@ export default function HelpPage() {
 
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-16 px-6 py-16">
           <CleanerExplainers />
+          <hr className="editorial-rule" />
           <PasteTips />
+          <hr className="editorial-rule" />
           <FAQ />
 
-          <section className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-muted)] p-6">
-            <h2 className="text-lg font-semibold tracking-tight">
+          <section className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 shadow-sm">
+            <div className="mb-4 border-l-2 border-[color:var(--color-accent)] pl-4">
+              <h2 className="font-display text-lg font-semibold tracking-tight">
               พร้อมลองใช้งานแล้วหรือยัง?
-            </h2>
-            <p className="mt-2 text-sm text-[color:var(--color-muted-foreground)]">
+              </h2>
+              <p className="mt-2 text-sm text-[color:var(--color-muted-foreground)]">
               เปิดโปรแกรมแก้ไขและวางเอกสาร ตัวทำความสะอาดทำงานเฉพาะเมื่อส่งออก จึงปลอดภัยที่จะทดลอง
-            </p>
+              </p>
+            </div>
             <div className="mt-4">
               <Button asChild>
                 <Link href="/">
