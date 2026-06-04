@@ -282,6 +282,11 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 ### Known Pending Issues
 - None — pagination UI integration is complete.
 
+### Phase 5 — Ruler Fix + Accessibility + UI Refresh (2026-06-04/05)
+5. **Ruler horizontal alignment fixed** — `EditorRulerBar` was in a separate sibling container above the scroll area; the scroll container's vertical scrollbar (~17 px on Windows) reduced its `mx-auto` centering width, shifting the ruler 7–8 px right of the paper. Fixed by moving `EditorRulerBar` inside the scroll container with `position: sticky; top: 0; z-index: 10`. Both ruler and paper now share the same container width, so centering is identical. Horizontal scroll also moves ruler + paper together correctly.
+6. **Accessibility fixes** — Hidden `input[type="color"]` and `input[type="file"]` elements given `aria-hidden="true"` + `tabIndex={-1}`. Visible `<select>` elements in `RibbonSelect` auto-derive `name` from label. `FontSizeSelector` has `name="ribbon-font-size"`. Spacing number inputs (`ribbon-space-before`, `ribbon-space-after`) have `id` + `name` + proper `<label htmlFor>`.
+7. **UI refresh** — Accent color changed from amber/orange to blue (`#3B82F6` light / `#60A5FA` dark). Display font changed from Lora to Plus Jakarta Sans. Landing page enhanced with SocialProof section, FAQ accordion, and feature chips in Hero.
+
 ## Pagination Architecture
 
 ### DOM Structure
