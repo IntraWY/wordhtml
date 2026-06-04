@@ -333,6 +333,7 @@ export function EditorShell() {
                 <div
                   ref={scrollContainerRef}
                   className="flex-1 overflow-auto bg-[color:var(--color-muted)] px-8 pb-8"
+                  style={{ scrollbarGutter: "stable" }}
                 >
                   <TemplatePreview
                     widthPx={widthPx}
@@ -340,8 +341,11 @@ export function EditorShell() {
                   />
                 </div>
               ) : (
-                <>
-                  <div className="shrink-0 bg-[color:var(--color-muted)] px-8 pt-8">
+                <div
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-auto bg-[color:var(--color-muted)]"
+                >
+                  <div className="sticky top-0 z-10 bg-[color:var(--color-muted)] px-8 pt-8">
                     <EditorRulerBar
                       widthPx={widthPx}
                       horizontalRuler={
@@ -358,10 +362,7 @@ export function EditorShell() {
                       }
                     />
                   </div>
-                  <div
-                    ref={scrollContainerRef}
-                    className="flex-1 overflow-auto bg-[color:var(--color-muted)] px-8 pb-8"
-                  >
+                  <div className="px-8 pb-8">
                     <EditorPaperScrollBody
                       widthPx={widthPx}
                       verticalRuler={
@@ -398,7 +399,7 @@ export function EditorShell() {
                       </div>
                     </EditorPaperScrollBody>
                   </div>
-                </>
+                </div>
               )}
               <div className="flex shrink-0 items-center justify-between border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)]">
                 <StatusBar
