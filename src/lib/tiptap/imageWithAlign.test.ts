@@ -39,7 +39,7 @@ describe("imageWithAlign renderHTML", () => {
   it("emits inline style for percentage widths", () => {
     editor = createEditor();
     editor.commands.focus("end");
-    editor.commands.setImage({ src: TINY_PNG, width: "50%" });
+    editor.commands.setImage({ src: TINY_PNG, width: "50%" as unknown as number });
 
     const html = editor.getHTML();
     expect(html).toMatch(/style="[^"]*width:\s*50%/);
@@ -49,7 +49,7 @@ describe("imageWithAlign renderHTML", () => {
   it("emits inline style for pixel widths", () => {
     editor = createEditor();
     editor.commands.focus("end");
-    editor.commands.setImage({ src: TINY_PNG, width: "320", height: "200" });
+    editor.commands.setImage({ src: TINY_PNG, width: "320" as unknown as number, height: "200" as unknown as number });
 
     const html = editor.getHTML();
     expect(html).toMatch(/style="[^"]*width:\s*320px/);

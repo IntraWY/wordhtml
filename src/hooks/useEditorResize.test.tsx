@@ -4,8 +4,9 @@ import { useEditorResize } from "./useEditorResize";
 import type { ReactNode } from "react";
 
 describe("useEditorResize", () => {
-  let observeSpy: ReturnType<typeof vi.fn>;
-  let disconnectSpy: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let observeSpy: (...args: any[]) => void;
+  let disconnectSpy: () => void;
   let callbackRef: ResizeObserverCallback | null = null;
 
   class MockResizeObserver implements ResizeObserver {
@@ -23,8 +24,8 @@ describe("useEditorResize", () => {
   }
 
   beforeEach(() => {
-    observeSpy = vi.fn();
-    disconnectSpy = vi.fn();
+    observeSpy = vi.fn() as unknown as (...args: unknown[]) => void;
+    disconnectSpy = vi.fn() as unknown as () => void;
     global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
   });
 
@@ -79,6 +80,7 @@ describe("useEditorResize", () => {
             borderBoxSize: [{ blockSize: 1234, inlineSize: 800 }] as unknown as ResizeObserverEntry["borderBoxSize"],
             contentBoxSize: [] as unknown as ResizeObserverEntry["contentBoxSize"],
             contentRect: {} as DOMRectReadOnly,
+            devicePixelContentBoxSize: [] as unknown as ResizeObserverEntry["devicePixelContentBoxSize"],
           },
         ],
         {} as ResizeObserver
@@ -111,6 +113,7 @@ describe("useEditorResize", () => {
             borderBoxSize: undefined as unknown as ResizeObserverEntry["borderBoxSize"],
             contentBoxSize: [] as unknown as ResizeObserverEntry["contentBoxSize"],
             contentRect: {} as DOMRectReadOnly,
+            devicePixelContentBoxSize: [] as unknown as ResizeObserverEntry["devicePixelContentBoxSize"],
           },
         ],
         {} as ResizeObserver

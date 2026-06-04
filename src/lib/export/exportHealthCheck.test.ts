@@ -16,7 +16,7 @@ describe("checkExportHealth", () => {
   it("flags missing merge fields in template preview", () => {
     const issues = checkExportHealth({
       documentHtml: "<p>สวัสดี {{name}}</p>",
-      variables: [{ name: "name", type: "text", value: "" }],
+      variables: [{ name: "name", type: "text", value: "", isList: false }],
       dataRow: {},
       templateMode: true,
       previewMode: "preview",

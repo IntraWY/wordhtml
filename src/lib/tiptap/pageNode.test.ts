@@ -3,6 +3,12 @@ import { PageNode, type PageNodeAttributes } from "./pageNode";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import type { PageSetup } from "@/types";
 
+// Tiptap v3 types config methods with a strict `this` context that cannot be
+// satisfied in unit tests without a full Editor instance. Cast to `any` so we
+// can invoke the functions directly and keep tests fast and isolated.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const c = PageNode.config as any;
+
 describe("PageNode", () => {
   describe("renderHTML", () => {
     it("renders div.page-node with A4 portrait dimensions and CSS variables", () => {
@@ -13,7 +19,7 @@ describe("PageNode", () => {
       };
       const attrs: PageNodeAttributes = { pageNumber: 1, pageSetup: setup };
 
-      const result = PageNode.config.renderHTML({
+      const result = c.renderHTML({
         HTMLAttributes: {},
         node: { attrs } as never,
       });
@@ -45,7 +51,7 @@ describe("PageNode", () => {
       };
       const attrs: PageNodeAttributes = { pageNumber: 2, pageSetup: setup };
 
-      const result = PageNode.config.renderHTML({
+      const result = c.renderHTML({
         HTMLAttributes: {},
         node: { attrs } as never,
       });
@@ -66,7 +72,7 @@ describe("PageNode", () => {
       };
       const attrs: PageNodeAttributes = { pageNumber: 3, pageSetup: setup };
 
-      const result = PageNode.config.renderHTML({
+      const result = c.renderHTML({
         HTMLAttributes: {
           "data-page-number": "3",
           "data-page-setup": JSON.stringify(setup),
@@ -80,7 +86,7 @@ describe("PageNode", () => {
     });
 
     it("places child content marker at index 2", () => {
-      const result = PageNode.config.renderHTML({
+      const result = c.renderHTML({
         HTMLAttributes: {},
         node: { attrs: { pageNumber: 1, pageSetup: { size: "A4", orientation: "portrait", marginMm: { top: 0, right: 0, bottom: 0, left: 0 } } } } as never,
       });
@@ -91,7 +97,7 @@ describe("PageNode", () => {
 
   describe("parseHTML", () => {
     it("matches div.page-node tag", () => {
-      const rules = PageNode.config.parseHTML();
+      const rules = c.parseHTML();
       expect(rules).toHaveLength(1);
       expect(rules[0].tag).toBe("div.page-node");
     });
@@ -99,12 +105,12 @@ describe("PageNode", () => {
 
   describe("attributes", () => {
     it("defaults pageNumber to 1", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       expect(defs.pageNumber.default).toBe(1);
     });
 
     it("defaults pageSetup to A4 portrait with standard margins", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const defaultSetup = defs.pageSetup.default as PageSetup;
       expect(defaultSetup.size).toBe("A4");
       expect(defaultSetup.orientation).toBe("portrait");
@@ -112,33 +118,33 @@ describe("PageNode", () => {
     });
 
     it("parseHTML pageNumber returns 1 for missing attribute", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const el = document.createElement("div");
       expect(defs.pageNumber.parseHTML!(el)).toBe(1);
     });
 
     it("parseHTML pageNumber parses valid integer", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const el = document.createElement("div");
       el.setAttribute("data-page-number", "5");
       expect(defs.pageNumber.parseHTML!(el)).toBe(5);
     });
 
     it("parseHTML pageNumber falls back to 1 for NaN", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const el = document.createElement("div");
       el.setAttribute("data-page-number", "abc");
       expect(defs.pageNumber.parseHTML!(el)).toBe(1);
     });
 
     it("parseHTML pageSetup returns default for missing attribute", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const el = document.createElement("div");
       expect(defs.pageSetup.parseHTML!(el)).toEqual(defs.pageSetup.default);
     });
 
     it("parseHTML pageSetup merges parsed JSON over defaults", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const el = document.createElement("div");
       el.setAttribute("data-page-setup", JSON.stringify({ size: "Letter" }));
       const parsed = defs.pageSetup.parseHTML!(el) as PageSetup;
@@ -147,27 +153,27 @@ describe("PageNode", () => {
     });
 
     it("parseHTML pageSetup returns default for malformed JSON", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const el = document.createElement("div");
       el.setAttribute("data-page-setup", "not-json");
       expect(defs.pageSetup.parseHTML!(el)).toEqual(defs.pageSetup.default);
     });
 
     it("renderHTML pageNumber emits string attribute", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const result = defs.pageNumber.renderHTML!({ pageNumber: 7 });
       expect(result).toEqual({ "data-page-number": "7" });
     });
 
     it("renderHTML pageSetup emits JSON string", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const setup: PageSetup = { size: "A4", orientation: "landscape", marginMm: { top: 10, right: 10, bottom: 10, left: 10 } };
       const result = defs.pageSetup.renderHTML!({ pageSetup: setup });
       expect(result).toEqual({ "data-page-setup": JSON.stringify(setup) });
     });
 
     it("renderHTML pageSetup returns empty object when undefined", () => {
-      const defs = PageNode.config.addAttributes();
+      const defs = c.addAttributes();
       const result = defs.pageSetup.renderHTML!({ pageSetup: undefined });
       expect(result).toEqual({});
     });
