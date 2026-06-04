@@ -12,8 +12,10 @@ interface RibbonSelectProps {
 }
 
 export function RibbonSelect({ label, value, onChange, options, className, disabled }: RibbonSelectProps) {
+  const nameVal = label.replace(/[^a-zA-Z0-9ก-ฮ]/g, "-").toLowerCase();
   return (
     <select
+      name={`ribbon-${nameVal}`}
       aria-label={label}
       value={value}
       disabled={disabled}

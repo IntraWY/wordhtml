@@ -126,6 +126,8 @@ export function BatchUploadDialog() {
                 type="file"
                 accept=".docx,.html,.htm"
                 multiple
+                aria-hidden="true"
+                tabIndex={-1}
                 className="hidden"
                 onChange={handleFileChange}
               />

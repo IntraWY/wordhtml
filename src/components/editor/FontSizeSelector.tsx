@@ -36,6 +36,7 @@ export function FontSizeSelector({ editor }: FontSizeSelectorProps) {
     <div className="relative flex items-center">
       <Type className="absolute left-1.5 size-3 text-[color:var(--color-muted-foreground)] pointer-events-none" />
       <select
+        name="ribbon-font-size"
         aria-label="ขนาดตัวอักษร (Font Size)"
         value={currentSize ?? ""}
         onChange={(e) => {

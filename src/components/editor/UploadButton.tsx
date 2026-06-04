@@ -52,6 +52,8 @@ export function UploadButton() {
         ref={inputRef}
         type="file"
         accept=".docx,.html,.htm,.md"
+        aria-hidden="true"
+        tabIndex={-1}
         className="hidden"
         onChange={handleChange}
       />

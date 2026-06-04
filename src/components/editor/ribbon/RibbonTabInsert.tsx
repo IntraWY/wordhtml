@@ -184,6 +184,8 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          aria-hidden="true"
+          tabIndex={-1}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];

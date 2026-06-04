@@ -254,6 +254,8 @@ export function TemplatePanel() {
                 ref={fileInputRef}
                 type="file"
                 accept=".json,application/json"
+                aria-hidden="true"
+                tabIndex={-1}
                 onChange={handleImportFile}
                 className="hidden"
               />
@@ -346,6 +348,8 @@ export function TemplatePanel() {
                   ref={restoreInputRef}
                   type="file"
                   accept=".json,application/json"
+                  aria-hidden="true"
+                  tabIndex={-1}
                   onChange={handleRestoreFile}
                   className="hidden"
                 />

@@ -291,6 +291,8 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
           <input
             ref={textColorRef}
             type="color"
+            aria-hidden="true"
+            tabIndex={-1}
             className="absolute opacity-0 h-0 w-0 pointer-events-none"
             defaultValue={currentTextColor ?? "#000000"}
             onChange={(e) => handleSetColor(e.target.value)}
@@ -312,6 +314,8 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
           <input
             ref={highlightColorRef}
             type="color"
+            aria-hidden="true"
+            tabIndex={-1}
             className="absolute opacity-0 h-0 w-0 pointer-events-none"
             defaultValue={currentHighlight ?? "#ffff00"}
             onChange={(e) => handleSetHighlight(e.target.value)}
@@ -373,8 +377,10 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
           <ArrowRightToLine className="size-3.5" />
         </RibbonButton>
         <div className="flex items-center gap-1">
-          <label className="text-[10px] text-[color:var(--color-muted-foreground)]">ก่อน</label>
+          <label htmlFor="ribbon-space-before" className="text-[10px] text-[color:var(--color-muted-foreground)]">ก่อน</label>
           <input
+            id="ribbon-space-before"
+            name="ribbon-space-before"
             type="number"
             min={0}
             step={1}
@@ -387,8 +393,10 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
           <span className="text-[10px] text-[color:var(--color-muted-foreground)]">pt</span>
         </div>
         <div className="flex items-center gap-1">
-          <label className="text-[10px] text-[color:var(--color-muted-foreground)]">หลัง</label>
+          <label htmlFor="ribbon-space-after" className="text-[10px] text-[color:var(--color-muted-foreground)]">หลัง</label>
           <input
+            id="ribbon-space-after"
+            name="ribbon-space-after"
             type="number"
             min={0}
             step={1}
