@@ -22,7 +22,17 @@ export function Hero() {
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-[color:var(--color-muted-foreground)]">
             วางจาก Word หรืออัปโหลดไฟล์ .docx แก้ไขในโปรแกรมแก้ไขแบบ Visual พร้อม A4 Preview แล้วส่งออกเป็น HTML ที่สะอาด, ZIP หรือ .docx — โดยไฟล์ไม่เคยออกจากเครื่องของคุณ
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap gap-2">
+            {["Word → HTML", "HTML Cleaner", "Template Export", "PDF Export"].map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border border-[color:var(--color-accent)]/30 bg-[color:var(--color-accent)]/8 px-3 py-1 text-xs font-medium text-[color:var(--color-accent)]"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
               <Link href="/">
                 เปิดโปรแกรมแก้ไข
@@ -33,7 +43,7 @@ export function Hero() {
               <Link href="/help">อ่านคู่มือ</Link>
             </Button>
           </div>
-          <p className="mt-6 text-xs text-[color:var(--color-muted-foreground)]">
+          <p className="mt-4 text-xs text-[color:var(--color-muted-foreground)]">
             ฟรี · ไม่ต้องสมัครสมาชิก · ใช้งานออฟไลน์ได้หลังโหลดครั้งแรก
           </p>
         </div>

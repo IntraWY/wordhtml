@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 
+import { FAQ } from "@/components/landing/FAQ";
 import { Features } from "@/components/landing/Features";
 import { Footer } from "@/components/landing/Footer";
 import { Header } from "@/components/landing/Header";
 import { Hero } from "@/components/landing/Hero";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { SocialProof } from "@/components/landing/SocialProof";
 
 export const metadata: Metadata = {
   title: "หน้าแรก",
@@ -19,7 +21,9 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Features />
+        <SocialProof />
         <HowItWorks />
+        <FAQ />
       </main>
       <Footer />
     </>

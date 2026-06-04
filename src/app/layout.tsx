@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans_Thai, Lora } from "next/font/google";
+import { IBM_Plex_Sans_Thai, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { APP_VERSION, APP_VERSION_LABEL, BUILD_ID } from "@/lib/version";
@@ -10,10 +10,10 @@ const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   weight: ["400", "600"],
 });
 
-const lora = Lora({
-  variable: "--font-lora",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
-  weight: ["600"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -76,7 +76,7 @@ export default function RootLayout({
     <html
       lang="th"
       data-theme="light"
-      className={`${ibmPlexSansThai.variable} ${lora.variable} h-full antialiased`}
+      className={`${ibmPlexSansThai.variable} ${plusJakartaSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
