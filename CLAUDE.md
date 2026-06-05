@@ -280,7 +280,14 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
 ### Known Pending Issues
-- None — pagination UI integration is complete.
+- None — all Phase 6 bugs fixed and tested.
+
+### Phase 6 — Critical Bug Fixes + Test Coverage (2026-06-05)
+1. **Font Family + Text Color fixed** — `TextStyle` mark from `@tiptap/extension-text-style` was never registered in `VisualEditor.tsx`. Both `Color` and `FontFamily` extensions silently fail without it. Fixed by importing `TextStyle` and inserting it **before** `Color` in the extensions array. Also aligned `fontSize.ts` command declaration signature to match the package's `(fontSize: string)` type to resolve a TypeScript intersection conflict.
+2. **font-family preserved on export** — `removeInlineStyles` cleaner (`src/lib/cleaning/cleaners.ts`) KEEP whitelist was missing `"font-family"`, stripping applied fonts during export. Added it.
+3. **Ruler left-margin handle unblocked** — At `indentLeft=0`, the indent ▽ triangle sat at the identical x-position as the left-margin handle with the same conditional `z-20`. The indent triangle (rendered later in DOM) captured all pointer events. Fixed by adding a permanent `z-10` base class to both margin handles so they always sit above indent handles. Anti-collision test added to verify indent handle is still keyboard-operable after the fix.
+4. **Ribbon Home active-state reactive** — `RibbonTabHome.tsx` read `editor?.isActive()` directly in JSX for Bold, Italic, Underline, Strike, Sub/Sup, Align, List, Heading, Blockquote, Code, CodeBlock (19 states total). Direct calls are not reactive to cursor movement. Replaced with a consolidated `formatState` `useEditorState` selector — pattern from `MobileToolbar.tsx`.
+5. **Tests added** — 8 new unit tests (379 total): `src/lib/tiptap/fontFamily.test.ts` (FontFamily+Color+export round-trip), extended `cleaners.test.ts` (font-family preservation), extended `Ruler.test.tsx` (margin+indent co-existence), `ribbon/RibbonTabHome.state.test.tsx` (aria-pressed regression).
 
 ### Phase 5 — Ruler Fix + Accessibility + UI Refresh (2026-06-04/05)
 5. **Ruler horizontal alignment fixed** — `EditorRulerBar` was in a separate sibling container above the scroll area; the scroll container's vertical scrollbar (~17 px on Windows) reduced its `mx-auto` centering width, shifting the ruler 7–8 px right of the paper. Fixed by moving `EditorRulerBar` inside the scroll container with `position: sticky; top: 0; z-index: 10`. Both ruler and paper now share the same container width, so centering is identical. Horizontal scroll also moves ruler + paper together correctly.
