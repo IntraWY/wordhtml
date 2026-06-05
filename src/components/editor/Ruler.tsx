@@ -325,7 +325,7 @@ function RulerInner({
                 }
                 onMouseLeave={handleLeave}
                 className={cn(
-                  "absolute grid cursor-ew-resize place-items-center",
+                  "absolute z-10 grid cursor-ew-resize place-items-center",
                   hovered === "marginLeft" && "z-20"
                 )}
                 style={{
@@ -363,7 +363,7 @@ function RulerInner({
                 }
                 onMouseLeave={handleLeave}
                 className={cn(
-                  "absolute grid cursor-ew-resize place-items-center",
+                  "absolute z-10 grid cursor-ew-resize place-items-center",
                   hovered === "marginRight" && "z-20"
                 )}
                 style={{

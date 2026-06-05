@@ -104,6 +104,31 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
       (e?.getAttributes("paragraph").spaceAfter as number | undefined) ?? 0,
   }) ?? 0;
 
+  const formatState = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      bold: e?.isActive("bold") ?? false,
+      italic: e?.isActive("italic") ?? false,
+      underline: e?.isActive("underline") ?? false,
+      strike: e?.isActive("strike") ?? false,
+      subscript: e?.isActive("subscript") ?? false,
+      superscript: e?.isActive("superscript") ?? false,
+      alignLeft: e?.isActive({ textAlign: "left" }) ?? false,
+      alignCenter: e?.isActive({ textAlign: "center" }) ?? false,
+      alignRight: e?.isActive({ textAlign: "right" }) ?? false,
+      alignJustify: e?.isActive({ textAlign: "justify" }) ?? false,
+      bulletList: e?.isActive("bulletList") ?? false,
+      orderedList: e?.isActive("orderedList") ?? false,
+      listItem: e?.isActive("listItem") ?? false,
+      h1: e?.isActive("heading", { level: 1 }) ?? false,
+      h2: e?.isActive("heading", { level: 2 }) ?? false,
+      h3: e?.isActive("heading", { level: 3 }) ?? false,
+      blockquote: e?.isActive("blockquote") ?? false,
+      codeBlock: e?.isActive("codeBlock") ?? false,
+      code: e?.isActive("code") ?? false,
+    }),
+  });
+
   const setImageAlign = useCallback((align: "left" | "center" | "right") => {
     editor?.chain().focus().updateAttributes("image", { align }).run();
   }, [editor]);
@@ -263,22 +288,22 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
           disabled={!hasEditor}
         />
         {hasEditor && editor && <FontSizeSelector editor={editor} />}
-        <RibbonButton label="ตัวหนา (Bold)" onClick={() => handleFormat("bold")} active={editor?.isActive("bold")} disabled={!hasEditor}>
+        <RibbonButton label="ตัวหนา (Bold)" onClick={() => handleFormat("bold")} active={formatState?.bold} disabled={!hasEditor}>
           <Bold className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ตัวเอียง (Italic)" onClick={() => handleFormat("italic")} active={editor?.isActive("italic")} disabled={!hasEditor}>
+        <RibbonButton label="ตัวเอียง (Italic)" onClick={() => handleFormat("italic")} active={formatState?.italic} disabled={!hasEditor}>
           <Italic className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ขีดเส้นใต้ (Underline)" onClick={() => handleFormat("underline")} active={editor?.isActive("underline")} disabled={!hasEditor}>
+        <RibbonButton label="ขีดเส้นใต้ (Underline)" onClick={() => handleFormat("underline")} active={formatState?.underline} disabled={!hasEditor}>
           <UnderlineIcon className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ขีดทับ (Strikethrough)" onClick={() => handleFormat("strike")} active={editor?.isActive("strike")} disabled={!hasEditor}>
+        <RibbonButton label="ขีดทับ (Strikethrough)" onClick={() => handleFormat("strike")} active={formatState?.strike} disabled={!hasEditor}>
           <Strikethrough className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ตัวห้อย (Subscript)" onClick={() => handleFormat("subscript")} active={editor?.isActive("subscript")} disabled={!hasEditor}>
+        <RibbonButton label="ตัวห้อย (Subscript)" onClick={() => handleFormat("subscript")} active={formatState?.subscript} disabled={!hasEditor}>
           <SubscriptIcon className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ตัวยก (Superscript)" onClick={() => handleFormat("superscript")} active={editor?.isActive("superscript")} disabled={!hasEditor}>
+        <RibbonButton label="ตัวยก (Superscript)" onClick={() => handleFormat("superscript")} active={formatState?.superscript} disabled={!hasEditor}>
           <SuperscriptIcon className="size-3.5" />
         </RibbonButton>
         <div className="relative">
@@ -328,7 +353,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         <RibbonButton
           label={isImage ? "จัดรูปชิดซ้าย" : "ชิดซ้าย"}
           onClick={() => handleFormat("alignLeft")}
-          active={isImage ? isImageAlign("left") : editor?.isActive({ textAlign: "left" })}
+          active={isImage ? isImageAlign("left") : formatState?.alignLeft}
           disabled={!hasEditor}
         >
           <AlignLeft className="size-3.5" />
@@ -336,7 +361,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         <RibbonButton
           label={isImage ? "จัดรูปกึ่งกลาง" : "กึ่งกลาง"}
           onClick={() => handleFormat("alignCenter")}
-          active={isImage ? isImageAlign("center") : editor?.isActive({ textAlign: "center" })}
+          active={isImage ? isImageAlign("center") : formatState?.alignCenter}
           disabled={!hasEditor}
         >
           <AlignCenter className="size-3.5" />
@@ -344,7 +369,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         <RibbonButton
           label={isImage ? "จัดรูปชิดขวา" : "ชิดขวา"}
           onClick={() => handleFormat("alignRight")}
-          active={isImage ? isImageAlign("right") : editor?.isActive({ textAlign: "right" })}
+          active={isImage ? isImageAlign("right") : formatState?.alignRight}
           disabled={!hasEditor}
         >
           <AlignRight className="size-3.5" />
@@ -352,7 +377,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         <RibbonButton
           label="เต็มบรรทัด"
           onClick={() => handleFormat("alignJustify")}
-          active={editor?.isActive({ textAlign: "justify" })}
+          active={formatState?.alignJustify}
           disabled={!hasEditor || isImage}
         >
           <AlignJustify className="size-3.5" />
@@ -411,38 +436,38 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
         <RibbonButton label="ย่อหน้า…" onClick={() => handleFormat("paragraph")} disabled={!hasEditor}>
           <Type className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="รายการจุด" onClick={() => handleFormat("bulletList")} active={editor?.isActive("bulletList")} disabled={!hasEditor}>
+        <RibbonButton label="รายการจุด" onClick={() => handleFormat("bulletList")} active={formatState?.bulletList} disabled={!hasEditor}>
           <List className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="รายการตัวเลข" onClick={() => handleFormat("orderedList")} active={editor?.isActive("orderedList")} disabled={!hasEditor}>
+        <RibbonButton label="รายการตัวเลข" onClick={() => handleFormat("orderedList")} active={formatState?.orderedList} disabled={!hasEditor}>
           <ListOrdered className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="ลดเยื้อง" onClick={() => handleFormat("outdent")} disabled={!hasEditor || !editor?.isActive("listItem")}>
+        <RibbonButton label="ลดเยื้อง" onClick={() => handleFormat("outdent")} disabled={!hasEditor || !formatState?.listItem}>
           <Outdent className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="เพิ่มเยื้อง" onClick={() => handleFormat("indentList")} disabled={!hasEditor || !editor?.isActive("listItem")}>
+        <RibbonButton label="เพิ่มเยื้อง" onClick={() => handleFormat("indentList")} disabled={!hasEditor || !formatState?.listItem}>
           <Indent className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 
       {/* Styles */}
       <RibbonGroup label="รูปแบบ">
-        <RibbonButton label="หัวเรื่อง 1" onClick={() => handleFormat("h1")} active={editor?.isActive("heading", { level: 1 })} disabled={!hasEditor}>
+        <RibbonButton label="หัวเรื่อง 1" onClick={() => handleFormat("h1")} active={formatState?.h1} disabled={!hasEditor}>
           <Heading1 className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="หัวเรื่อง 2" onClick={() => handleFormat("h2")} active={editor?.isActive("heading", { level: 2 })} disabled={!hasEditor}>
+        <RibbonButton label="หัวเรื่อง 2" onClick={() => handleFormat("h2")} active={formatState?.h2} disabled={!hasEditor}>
           <Heading2 className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="หัวเรื่อง 3" onClick={() => handleFormat("h3")} active={editor?.isActive("heading", { level: 3 })} disabled={!hasEditor}>
+        <RibbonButton label="หัวเรื่อง 3" onClick={() => handleFormat("h3")} active={formatState?.h3} disabled={!hasEditor}>
           <Heading3 className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="อ้างอิง" onClick={() => handleFormat("blockquote")} active={editor?.isActive("blockquote")} disabled={!hasEditor}>
+        <RibbonButton label="อ้างอิง" onClick={() => handleFormat("blockquote")} active={formatState?.blockquote} disabled={!hasEditor}>
           <Quote className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="บล็อกโค้ด" onClick={() => handleFormat("codeBlock")} active={editor?.isActive("codeBlock")} disabled={!hasEditor}>
+        <RibbonButton label="บล็อกโค้ด" onClick={() => handleFormat("codeBlock")} active={formatState?.codeBlock} disabled={!hasEditor}>
           <Code2 className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="โค้ดบรรทัด" onClick={() => handleFormat("code")} active={editor?.isActive("code")} disabled={!hasEditor}>
+        <RibbonButton label="โค้ดบรรทัด" onClick={() => handleFormat("code")} active={formatState?.code} disabled={!hasEditor}>
           <Code className="size-3.5" />
         </RibbonButton>
         <RibbonButton label="เส้นคั่น" onClick={() => handleFormat("horizontalRule")} disabled={!hasEditor}>

@@ -60,30 +60,30 @@ src/
 ├── components/
 │   ├── editor/
 │   │   ├── EditorShell.tsx       # outer shell — owns A4 paper grid (corner + H/V ruler +
-│   │   │                         #   article.paper), FormattingToolbar, drag-drop,
-│   │   │                         #   beforeunload, keyboard, search panel, page-setup dialog
-│   │   ├── TopBar.tsx            # logo + filename + history/upload/export
-│   │   ├── MenuBar.tsx           # 7-menu nav, slim composition
-│   │   ├── menu/
-│   │   │   ├── primitives.tsx    # MenuDropdown, MenuItem, MenuSub, Sep
-│   │   │   ├── FileMenu.tsx      # New, Open, Export HTML/ZIP/DOCX/MD, Snapshot
-│   │   │   ├── EditMenu.tsx      # Undo/Redo/Copy-as-HTML/Select All
-│   │   │   ├── InsertMenu.tsx    # Link, Image upload/URL, Table, HR, Soft Break, Code, Variable
-│   │   │   ├── ViewMenu.tsx      # Source HTML, Fullscreen
-│   │   │   ├── FormatMenu.tsx    # paragraph, B/I/U/Strike, Sub/Sup/Code,
-│   │   │   │                     #   Align submenu, Font submenu, Font Size submenu, Paragraph dialog, Clear Formatting
-│   │   │   ├── TableMenu.tsx     # Insert Table, row/column ops, Delete Table
-│   │   │   └── ToolsMenu.tsx     # Word Count, Find/Replace, Page Setup, Cleaning
-│   │   ├── CleaningToolbar.tsx   # cleaner pills row
+│   │   │                         #   article.paper), drag-drop, beforeunload, keyboard,
+│   │   │                         #   search panel, page-setup dialog, all window event listeners
+│   │   ├── TopBar.tsx            # logo + filename + history/upload/export/batch-convert
+│   │   ├── ribbon/               # Ribbon UI (replaced legacy MenuBar + FormattingToolbar)
+│   │   │   ├── Ribbon.tsx        # tab bar + tab switching
+│   │   │   ├── RibbonGroup.tsx   # labelled group of ribbon buttons
+│   │   │   ├── RibbonButton.tsx  # button primitive (aria-pressed, active highlight)
+│   │   │   ├── RibbonSelect.tsx  # dropdown select in ribbon
+│   │   │   ├── RibbonTabHome.tsx # Font, Bold/Italic/…, Align, List, Heading, Edit group
+│   │   │   ├── RibbonTabInsert.tsx # Link, Image, Table, HR, Variable, Math, Page Break
+│   │   │   ├── RibbonTabLayout.tsx # Page Setup, margins, header/footer
+│   │   │   ├── RibbonTabClean.tsx  # cleaner pills (replaces CleaningToolbar)
+│   │   │   ├── RibbonTabView.tsx   # Source HTML, TOC, Shortcuts, Fullscreen
+│   │   │   └── RibbonTabSettings.tsx # app settings
 │   │   ├── VisualEditor.tsx      # Tiptap editor setup + EditorContent + EmptyHint only
 │   │   │                         #   (no outer container — rendered inside article.paper)
-│   │   ├── FormattingToolbar.tsx # icon toolbar — image-aware align/size, sub/sup, code, font, paragraph dialog
+│   │   │                         #   Extensions: StarterKit + TextStyle + Color + FontFamily +
+│   │   │                         #   FontSize (custom) + ParagraphFormat + Table + … (full list inside)
 │   │   ├── ParagraphDialog.tsx   # Word-style Paragraph dialog: indents + spacing
-│   │   ├── FontSelector.tsx      # Font family dropdown (TH Sarabun, Noto Sans Thai, etc.)
-│   │   ├── FontSizeSelector.tsx  # Font size dropdown (10-36px)
+│   │   ├── FontSizeSelector.tsx  # Font size dropdown (10-36px), used inside RibbonTabHome
+│   │   ├── MobileToolbar.tsx     # Mobile-only bottom toolbar (mirrors RibbonTabHome formatting)
 │   │   ├── Ruler.tsx             # H/V cm rulers with margin guides (PX_PER_CM=37.81).
-│   │   │                         #   Vertical ruler auto-extends to content height via ResizeObserver.
-│   │   │                         #   Horizontal ruler has draggable margin handles (left/right)
+│   │   │                         #   Horizontal ruler: margin handles (z-10 base, z-20 on hover)
+│   │   │                         #   sit above indent ▽ triangles to prevent occlusion at indentLeft=0.
 │   │   │                         #   + indent triangles (left/first-line).
 │   │   ├── SearchPanel.tsx       # Ctrl+F floating Find & Replace panel
 │   │   ├── PageSetupDialog.tsx   # A4/Letter, portrait/landscape, margins
@@ -177,7 +177,7 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 ## Architecture conventions
 
 - **No server code.** All conversion, cleaning, and exporting happens in `'use client'` components or in pure-function libraries called from them. Do not introduce API routes, Server Actions, or `'use server'` blocks.
-- **Store as single source of truth for editor state.** UI components read with separate selectors (`useEditorStore((s) => s.x)`) — avoid destructuring the whole store, which causes unnecessary re-renders. The `MenuBar` perf bug from history was exactly this pattern.
+- **Store as single source of truth for editor state.** UI components read with separate selectors (`useEditorStore((s) => s.x)`) — avoid destructuring the whole store, which causes unnecessary re-renders. (A stale whole-store destructure in a past Ribbon tab was exactly this pattern.)
 - **Cleaners are pure.** Each cleaner takes an HTML string and returns a new one. They use `DOMParser`, which is a browser API and also available under jsdom for tests.
 - **Cleaners apply only at export.** Editing should stay snappy; the paper editor shows the *current* document, not the cleaned-for-export version.
 - **Document never persists.** localStorage holds only preferences (cleaners, imageMode, pageSetup) and **history snapshots (device-local only)**. The current document is gone on reload — by design, for privacy. `beforeunload` warns if there are unsaved changes (current HTML differs from latest snapshot). History does **not** sync across devices; use Export or save as **Template** (Firestore) to move work between machines.
@@ -185,7 +185,7 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 - **History is local-only.** Up to 20 document snapshots in localStorage. Auto-snapshot fires after 2 min idle. Total serialized size is capped at 4MB; oldest snapshots are dropped first.
 - **Templates use Firebase Firestore** when `NEXT_PUBLIC_FIREBASE_*` env vars are set at build time (`src/lib/templateFirestore.ts`, `templateStore.ts`). Up to 50 templates; real-time `onSnapshot` when the Template panel is open. JSON export/import still works for backup. **No Firebase Auth yet** — collection is global (see `docs/firebase-cloud-sync-design.md` for planned per-user paths). **History remains local-only** in `wordhtml-editor` localStorage — do not confuse with Templates.
 - **Cleaner order matters.** See `src/lib/cleaning/pipeline.ts` — comments → styles → classes → attributes → **unwrapDeprecatedTags** → unwrapSpans → empty tags → spaces → (terminal) plainText.
-- **Editor reactivity for menus.** Menu components that show active/disabled states based on cursor position (e.g., `FormatMenu`, `EditMenu`) use `useEditorState` from `@tiptap/react` to subscribe to selection changes. Without it, checkmarks go stale.
+- **Editor reactivity for ribbon buttons.** Ribbon tab components that show active/disabled states based on cursor position (e.g., `RibbonTabHome`) must use `useEditorState` from `@tiptap/react` with a consolidated selector. Direct `editor.isActive()` calls in JSX are not reactive — they only evaluate at the render that triggered for other reasons. See `MobileToolbar.tsx` for the correct pattern.
 - **Cross-component coordination via custom events.** Menu items dispatch `wordhtml:open-search`, `wordhtml:open-page-setup`, `wordhtml:open-file` on `window`. `EditorShell` and `UploadButton` listen. Avoids passing dialog state through props.
 
 ## Design system
@@ -222,7 +222,7 @@ Implemented via `ParagraphFormatExtension` (`src/lib/tiptap/paragraphFormat.ts`)
 
 **UI:**
 - `ParagraphDialog.tsx` — Radix Dialog with two fieldsets: "เยื้อง (Indents)" and "ระยะห่าง (Spacing)"
-- Accessible from: FormattingToolbar icon (between Align and List), FormatMenu → "ย่อหน้า... (Paragraph...)"
+- Accessible from: RibbonTabHome "ย่อหน้า…" button (Type icon, in Paragraph group)
 - Dialog reads current node attrs from cursor position and applies via `editor.commands.setParagraphFormat()`
 
 **Default font:** New empty documents auto-apply `THSarabunPSK` (with Google Font `Sarabun` fallback) via `useEffect` in `VisualEditor.tsx`.
@@ -276,7 +276,7 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 ### Previously (2026-05-12)
 - **Placeholder hints** — `EmptyHint` now shows guidance about `{{variable}}` template syntax; FAQ and PasteTips include variable usage sections.
 2. **Dashed page break indicators** — Automatic pagination separators (`.page-break-indicator`) changed from thick dot-grid bands to simple dashed horizontal lines with centered page labels, matching Microsoft Word style.
-3. **Insert Variable button** — Added to Insert ribbon tab (`InsertMenu.tsx`); inserts `{{variable}}` template mark.
+3. **Insert Variable button** — Added to Insert ribbon tab (`RibbonTabInsert.tsx`); inserts `{{variable}}` template mark.
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
 ### Known Pending Issues

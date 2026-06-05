@@ -25,6 +25,14 @@ describe("removeInlineStyles", () => {
   it("returns empty string for empty input", () => {
     expect(removeInlineStyles("")).toBe("");
   });
+
+  it("preserves font-family style so applied fonts survive export", () => {
+    const html = `<p><span style="font-family:Sarabun;font-weight:bold">x</span></p>`;
+    const result = removeInlineStyles(html);
+    expect(result).toMatch(/font-family:\s*Sarabun/);
+    // font-weight is NOT in KEEP — must be stripped
+    expect(result).not.toMatch(/font-weight/);
+  });
 });
 
 describe("removeEmptyTags", () => {

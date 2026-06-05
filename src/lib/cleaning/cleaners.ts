@@ -63,7 +63,7 @@ export function removeInlineStyles(html: string): string {
   const KEEP = [
     "margin-left", "margin-right", "margin-top", "margin-bottom",
     "text-indent", "width", "height",
-    "font-size", "color", "background-color", "line-height", "text-align",
+    "font-size", "font-family", "color", "background-color", "line-height", "text-align",
   ];
   doc.body.querySelectorAll("[style]").forEach((el) => {
     const s = (el as HTMLElement).style;

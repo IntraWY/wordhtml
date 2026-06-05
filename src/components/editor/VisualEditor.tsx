@@ -33,6 +33,7 @@ const EditorLink = Link.extend({
 });
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import { SearchAndReplace } from "@sereneinserenade/tiptap-search-and-replace";
@@ -149,6 +150,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),
+      TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
       FontSize,

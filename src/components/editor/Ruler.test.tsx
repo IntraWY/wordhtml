@@ -473,4 +473,51 @@ describe("Ruler", () => {
       expect(onMarginChange).toHaveBeenCalledWith(24, 25);
     });
   });
+
+  describe("margin and indent handle co-existence at indentLeft=0", () => {
+    it("left margin handle has base z-10 so it sits above indent handle at indentLeft=0", () => {
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          marginLeftMm={25.4}
+          marginRightMm={25.4}
+          onMarginChange={vi.fn()}
+          indentLeft={0}
+          indentFirst={0}
+          onIndentChange={vi.fn()}
+        />
+      );
+
+      const sliders = screen.getAllByRole("slider");
+      const marginHandle = sliders.find((s) =>
+        s.getAttribute("aria-label")?.includes("Left margin")
+      );
+      expect(marginHandle).toBeDefined();
+      // Margin handle must always have z-10 so it is not occluded by the indent ▽ at indentLeft=0
+      expect(marginHandle!.className).toContain("z-10");
+    });
+
+    it("left indent handle is still keyboard-operable after margin z-index fix", () => {
+      const onIndentChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          onMarginChange={vi.fn()}
+          indentLeft={0}
+          indentFirst={0}
+          onIndentChange={onIndentChange}
+        />
+      );
+
+      const indentHandle = screen.getByRole("slider", { name: /Left indent/i });
+      fireEvent.keyDown(indentHandle, { key: "ArrowRight" });
+      expect(onIndentChange).toHaveBeenCalled();
+    });
+  });
 });

@@ -26,7 +26,7 @@ export function FontSizeSelector({ editor }: FontSizeSelectorProps) {
       if (size == null) {
         editor.chain().focus().unsetFontSize().run();
       } else {
-        editor.chain().focus().setFontSize(size).run();
+        editor.chain().focus().setFontSize(String(size)).run();
       }
     },
     [editor]

@@ -2,8 +2,10 @@ import { Mark } from "@tiptap/core";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
+    // Declaration matches @tiptap/extension-text-style's FontSize signature exactly.
+    // Our implementation converts the string (e.g. "16" or "16px") to px number internally.
     fontSize: {
-      setFontSize: (size: number) => ReturnType;
+      setFontSize: (fontSize: string) => ReturnType;
       unsetFontSize: () => ReturnType;
     };
   }
@@ -51,9 +53,11 @@ export const FontSize = Mark.create({
   addCommands() {
     return {
       setFontSize:
-        (size: number) =>
+        (fontSize: string) =>
         ({ chain }) => {
-          return chain().setMark("fontSize", { size }).run();
+          const px = parseFloat(fontSize);
+          if (Number.isNaN(px)) return false;
+          return chain().setMark("fontSize", { size: px }).run();
         },
       unsetFontSize:
         () =>
