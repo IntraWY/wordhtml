@@ -506,10 +506,15 @@ export function ExportDialog() {
 
                 <footer className="flex flex-col gap-3 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <label className="text-xs text-[color:var(--color-muted-foreground)]">
+                    <label
+                      htmlFor="gas-function-name"
+                      className="text-xs text-[color:var(--color-muted-foreground)]"
+                    >
                       ชื่อฟังก์ชัน:
                     </label>
                     <input
+                      id="gas-function-name"
+                      name="gas-function-name"
                       type="text"
                       value={gasFunctionName}
                       onChange={(e) => setGasFunctionName(e.target.value)}
