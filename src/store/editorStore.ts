@@ -4,6 +4,8 @@ import { persist } from "zustand/middleware";
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import { markdownToHtml } from "@/lib/importMarkdown";
+import { parseProjectFile } from "@/lib/project";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { countWords } from "@/lib/text";
 import { useToastStore } from "./toastStore";
 import { useUiStore } from "./uiStore";
@@ -387,8 +389,32 @@ export const useEditorStore = create<EditorState>()(
             html = await loadHtmlFile(file);
           } else if (lower.endsWith(".md")) {
             html = await markdownToHtml(file);
+          } else if (lower.endsWith(".json")) {
+            // wordhtml project file — restores the full working state.
+            const text = await file.text();
+            const project = parseProjectFile(text); // throws on invalid
+            clearRecoveryDraft();
+            setActiveSnapshotSession(null);
+            set((state) => ({
+              documentHtml: sanitizeHtml(project.html),
+              fileName: project.fileName ?? name,
+              pageSetup: project.pageSetup,
+              templateMode: project.templateMode,
+              variables: project.variables,
+              dataSet: project.dataSet,
+              previewMode: "edit",
+              activeSnapshotId: null,
+              isLoadingFile: false,
+              loadError: null,
+              lastLoadWarnings: [],
+              htmlSyncRevision: state.htmlSyncRevision + 1,
+            }));
+            useToastStore.getState().show("เปิดโปรเจคแล้ว (Project opened)");
+            return;
           } else {
-            throw new Error("ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, หรือ .md");
+            throw new Error(
+              "ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, .md หรือ .json"
+            );
           }
           clearRecoveryDraft();
           setActiveSnapshotSession(null);

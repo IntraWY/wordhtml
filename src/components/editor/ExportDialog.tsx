@@ -12,6 +12,7 @@ import {
   Loader2,
   Copy,
   Check,
+  Save,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -31,6 +32,7 @@ import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { resolveHtmlPlaceholders } from "@/lib/placeholders";
 import { checkExportHealth } from "@/lib/export/exportHealthCheck";
 import { inlinePlaceholderFields } from "@/lib/export/inlinePlaceholderFields";
+import { buildProjectBlob, projectFileName } from "@/lib/project";
 
 type ExportKind = ExportFormat;
 
@@ -190,6 +192,30 @@ export function ExportDialog() {
       useToastStore.getState().show(message, "error");
     } finally {
       setBusy(null);
+    }
+  };
+
+  // Save the RAW editable state as a re-openable project file (not cleaned or
+  // placeholder-resolved like the content exports above).
+  const handleSaveProject = () => {
+    try {
+      const blob = buildProjectBlob({
+        html: documentHtml,
+        fileName,
+        pageSetup,
+        templateMode,
+        variables,
+        dataSet,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = projectFileName(fileName);
+      a.click();
+      URL.revokeObjectURL(url);
+      useToastStore.getState().show("บันทึกไฟล์โปรเจคแล้ว (.json)");
+    } catch {
+      useToastStore.getState().show("บันทึกไฟล์โปรเจคไม่สำเร็จ", "error");
     }
   };
 
@@ -363,6 +389,17 @@ export function ExportDialog() {
                   </p>
                 ) : null}
                 <ImageModeToggle imageMode={imageMode} onChange={setImageMode} />
+
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-3 py-2">
+                  <p className="text-xs text-[color:var(--color-muted-foreground)]">
+                    บันทึกงานเพื่อแก้ไขต่อภายหลัง — เก็บเนื้อหา หน้ากระดาษ ตัวแปร และข้อมูลไว้ครบ
+                    เปิดกลับด้วยปุ่ม &ldquo;อัปโหลด&rdquo;
+                  </p>
+                  <Button variant="secondary" onClick={handleSaveProject}>
+                    <Save />
+                    บันทึกงาน (.json)
+                  </Button>
+                </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
