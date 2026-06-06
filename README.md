@@ -12,9 +12,11 @@ A redesigned clone of [wordhtml.com](https://wordhtml.com/) built with Next.js 1
 - **Paste from Word** — Word/Google Docs paste artifacts (mso-* styles, MsoNormal classes, conditional comments) are stripped on the way in.
 - **WYSIWYG A4 editor** — interactive horizontal and vertical rulers with draggable margin guides, page setup (A4/Letter, portrait/landscape), and header/footer configuration.
 - **Template mode** — define `{{variables}}`, paste data from Google Sheets, and preview merged documents. See [`docs/placeholder-system.md`](./docs/placeholder-system.md) for merge fields, page tokens, the Placeholder panel, and export policies.
+- **Save / open your work** — save a `.wordhtml.json` project (content + page setup + variables + data) and reopen it later or on another machine — no cloud needed.
 - **Document history** — up to 20 snapshots per browser (localStorage); does not sync across devices.
-- **Named templates (optional cloud)** — save documents as templates via Firebase Firestore when configured (see `.env.example`).
-- **Client-side editing** — conversion and export run in the browser; static-export ready.
+- **Named templates (optional cloud)** — save documents as templates via Firebase Firestore when configured + signed in (see `.env.example`).
+- **Installable (PWA)** — add to your desktop/home screen and launch like an app.
+- **Client-side editing** — conversion and export run in the browser; static-export ready. See [Privacy](https://wordhtml.vercel.app/privacy).
 
 ## Quick start
 

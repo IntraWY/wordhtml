@@ -280,7 +280,17 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
 ### Known Pending Issues
-- None — all Phase 6 bugs fixed and tested.
+- None — Phase 7 production-hardening complete and tested.
+
+### Phase 7 — Production Hardening (2026-06-06)
+1. **Repo cleanup** — removed 22 committed QA-screenshot PNGs + `tsc-errors.txt` from the repo root (gitignored `/*.png` + `tsc-errors.txt`, keeping `tests/e2e/screenshots/`); moved ~15 audit/plan markdown files into `docs/audits/` and `docs/plans/`.
+2. **PWA + metadata** — `src/app/manifest.ts` (force-static, installable `display:"standalone"`), `icon.svg` / `apple-icon.svg`, `robots.ts`, and minimal Twitter-card/OG metadata in `layout.tsx`.
+3. **Privacy page** — `src/app/privacy/page.tsx` (browser-only processing, local history, per-user cloud templates) + footer link.
+4. **Firebase template gating** — `templateStore` now throws `SignInRequiredError` for cloud writes when Firebase is configured but the user is signed out (was a silent permission-denied against the read-only legacy collection). `TemplatePanel` turns Save into a sign-in CTA. `firestore.rules` comment refreshed; per-user paths are the active layout.
+5. **Removed debug telemetry** — deleted the leftover `debugPerfLog` harness (hardcoded localhost POST) and all 7 call sites, eliminating per-keystroke regex/perf work in `VisualEditor.onUpdate`.
+6. **a11y** — associated the GAS function-name `<label>`/input in `ExportDialog` (ruler keyboard handles, search labels, and `aria-busy` were already in place).
+7. **Save/Open project (`.wordhtml.json`)** — `src/lib/project.ts` bundles the full editable state (html + pageSetup + templateMode + variables + dataSet). Save from the Export dialog ("บันทึกงาน"); open via the Upload button (`loadFile` handles `.json`). Survives reload and moves work between machines without cloud.
+8. **Lint clean (0 warnings)**, build type-checks, **396 unit tests** pass (added gating, storage, and project test suites). Stale CLAUDE.md design-system + Firebase notes corrected (warm stone palette, IBM Plex Sans Thai, Auth done).
 
 ### Phase 6 — Critical Bug Fixes + Test Coverage (2026-06-05)
 1. **Font Family + Text Color fixed** — `TextStyle` mark from `@tiptap/extension-text-style` was never registered in `VisualEditor.tsx`. Both `Color` and `FontFamily` extensions silently fail without it. Fixed by importing `TextStyle` and inserting it **before** `Color` in the extensions array. Also aligned `fontSize.ts` command declaration signature to match the package's `(fontSize: string)` type to resolve a TypeScript intersection conflict.
