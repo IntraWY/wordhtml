@@ -67,7 +67,6 @@ import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompressio
 import { ImageResizeView } from "./ImageResizeView";
 import { isLiveEditor } from "@/lib/editorLive";
 import { useToastStore } from "@/store/toastStore";
-import { debugPerfLog } from "@/lib/debugPerfLog";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
 import { getPageSelectionContext } from "@/lib/pagination/pageSelection";
 import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
@@ -191,18 +190,9 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
   const onUpdate = useCallback(
     ({ editor }: { editor: Editor }) => {
-      const t0 = performance.now();
       const html = unwrapPageNode(editor.getHTML());
-      const getHtmlMs = performance.now() - t0;
       lastWrittenHtml.current = html;
       setHtml(html, { debounce: true });
-      // #region agent log
-      debugPerfLog("A", "VisualEditor.tsx:onUpdate", "editor onUpdate", {
-        getHtmlMs: Math.round(getHtmlMs * 100) / 100,
-        htmlLen: html.length,
-        pageNodes: (html.match(/class="page-node"/g) ?? []).length,
-      });
-      // #endregion
     },
     [setHtml]
   );
@@ -455,17 +445,9 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
     const applyContent = () => {
       if (cancelled || !isLiveEditor(editor)) return;
-      const t0 = performance.now();
       editor.commands.setContent(wrapped, { emitUpdate: false });
       lastWrittenHtml.current = documentHtml;
       lastSyncedRevision.current = htmlSyncRevision;
-      // #region agent log
-      debugPerfLog("A", "VisualEditor.tsx:setContent", "external html applied", {
-        setContentMs: Math.round((performance.now() - t0) * 100) / 100,
-        htmlLen: documentHtml.length,
-        isExternalLoad,
-      });
-      // #endregion
     };
 
     if (isExternalLoad) {

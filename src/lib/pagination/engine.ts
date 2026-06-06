@@ -3,7 +3,6 @@
 import type { Editor } from "@tiptap/react";
 import type { PageSetup } from "@/types";
 import { A4, LETTER, mmToPx } from "@/lib/page";
-import { debugPerfLog } from "@/lib/debugPerfLog";
 import { findTableRowSplitPosition } from "./tableSplit";
 import { isDomPageBodyEffectivelyEmpty } from "./domPageBody";
 
@@ -406,7 +405,6 @@ export class PaginationEngine {
     if (this.isDestroyed) return;
     if (performance.now() < this.pausedUntil) return;
 
-    const t0 = typeof performance !== "undefined" ? performance.now() : 0;
     const metrics = calculatePageMetrics(
       this.options.pageSetup,
       this.options.headerFooterReservePx ?? DEFAULT_HEADER_FOOTER_RESERVE_PX
@@ -418,17 +416,6 @@ export class PaginationEngine {
       metrics.contentHeightPx,
       this.options.tolerancePx ?? DEFAULT_TOLERANCE_PX
     );
-
-    const pageCount = root.querySelectorAll(".page-body").length;
-    const checkMs =
-      typeof performance !== "undefined" ? performance.now() - t0 : 0;
-    // #region agent log
-    debugPerfLog("B", "engine.ts:checkAllPages", "pagination measure", {
-      checkMs: Math.round(checkMs * 100) / 100,
-      pageCount,
-      overflowCount: overflows.length,
-    });
-    // #endregion
 
     if (overflows.length === 0) {
       this.maybeEmitStable();

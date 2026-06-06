@@ -15,7 +15,6 @@ import {
   PAGINATION_COOLDOWN_MS,
 } from "@/lib/pagination/paginationMaintenance";
 import { isLiveEditor } from "@/lib/editorLive";
-import { debugPerfLog } from "@/lib/debugPerfLog";
 import { useEditorStore } from "@/store/editorStore";
 import {
   addEventListener,
@@ -258,14 +257,6 @@ export function usePagination(
   useEffect(() => {
     if (htmlSyncRevision === 0) return;
     engineRef.current?.pauseFor(BULK_LOAD_PAGINATION_PAUSE_MS);
-    // #region agent log
-    debugPerfLog(
-      "B",
-      "usePagination.ts:bulkLoadPause",
-      "pagination paused after bulk html load",
-      { pauseMs: BULK_LOAD_PAGINATION_PAUSE_MS, htmlSyncRevision }
-    );
-    // #endregion
   }, [htmlSyncRevision]);
 
   /* -- editor updates -- */
@@ -287,14 +278,6 @@ export function usePagination(
             engineRef.current?.pauseFor(PAGINATION_COOLDOWN_MS);
           }
           engineRef.current?.scheduleCheck();
-          // #region agent log
-          debugPerfLog(
-            "B",
-            "usePagination.ts:typingIdle",
-            "pagination scheduled after typing idle",
-            { idleMs: PAGINATION_TYPING_IDLE_MS }
-          );
-          // #endregion
         }
       }, PAGINATION_TYPING_IDLE_MS);
     };

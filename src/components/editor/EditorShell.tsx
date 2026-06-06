@@ -249,7 +249,7 @@ export function EditorShell() {
       pageNode.getBoundingClientRect().top - canvas.getBoundingClientRect().top
     );
     setContentOffsetPx(measured > 0 ? measured : PAGE_CANVAS_PADDING_PX);
-  }, [contentHeight, pageCount, pageHeightPx, previewMode, templateMode]);
+  }, [articleRef, contentHeight, pageCount, pageHeightPx, previewMode, templateMode]);
 
   return (
     <>

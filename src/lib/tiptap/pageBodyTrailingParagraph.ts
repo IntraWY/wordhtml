@@ -1,6 +1,5 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { debugPerfLog } from "@/lib/debugPerfLog";
 
 /**
  * Ensures every pageBody ends with a paragraph so users can click/type after
@@ -31,15 +30,6 @@ export const PageBodyTrailingParagraph = Extension.create({
           });
 
           if (insertPositions.length === 0) return null;
-
-          // #region agent log
-          debugPerfLog(
-            "C",
-            "pageBodyTrailingParagraph.ts:appendTransaction",
-            "trailing paragraph inserts",
-            { insertCount: insertPositions.length, docSize: doc.nodeSize }
-          );
-          // #endregion
 
           insertPositions.sort((a, b) => b - a);
           for (const insertPos of insertPositions) {

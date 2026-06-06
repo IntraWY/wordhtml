@@ -5,7 +5,6 @@ import { measureHeaderFooterReservePx } from "@/lib/pageChromeReserve";
 import { resolveHeaderFooter } from "./PageHeaderFooter";
 import { replacePageTokens } from "@/lib/placeholders";
 import type { HeaderFooterConfig, PageSetup } from "@/types";
-import { debugPerfLog } from "@/lib/debugPerfLog";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface PageChromeLayerProps {
@@ -95,13 +94,6 @@ export function PageChromeLayer({
     });
 
     setBoxes(next);
-
-    // #region agent log
-    debugPerfLog("D", "PageChromeLayer.tsx:measure", "header/footer measure", {
-      pageCount: pages.length,
-      enabled,
-    });
-    // #endregion
 
     const reserve = measureHeaderFooterReservePx(
       hf.headerHtml,

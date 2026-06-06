@@ -22,7 +22,6 @@ import type {
   AutoSaveSettings,
 } from "@/types";
 import { DEFAULT_AUTO_SAVE } from "@/types";
-import { debugPerfLog } from "@/lib/debugPerfLog";
 import type { ExportMissingPolicy } from "@/lib/placeholders";
 import { removeMergeFieldFromHtml } from "@/lib/placeholders/removeMergeField";
 import {
@@ -236,11 +235,6 @@ export const useEditorStore = create<EditorState>()(
         set({ documentHtml: html, lastEditAt: Date.now() });
         scheduleRecoveryDraft(html, fileName, pageSetup);
         get().scheduleAutoSnapshot();
-        // #region agent log
-        debugPerfLog("A", "editorStore.ts:commitDocumentHtml", "store html commit", {
-          htmlLen: html.length,
-        });
-        // #endregion
       };
 
       return {
@@ -506,7 +500,6 @@ export const useEditorStore = create<EditorState>()(
       },
 
       loadSnapshot: (id) => {
-        const t0 = performance.now();
         const { history } = get();
         const snap = history.find((s) => s.id === id);
         if (!snap) return;
@@ -519,12 +512,6 @@ export const useEditorStore = create<EditorState>()(
           activeSnapshotId: id,
           htmlSyncRevision: state.htmlSyncRevision + 1,
         }));
-        // #region agent log
-        debugPerfLog("A", "editorStore.ts:loadSnapshot", "snapshot loaded to store", {
-          htmlLen: snap.html.length,
-          storeMs: Math.round((performance.now() - t0) * 100) / 100,
-        });
-        // #endregion
       },
 
       duplicateSnapshot: (id) => {
