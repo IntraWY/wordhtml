@@ -2,15 +2,16 @@
 
 import { useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload, Loader2 } from "lucide-react";
+import { BookmarkPlus, FileText, Pencil, Trash2, X, Download, Upload, Loader2, LogIn } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useAuthStore } from "@/store/authStore";
 import type { PageSetup } from "@/types";
-import { useTemplateStore, exportAllTemplates, parseTemplateExport } from "@/store/templateStore";
+import { useTemplateStore, exportAllTemplates, parseTemplateExport, SignInRequiredError } from "@/store/templateStore";
 import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { isFirebaseConfigured } from "@/lib/firebaseConfig";
+import { signInWithGoogle } from "@/lib/firebaseAuth";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
@@ -81,19 +82,41 @@ export function TemplatePanel() {
     useToastStore.getState().show(`โหลด Template: ${template.name} แล้ว`);
   }
 
-  async function handleSave() {
-    const name = saveName.trim();
-    if (!name || !hasDoc) return;
+  async function doSave(name: string) {
     setActionLoading("save");
     try {
       await saveTemplate(name, documentHtml, pageSetup);
       setSaveName("");
       useToastStore.getState().show(`บันทึก Template "${name}" แล้ว`);
-    } catch {
-      useToastStore.getState().show("บันทึก Template ไม่สำเร็จ", "error");
+    } catch (err) {
+      if (err instanceof SignInRequiredError) {
+        useToastStore.getState().show(err.message, "warning");
+      } else {
+        useToastStore.getState().show("บันทึก Template ไม่สำเร็จ", "error");
+      }
     } finally {
       setActionLoading(null);
     }
+  }
+
+  async function handleSave() {
+    const name = saveName.trim();
+    if (!name || !hasDoc) return;
+    // Firebase enabled but signed out: sign in first, then save (avoids a
+    // doomed write to the read-only legacy collection).
+    if (firebaseEnabled && !user) {
+      setActionLoading("save");
+      try {
+        await signInWithGoogle();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ";
+        useToastStore.getState().show(message, "warning");
+        setActionLoading(null);
+        return;
+      }
+      setActionLoading(null);
+    }
+    await doSave(name);
   }
 
   function handleRenameStart(id: string, currentName: string) {
@@ -110,8 +133,12 @@ export function TemplatePanel() {
     setActionLoading(`rename-${id}`);
     try {
       await renameTemplate(id, name);
-    } catch {
-      useToastStore.getState().show("เปลี่ยนชื่อไม่สำเร็จ", "error");
+    } catch (err) {
+      if (err instanceof SignInRequiredError) {
+        useToastStore.getState().show(err.message, "warning");
+      } else {
+        useToastStore.getState().show("เปลี่ยนชื่อไม่สำเร็จ", "error");
+      }
     } finally {
       setActionLoading(null);
       setRenamingId(null);
@@ -148,8 +175,12 @@ export function TemplatePanel() {
       }
       const imported = await importTemplates(items);
       useToastStore.getState().show(`นำเข้า template ${imported} รายการแล้ว`);
-    } catch {
-      useToastStore.getState().show("อ่านไฟล์ไม่สำเร็จ", "error");
+    } catch (err) {
+      if (err instanceof SignInRequiredError) {
+        useToastStore.getState().show(err.message, "warning");
+      } else {
+        useToastStore.getState().show("อ่านไฟล์ไม่สำเร็จ", "error");
+      }
     } finally {
       setActionLoading(null);
       e.target.value = "";
@@ -198,8 +229,12 @@ export function TemplatePanel() {
     try {
       await deleteTemplate(id);
       useToastStore.getState().show(`ลบ Template "${name}" แล้ว`);
-    } catch {
-      useToastStore.getState().show("ลบ Template ไม่สำเร็จ", "error");
+    } catch (err) {
+      if (err instanceof SignInRequiredError) {
+        useToastStore.getState().show(err.message, "warning");
+      } else {
+        useToastStore.getState().show("ลบ Template ไม่สำเร็จ", "error");
+      }
     } finally {
       setActionLoading(null);
     }
@@ -372,15 +407,31 @@ export function TemplatePanel() {
                 type="button"
                 onClick={handleSave}
                 disabled={!saveName.trim() || !hasDoc || actionLoading === "save"}
+                title={
+                  firebaseEnabled && !user
+                    ? "เข้าสู่ระบบด้วย Google เพื่อบันทึก Template บนคลาวด์"
+                    : "บันทึกเอกสารปัจจุบันเป็น Template"
+                }
                 className="inline-flex items-center gap-1.5 rounded-md bg-[color:var(--color-foreground)] px-4 py-2 text-sm font-medium text-[color:var(--color-background)] transition-colors disabled:opacity-40"
               >
-                {actionLoading === "save" ? <Loader2 className="size-3.5 animate-spin" /> : <BookmarkPlus className="size-3.5" />}
-                บันทึก
+                {actionLoading === "save" ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : firebaseEnabled && !user ? (
+                  <LogIn className="size-3.5" />
+                ) : (
+                  <BookmarkPlus className="size-3.5" />
+                )}
+                {firebaseEnabled && !user ? "เข้าสู่ระบบเพื่อบันทึก" : "บันทึก"}
               </button>
             </div>
             {!hasDoc && (
               <p className="mt-1.5 text-[11px] text-[color:var(--color-muted-foreground)]">
                 เปิดหรือสร้างเอกสารก่อนบันทึก template
+              </p>
+            )}
+            {hasDoc && firebaseEnabled && !user && (
+              <p className="mt-1.5 text-[11px] text-[color:var(--color-warning)]">
+                ต้องเข้าสู่ระบบก่อนจึงจะบันทึก Template บนคลาวด์ได้
               </p>
             )}
             <p className="mt-3 text-[11px] text-[color:var(--color-muted-foreground)]">

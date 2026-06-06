@@ -1,7 +1,10 @@
 rules_version = '2';
 
-// Recommended rules for wordhtml after Firebase Auth + per-user paths are implemented.
-// CURRENT APP: may still use legacy global `templates` — adjust rules to match your deployment.
+// Production rules for wordhtml. Firebase Auth (Google) + per-user paths are
+// implemented: templates live at users/{uid}/templates and history snapshots at
+// users/{uid}/snapshots. The app gates all cloud WRITES on sign-in
+// (see SignInRequiredError in src/store/templateStore.ts), so the legacy global
+// `templates` collection is kept read-only purely as a one-time migration source.
 //
 // Deploy: firebase deploy --only firestore:rules
 //

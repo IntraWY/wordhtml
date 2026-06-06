@@ -8,9 +8,25 @@ import {
 } from "@/lib/templateFirestore";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useAuthStore } from "@/store/authStore";
+import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import type { Unsubscribe, FirestoreError } from "firebase/firestore";
 
 const MAX_TEMPLATES = 50;
+
+/**
+ * Thrown when a cloud template write is attempted while Firebase is configured
+ * but the user is not signed in. The legacy global `templates` collection is
+ * read-only in production rules, so a signed-out write would otherwise fail with
+ * an opaque `permission-denied`. Callers should prompt the user to sign in.
+ */
+export class SignInRequiredError extends Error {
+  constructor(
+    message = "ต้องเข้าสู่ระบบก่อนจึงจะบันทึก Template บนคลาวด์ได้ (Sign in required)"
+  ) {
+    super(message);
+    this.name = "SignInRequiredError";
+  }
+}
 
 export interface DocumentTemplate {
   id: string;
@@ -37,6 +53,19 @@ let unsubscribe: Unsubscribe | null = null;
 
 function getTemplateUid(): string | null {
   return useAuthStore.getState().user?.uid ?? null;
+}
+
+/**
+ * Resolve the uid for a cloud WRITE. When Firebase is configured but the user is
+ * signed out, throw `SignInRequiredError` instead of letting the write fall back
+ * to the read-only legacy collection (which fails silently with permission-denied).
+ */
+function getUidForWrite(): string | null {
+  const uid = getTemplateUid();
+  if (isFirebaseConfigured() && !uid) {
+    throw new SignInRequiredError();
+  }
+  return uid;
 }
 
 function handleSubscriptionError(error: FirestoreError): string {
@@ -154,6 +183,9 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       throw new Error(`Maximum ${MAX_TEMPLATES} templates allowed`);
     }
 
+    // Gate before building the doc so a signed-out write never reaches Firestore.
+    const uid = getUidForWrite();
+
     const template: DocumentTemplate = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name,
@@ -162,15 +194,15 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       pageSetup,
     };
 
-    await saveTemplateToFirestore(template, getTemplateUid());
+    await saveTemplateToFirestore(template, uid);
   },
 
   renameTemplate: async (id, name) => {
-    await updateTemplateName(id, name, getTemplateUid());
+    await updateTemplateName(id, name, getUidForWrite());
   },
 
   deleteTemplate: async (id) => {
-    await deleteTemplateFromFirestore(id, getTemplateUid());
+    await deleteTemplateFromFirestore(id, getUidForWrite());
   },
 
   importTemplates: async (items) => {
@@ -180,7 +212,7 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       .filter((t) => !existingIds.has(t.id))
       .slice(0, MAX_TEMPLATES - state.templates.length);
 
-    const uid = getTemplateUid();
+    const uid = getUidForWrite();
     await Promise.all(
       newItems.map((item) =>
         saveTemplateToFirestore({ ...item, html: sanitizeHtml(item.html) }, uid)
