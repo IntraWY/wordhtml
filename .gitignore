@@ -45,6 +45,9 @@ test-results/
 qa-screenshots/
 test-start.png
 .playwright-mcp/
+# stray QA screenshots / scratch output at repo root (keeps tests/e2e/screenshots/)
+/*.png
+tsc-errors.txt
 
 # typescript
 *.tsbuildinfo

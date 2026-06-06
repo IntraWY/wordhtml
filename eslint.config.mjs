@@ -22,6 +22,20 @@ const eslintConfig = defineConfig([
     "test-results/**",
     "playwright-report/**",
   ]),
+  {
+    // Allow intentionally-unused identifiers prefixed with "_"
+    // (e.g. omit-via-rest destructuring: `const { dataSet: _removed, ...rest } = state`).
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

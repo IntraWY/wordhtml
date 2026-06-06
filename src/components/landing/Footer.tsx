@@ -32,6 +32,12 @@ export function Footer() {
             >
               วิธีใช้
             </Link>
+            <Link
+              href="/privacy"
+              className="transition-colors hover:text-[color:var(--color-foreground)]"
+            >
+              ความเป็นส่วนตัว
+            </Link>
           </nav>
           <nav className="flex flex-col gap-2 text-sm text-[color:var(--color-muted-foreground)]">
             <a

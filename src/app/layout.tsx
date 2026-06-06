@@ -37,6 +37,13 @@ export const metadata: Metadata = {
     description:
       "Convert Word documents to clean, semantic HTML — and back. 100% in your browser.",
     type: "website",
+    siteName: "wordhtml",
+  },
+  twitter: {
+    card: "summary",
+    title: "wordhtml — Clean HTML from Word, in your browser",
+    description:
+      "Convert Word documents to clean, semantic HTML — and back. 100% in your browser.",
   },
   icons: {
     icon: "/favicon.ico",

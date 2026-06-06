@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Download, Clock, Bookmark, Save, Split, Layers, LayoutTemplate } from "lucide-react";
 
@@ -16,7 +15,6 @@ import {
   dispatchInsertPageBreak,
   dispatchOpenBatchConvert,
 } from "@/lib/events";
-import { APP_VERSION, APP_VERSION_LABEL } from "@/lib/version";
 
 const HistoryPanel = dynamic(
   () => import("./HistoryPanel").then((m) => m.HistoryPanel),
