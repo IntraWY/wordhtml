@@ -48,6 +48,15 @@ import { useDialogStore } from "@/store/dialogStore";
 import { useUiStore } from "@/store/uiStore";
 import { dispatchOpenSearch } from "@/lib/events";
 import { editorCan, isLiveEditor } from "@/lib/editorLive";
+import {
+  PARAGRAPH_STYLE_PRESETS,
+  getPresetById,
+} from "@/lib/styles/paragraphStylePresets";
+
+const STYLE_PRESET_OPTIONS = [
+  { label: "สไตล์ (Styles)…", value: "" },
+  ...PARAGRAPH_STYLE_PRESETS.map((p) => ({ label: p.label, value: p.id })),
+];
 
 const FONT_OPTIONS = [
   { label: "ค่าเริ่มต้น", value: "" },
@@ -192,6 +201,25 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
       case "paragraph": useUiStore.getState().openParagraph(); break;
     }
   }, [editor, isImage, setImageAlign]);
+
+  const applyStylePreset = useCallback((id: string) => {
+    if (!isLiveEditor(editor) || !id) return;
+    const preset = getPresetById(id);
+    if (!preset) return;
+    const chain = editor.chain().focus();
+    if (preset.headingLevel) {
+      chain.setHeading({ level: preset.headingLevel });
+    } else {
+      chain.setParagraph();
+    }
+    chain.setParagraphFormat(preset.format).run();
+    // Apply/clear bold across the whole text block so the style is self-contained.
+    const { $from } = editor.state.selection;
+    const blockSel = { from: $from.start(), to: $from.end() };
+    const boldChain = editor.chain().focus().setTextSelection(blockSel);
+    if (preset.bold) boldChain.setBold().run();
+    else boldChain.run();
+  }, [editor]);
 
   const handleSetColor = useCallback((color: string) => editor?.chain().focus().setColor(color).run(), [editor]);
   const handleSetHighlight = useCallback((color: string) => editor?.chain().focus().setHighlight({ color }).run(), [editor]);
@@ -452,6 +480,13 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
 
       {/* Styles */}
       <RibbonGroup label="รูปแบบ">
+        <RibbonSelect
+          label="ชุดสไตล์ (Style gallery)"
+          value=""
+          onChange={applyStylePreset}
+          options={STYLE_PRESET_OPTIONS}
+          disabled={!hasEditor}
+        />
         <RibbonButton label="หัวเรื่อง 1" onClick={() => handleFormat("h1")} active={formatState?.h1} disabled={!hasEditor}>
           <Heading1 className="size-3.5" />
         </RibbonButton>
