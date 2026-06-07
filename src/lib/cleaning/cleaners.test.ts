@@ -66,6 +66,19 @@ describe("collapseSpaces", () => {
   it("preserves single spaces", () => {
     expect(collapseSpaces(`<p>a b c</p>`)).toBe(`<p>a b c</p>`);
   });
+
+  it("preserves a single tab character (Word tab stop)", () => {
+    expect(collapseSpaces("<p>a\tb</p>")).toContain("\t");
+  });
+
+  it("preserves multiple consecutive tabs (does not collapse them)", () => {
+    expect(collapseSpaces("<p>a\t\tb</p>")).toContain("\t\t");
+  });
+
+  it("keeps a tab that sits between spaces", () => {
+    const out = collapseSpaces("<p>a \t b</p>");
+    expect(out).toContain("\t");
+  });
 });
 
 describe("removeAttributes", () => {

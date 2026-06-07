@@ -60,7 +60,10 @@ export function wrapAsDocument(
       padding: 0 1rem;
       color: #18181b;
       line-height: 1.7;
+      tab-size: 1.27cm;
+      -moz-tab-size: 1.27cm;
     }
+    p, h1, h2, h3, li { white-space: pre-wrap; }
     img { max-width: 100%; height: auto; }
     blockquote {
       border-left: 3px solid #d4d4d8;

@@ -251,6 +251,14 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 
 ## Recent Changes & Known Issues
 
+### Phase 12 — Word-style Tab behavior (2026-06-07)
+`v0.1.38`. Tab in a paragraph felt unlike Word because the only live handler always indented the whole block. Reworked to be **position-aware** + render real tab stops. Spec: `docs/superpowers/specs/2026-06-07-word-style-tab-design.md`. **560 unit tests pass; lint + build clean; live grid-snap verified.**
+1. **Position-aware Tab** (`paragraphFormat.ts` `addKeyboardShortcuts`): caret at `parentOffset===0` of paragraph/heading → block indent +0.5cm (Word indents here); multi-block selection (`!$from.sameParent($to)`) → indent all; otherwise → insert a real `\t`; code block → `\t`; list → `sinkListItem`. Shift-Tab: list lift · delete a `\t` immediately before caret · else outdent −0.5cm.
+2. **Removed dead code** — the orphaned "delete 4-space block" Backspace branch in `VisualEditor.tsx` (Tab never inserted 4 spaces; CLAUDE.md note was stale). Kept Case 1 (outdent at start of indented paragraph).
+3. **Tab-stop CSS** — `tab-size: 1.27cm` (Word default 0.5") + `white-space: pre-wrap` on shared `.prose-editor/.paper` p/h1–h3/li in `globals.css`, plus `wrap.ts` (standalone HTML) and `exportPdf.ts` static CSS, so tabs snap to a 1.27cm grid in editor, preview, HTML, and PDF.
+4. **Cleaner preserves tabs** — `collapseSpaces` (`cleaners.ts`) now collapses only runs of regular spaces (`/ {2,}/g`) and keeps `\t` (was `/[ \t]+/g`, which destroyed tabs on export — the real breakage).
+5. **Tests** — `tabBehavior.test.ts` (keymap via `someProp("handleKeyDown")`), `wrap.test.ts` (tab-size/pre-wrap/`\t` preserved), `cleaners.test.ts` (single/double/inter-space tabs preserved). Out of scope: custom click-to-set ruler tab stops (uniform 1.27cm grid for now).
+
 ### Phase 11 — Word-parity + Thai-gov feature batch 1 (2026-06-07)
 From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, `v0.1.29`. Each is additive + tested + verified live:
 1. **B4 Watermark** — `Watermark` on `PageSetup`; `src/lib/watermark.ts` (pure render attrs + print CSS); `pageNode.ts` emits `--wm-*` vars + `data-watermark`; `globals.css` `.page-node[data-watermark] .page-body::before` diagonal text; `PageSetupDialog` presets (ร่าง/สำเนา/ลับ) + custom; `EditorShell` propagates; HTML export injects fixed print watermark.
@@ -511,7 +519,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.37**
+- **Current version**: **v0.1.38**
 
 ### Patch bump rule (deploy default)
 

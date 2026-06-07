@@ -111,4 +111,20 @@ describe("wrapAsDocument", () => {
     const result = wrapAsDocument("<p>hi</p>");
     expect(result).toContain('charset="utf-8"');
   });
+
+  // Word-style tab stops — real \t chars should render as 1.27cm tab stops.
+  it("includes tab-size in the document stylesheet", () => {
+    const result = wrapAsDocument("<p>x</p>");
+    expect(result).toContain("tab-size: 1.27cm");
+  });
+
+  it("includes white-space: pre-wrap so tabs render in paragraphs/headings/lists", () => {
+    const result = wrapAsDocument("<p>x</p>");
+    expect(result).toContain("white-space: pre-wrap");
+  });
+
+  it("preserves literal tab characters in the body (does not strip \\t)", () => {
+    const result = wrapAsDocument("<p>a\tb</p>");
+    expect(result).toContain("a\tb");
+  });
 });

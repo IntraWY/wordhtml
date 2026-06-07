@@ -347,32 +347,56 @@ export const ParagraphFormatExtension = Extension.create({
 
     return {
       Tab: () => {
-        if (this.editor.isActive("codeBlock")) {
-          return this.editor.commands.insertContent("    ");
+        const editor = this.editor;
+        if (editor.isActive("codeBlock")) {
+          // Real tab character (was 4 spaces) — consistent with mid-line tabs.
+          return editor.commands.insertContent("\t");
         }
-        if (this.editor.isActive("listItem")) {
-          return this.editor.commands.sinkListItem("listItem");
+        if (editor.isActive("listItem")) {
+          return editor.commands.sinkListItem("listItem");
         }
-        const { selection } = this.editor.state;
-        if (selection.empty) {
-          const { $from } = selection;
+        const { selection } = editor.state;
+        const { $from, $to, empty } = selection;
+        // Word: Tab at the very start of a paragraph/heading indents the block.
+        if (empty && $from.parentOffset === 0) {
           for (let d = $from.depth; d > 0; d--) {
-            const node = $from.node(d);
-            if (node.type.name === "paragraph" || node.type.name === "heading") {
+            const name = $from.node(d).type.name;
+            if (name === "paragraph" || name === "heading") {
               return blockIndent(0.5);
             }
           }
         }
-        return false;
+        // Word: a selection spanning multiple blocks indents them all.
+        if (!empty && !$from.sameParent($to)) {
+          return blockIndent(0.5);
+        }
+        // Otherwise insert a real tab character. CSS `tab-size` snaps it to the
+        // next tab stop, matching Microsoft Word's mid-line Tab behavior.
+        return editor.commands.insertContent("\t");
       },
 
       "Shift-Tab": () => {
-        if (this.editor.isActive("listItem")) {
-          return this.editor.commands.liftListItem("listItem");
+        const editor = this.editor;
+        if (editor.isActive("listItem")) {
+          return editor.commands.liftListItem("listItem");
+        }
+        const { selection } = editor.state;
+        const { $from, empty } = selection;
+        // Remove a tab character immediately before the cursor (Word-ish outdent).
+        if (empty && $from.parentOffset > 0) {
+          const before = $from.parent.textBetween(
+            $from.parentOffset - 1,
+            $from.parentOffset
+          );
+          if (before === "\t") {
+            return editor.commands.command(({ tr, dispatch }) => {
+              if (dispatch) tr.delete($from.pos - 1, $from.pos);
+              return true;
+            });
+          }
         }
         return blockIndent(-0.5);
       },
-
     };
   },
 });

@@ -55,7 +55,8 @@ export async function exportPdf(
   // which is fragile and can pull in unexpected rules.
   const styleEl = document.createElement("style");
   const cssText = `
-    .prose-editor, .paper { outline: none; }
+    .prose-editor, .paper { outline: none; tab-size: 1.27cm; -moz-tab-size: 1.27cm; }
+    .prose-editor p, .paper p, .prose-editor h1, .paper h1, .prose-editor h2, .paper h2, .prose-editor h3, .paper h3, .prose-editor li, .paper li { white-space: pre-wrap; }
     .prose-editor h1, .paper h1 { font-size: 2em; font-weight: 700; margin: 0.67em 0; letter-spacing: -0.01em; }
     .prose-editor h2, .paper h2 { font-size: 1.5em; font-weight: 700; margin: 0.75em 0; letter-spacing: -0.01em; }
     .prose-editor h3, .paper h3 { font-size: 1.25em; font-weight: 600; margin: 0.83em 0; letter-spacing: -0.01em; }

@@ -300,7 +300,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
           }
         }
 
-        // Backspace: outdent at start of indented paragraph, or delete 4-space tab block
+        // Backspace: outdent at start of indented paragraph
         if (event.key === "Backspace") {
           const { selection } = ed.state;
           if (!selection.empty) return false;
@@ -318,26 +318,6 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
               event.preventDefault();
               ed.chain().focus().setParagraphFormat({ marginLeft: next }).run();
               return true;
-            }
-          }
-
-          // Case 2: Isolated 4-space tab block before cursor → delete all 4
-          if ($from.parentOffset >= 4) {
-            const text = $from.parent.textContent;
-            // parentOffset counts ProseMirror document positions (1-based into the
-            // paragraph), whereas textContent is a 0-based string — align them.
-            const textOffset = $from.parentOffset - 1;
-            const prev4 = text.slice(textOffset - 4, textOffset);
-            const charBefore = textOffset >= 5 ? text[textOffset - 5] : "";
-            if (prev4 === "    " && charBefore !== " ") {
-              const startPos = $from.pos - 4;
-              const slice = ed.state.doc.textBetween(startPos, $from.pos);
-              if (slice === "    ") {
-                event.preventDefault();
-                const tr = ed.state.tr.delete(startPos, $from.pos);
-                ed.view.dispatch(tr);
-                return true;
-              }
             }
           }
         }

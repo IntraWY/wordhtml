@@ -117,11 +117,14 @@ export function collapseSpaces(html: string): string {
   const doc = parse(html);
   walk(doc.body, (node) => {
     if (node.nodeType === Node.TEXT_NODE && node.nodeValue) {
-      node.nodeValue = node.nodeValue.replace(/[ \t]+/g, " ").replace(/\n[ \t]+/g, "\n");
+      // Collapse runs of regular spaces, but PRESERVE tab characters (\t) so
+      // Word-style tab stops survive export. Strip leading spaces after a
+      // newline (but keep tabs used for indentation).
+      node.nodeValue = node.nodeValue.replace(/ {2,}/g, " ").replace(/\n +/g, "\n");
     }
   });
-  // Also collapse leading/trailing whitespace inside the serialized output
-  return serialize(doc).replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
+  // Collapse runs of spaces in the serialized output too; tabs are left intact.
+  return serialize(doc).replace(/ {2,}/g, " ").replace(/\n{3,}/g, "\n\n");
 }
 
 // ---------- 4. Remove tag attributes (preserve safe ones) ----------
