@@ -265,7 +265,9 @@ From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, 
 10. **C3 Distribution list / สำเนาเรียน** (`v0.1.33`) — Insert-ribbon "สำเนาเรียน" → `DistributionDialog` (recipient list + `{{เรียน}}` field) → `downloadDistributionZip` bundles one doc per recipient. `src/lib/export/distributionList.ts`.
 11. **B5 Comments / คอมเมนต์** (`v0.1.34`) — `CommentMark` stores body+resolved on the mark (travels with HTML, no schema/store change); View-ribbon toggles `CommentsPanel` (add on selection / resolve / delete via doc-scanning commands); `stripPaginationWrappers` unwraps comment spans so they never ship. `src/lib/tiptap/commentMark.ts`, `src/lib/comments.ts`.
 
-**542 unit tests pass.** Still pending (each needs own spec — pagination-core or very large): **B6** multi-column, **B8** track changes, **B9** citations, **A1** full header/footer rich editing, **A2** first/odd-even layout, **A3** table/image split.
+12. **B9 Citations/bibliography** (`v0.1.35`) — Insert-ribbon "อ้างอิง/บรรณานุกรม" inserts an inline `[N]` marker + appends a numbered bibliography entry (`data-citation` via new `citationIndex` global attribute) at document end. `src/lib/citations.ts` — same reflow-safe pattern as B1.
+
+**547 unit tests pass.** Still pending — **each touches the pagination/page-node core or is very large, so each needs its own spec + pagination regression testing before implementation** (not safe to rush): **B6** multi-column (needs a container node + page-flow handling), **B8** track changes (large: insert/delete tracking + accept/reject), **A1** full WYSIWYG header/footer (pageNode schema change), **A2** first/odd-even *layout* (page-break distribution), **A3** table/image split (pagination engine).
 **503 unit tests pass; lint + build clean.** Remaining proposal items are larger/riskier and **touch the pagination/page-node core** (A1 header/footer rich editing — schema change; A2 first/odd-even *layout* — affects page-break distribution; A3 table/image split — pagination engine) plus B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list — each gets its own spec + focused pagination testing before implementation (per `wordhtml-feature-proposal.html`).
 
 ### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
@@ -502,7 +504,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.34**
+- **Current version**: **v0.1.35**
 
 ### Patch bump rule (deploy default)
 
