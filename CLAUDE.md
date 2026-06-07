@@ -285,6 +285,16 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 - **Single paragraph taller than one page does not split mid-text.** Holistic reflow (Phase 8) breaks *between* blocks and fills each page to the limit, but a single block (e.g. one giant pasted paragraph with no line breaks) that exceeds the page height still stays on one page and is clipped by the frame. Intra-paragraph soft-splitting (plan Task 8/9 in `docs/superpowers/plans/2026-06-07-pagination-reflow-foundation.md`) is the remaining piece. Normal multi-paragraph documents reflow correctly. `pasteCleanup` already splits Word `<br>` runs into paragraphs, so real Word pastes rarely hit this.
 - Roadmap (own specs/plans): Sub-project B (Thai official-document templates + mail-merge hardening + batch export) and Sub-project C (IndexedDB crash-safe draft recovery + cloud history sync) — see `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
 
+### Phase 9 — Thai Documents + Mail-merge (2026-06-07)
+Sub-project B of the production roadmap (`docs/superpowers/specs/2026-06-07-production-roadmap-design.md`):
+- **Thai helpers** (`src/lib/thai/`): `bahtText()` (จำนวนเงินเป็นตัวอักษร, เอ็ด/ยี่/สิบ/ล้าน rules), `toThaiDigits()`, `formatThaiDate()` (Buddhist-era, Thai numerals).
+- **Merge-field filters** (additive — plain `{{name}}` unchanged): `{{x|baht}}`, `{{x|thai}}`, `{{x|date}}` via a filtered-field pass in `mergeFields.ts` (`FILTERED_MERGE_FIELD_REGEX_SOURCE`). The variable-badge system uses `data-variable`, not this regex, so it is unaffected.
+- **Page tokens**: `{date_th}` `{date_th_short}` `{date_en}` in `pageTokens.ts` (accepts injectable `now`).
+- **Built-in gallery** (`src/lib/templateGallery.ts`): proper สารบรรณ formats — หนังสือภายนอก, บันทึกข้อความ, ประกาศ, and รายงานขอซื้อขอจ้าง (showcases `{{วงเงิน|baht}}` + `{date_th}`).
+- **Mail-merge batch export** (`src/lib/export/exportMailMerge.ts`): `buildMergedDocuments()` resolves the template once per `dataSet` row; `downloadMailMergeZip()` bundles them. Surfaced in the Export dialog when `templateMode` + data rows exist.
+- **B.3 (variable panel bugs)** were already fixed on master — the 3 `variable-*` E2E specs pass. **C.1 (crash-safe draft recovery)** already exists (`draftRecovery.ts`, IndexedDB + sessionStorage). Remaining roadmap: A.3 intra-paragraph split (risky, needs spot-check) and C.2 cloud history sync (Firebase, needs a project to verify).
+442 unit tests pass.
+
 ### Phase 8 — Pagination Reflow Foundation (2026-06-07)
 Editor route is `/` (root, `src/app/page.tsx` → `EditorShell`); `/landing` is marketing; `/procurement` is the Thai 3-stage จัดซื้อจัดจ้าง builder. Live Chrome exploration found three real "หน้าเพี้ยน" defects; fixed two of three:
 1. **Ghost pages on open/paste fixed** — `src/lib/pagination/normalizeIncomingHtml.ts` strips `.page-node/.page-body/.page-break` wrappers from incoming HTML. Wired into `loadFile` (.docx/.html/.md); pasted external HTML is already flattened by `pasteCleanup`'s `normalizePastedStructure` (regression-guarded).
@@ -468,7 +478,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.26**
+- **Current version**: **v0.1.27**
 
 ### Patch bump rule (deploy default)
 
