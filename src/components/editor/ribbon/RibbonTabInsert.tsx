@@ -18,8 +18,10 @@ import {
   TextCursorInput,
   FileText,
   PenLine,
+  Captions as CaptionsIcon,
 } from "lucide-react";
 import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
+import { buildCaptionHtml, nextCaptionNumber } from "@/lib/caption";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
@@ -176,6 +178,12 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     editor?.chain().focus().insertContent(buildSignatureBlockHtml()).run();
   }, [editor]);
 
+  const handleCaption = useCallback(() => {
+    if (!isLiveEditor(editor)) return;
+    const num = nextCaptionNumber(editor.getHTML(), "figure");
+    editor.chain().focus().insertContent(buildCaptionHtml("figure", num)).run();
+  }, [editor]);
+
   return (
     <>
       <RibbonGroup label="ลิงก์ & รูปภาพ">
@@ -187,6 +195,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="รูปภาพจาก URL" onClick={handleImageUrl} disabled={!hasEditor}>
           <Globe className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="คำบรรยายภาพ (Caption)" onClick={handleCaption} disabled={!hasEditor}>
+          <CaptionsIcon className="size-3.5" />
         </RibbonButton>
         <input
           ref={fileInputRef}

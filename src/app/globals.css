@@ -877,6 +877,15 @@ html[data-theme="dark"] .page-node {
   z-index: 1;
 }
 
+/* Figure/table captions (B2) */
+.prose-editor p[data-caption],
+.paper p[data-caption] {
+  text-align: center;
+  font-size: 0.9em;
+  color: var(--color-muted-foreground, #555);
+  margin-top: 4px;
+}
+
 .page-node[data-page-number]::after {
   content: attr(data-page-number);
   position: absolute;

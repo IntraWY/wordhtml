@@ -242,6 +242,16 @@ export const ParagraphFormatExtension = Extension.create({
             parseHTML: (el): boolean =>
               el.getAttribute("data-soft-split") === "true",
           },
+          // Marks a paragraph as a figure/table caption (B2). Styled via CSS
+          // `p[data-caption]`; numbering computed at insert time (lib/caption.ts).
+          captionKind: {
+            default: null,
+            renderHTML: (attrs) =>
+              attrs.captionKind
+                ? { "data-caption": attrs.captionKind as string }
+                : {},
+            parseHTML: (el): string | null => el.getAttribute("data-caption"),
+          },
         },
       },
     ];
