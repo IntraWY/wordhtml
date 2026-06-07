@@ -267,6 +267,21 @@ export const ParagraphFormatExtension = Extension.create({
               return Number.isNaN(n) ? null : n;
             },
           },
+          // Marks a paragraph as a bibliography entry (B9). Styled via CSS
+          // `p[data-citation]`; numbering computed at insert time (lib/citations.ts).
+          citationIndex: {
+            default: null,
+            renderHTML: (attrs) =>
+              attrs.citationIndex
+                ? { "data-citation": String(attrs.citationIndex) }
+                : {},
+            parseHTML: (el): number | null => {
+              const raw = el.getAttribute("data-citation");
+              if (!raw) return null;
+              const n = parseInt(raw, 10);
+              return Number.isNaN(n) ? null : n;
+            },
+          },
         },
       },
     ];

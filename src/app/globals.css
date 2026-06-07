@@ -915,6 +915,22 @@ html[data-theme="dark"] .page-node {
   border-top: 1px solid var(--color-border, #ddd);
 }
 
+/* Citations / bibliography (B9) */
+.prose-editor p[data-citation],
+.paper p[data-citation] {
+  font-size: 0.85em;
+  color: var(--color-muted-foreground, #555);
+  margin: 2px 0;
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+}
+.prose-editor p[data-citation="1"],
+.paper p[data-citation="1"] {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border, #ddd);
+}
+
 .page-node[data-page-number]::after {
   content: attr(data-page-number);
   position: absolute;

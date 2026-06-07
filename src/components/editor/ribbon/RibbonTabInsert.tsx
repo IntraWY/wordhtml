@@ -22,6 +22,7 @@ import {
   Asterisk,
   Link2,
   Users,
+  Quote,
 } from "lucide-react";
 import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
 import { buildCaptionHtml, nextCaptionNumber } from "@/lib/caption";
@@ -30,6 +31,11 @@ import {
   buildFootnoteRefHtml,
   buildFootnoteNoteHtml,
 } from "@/lib/footnotes";
+import {
+  nextCitationNumber,
+  buildCitationRefHtml,
+  buildBibliographyEntryHtml,
+} from "@/lib/citations";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
@@ -182,6 +188,33 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     window.dispatchEvent(new CustomEvent("wordhtml:open-math-dialog"));
   }, []);
 
+  const handleCitation = useCallback(() => {
+    if (!isLiveEditor(editor)) return;
+    useDialogStore.getState().openPrompt(
+      "อ้างอิง / บรรณานุกรม (Citation)",
+      "ข้อมูลอ้างอิง (ผู้แต่ง, ชื่อเรื่อง, ปี):",
+      "",
+      (text) => {
+        const ed = liveEditor();
+        if (!isLiveEditor(ed) || !text || !text.trim()) return;
+        const num = nextCitationNumber(ed.getHTML());
+        ed.chain().focus().insertContent(buildCitationRefHtml(num)).run();
+        let lastBodyEnd = -1;
+        ed.state.doc.descendants((node, pos) => {
+          if (node.type.name === "pageBody") lastBodyEnd = pos + node.nodeSize - 1;
+          return true;
+        });
+        if (lastBodyEnd > 0) {
+          ed.chain()
+            .insertContentAt(lastBodyEnd, buildBibliographyEntryHtml(num, text))
+            .run();
+        } else {
+          ed.chain().focus().insertContent(buildBibliographyEntryHtml(num, text)).run();
+        }
+      }
+    );
+  }, [editor]);
+
   const handleSignatureBlock = useCallback(() => {
     editor?.chain().focus().insertContent(buildSignatureBlockHtml()).run();
   }, [editor]);
@@ -292,6 +325,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="อ้างอิงข้าม (Cross-reference)" onClick={() => useUiStore.getState().openCrossRef()} disabled={!hasEditor}>
           <Link2 className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="อ้างอิง/บรรณานุกรม (Citation)" onClick={handleCitation} disabled={!hasEditor}>
+          <Quote className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 
