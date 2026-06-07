@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, FileText } from "lucide-react";
+import { X, FileText, Bold, Italic, Underline, AlignCenter, Image as ImageIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
@@ -59,6 +59,36 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
     },
     [activeTab]
   );
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const field = activeTab === "header" ? "headerHtml" : "footerHtml";
+
+  // Plain handlers (not memoized): they read textareaRef.current at click time.
+  // Wrap the current textarea selection (or whole value) with open/close HTML.
+  function applyWrap(openTag: string, closeTag: string) {
+    const ta = textareaRef.current;
+    setDraft((d) => {
+      const value = (d[field as "headerHtml"] as string) || "";
+      const start = ta?.selectionStart ?? value.length;
+      const end = ta?.selectionEnd ?? value.length;
+      const selected = value.slice(start, end) || "ข้อความ";
+      const next =
+        value.slice(0, start) + openTag + selected + closeTag + value.slice(end);
+      return { ...d, [field]: next };
+    });
+  }
+
+  function insertLogo() {
+    const url = window.prompt("URL ของโลโก้/รูป (Logo image URL):", "");
+    if (!url) return;
+    const safe = url.replace(/"/g, "&quot;");
+    setDraft((d) => ({
+      ...d,
+      [field]:
+        ((d[field as "headerHtml"] as string) || "") +
+        `<img src="${safe}" alt="logo" style="height:40px;vertical-align:middle">`,
+    }));
+  }
 
   const variableButtons = [
     { label: "{page}", desc: "เลขหน้า (Page number)" },
@@ -158,7 +188,34 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                       ? "เนื้อหาส่วนหัว (Header content)"
                       : "เนื้อหาส่วนท้าย (Footer content)"}
                   </label>
+                  {/* Rich formatting toolbar (A1) */}
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { icon: Bold, label: "ตัวหนา", fn: () => applyWrap("<b>", "</b>") },
+                      { icon: Italic, label: "ตัวเอียง", fn: () => applyWrap("<i>", "</i>") },
+                      { icon: Underline, label: "ขีดเส้นใต้", fn: () => applyWrap("<u>", "</u>") },
+                      {
+                        icon: AlignCenter,
+                        label: "จัดกึ่งกลาง",
+                        fn: () =>
+                          applyWrap('<div style="text-align:center">', "</div>"),
+                      },
+                      { icon: ImageIcon, label: "แทรกโลโก้/รูป", fn: insertLogo },
+                    ].map((b) => (
+                      <button
+                        key={b.label}
+                        type="button"
+                        title={b.label}
+                        aria-label={b.label}
+                        onClick={b.fn}
+                        className="grid h-7 w-7 place-items-center rounded-md border border-[color:var(--color-border)] text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]"
+                      >
+                        <b.icon className="size-3.5" />
+                      </button>
+                    ))}
+                  </div>
                   <textarea
+                    ref={textareaRef}
                     rows={3}
                     value={activeTab === "header" ? draft.headerHtml : draft.footerHtml}
                     onChange={(e) =>
