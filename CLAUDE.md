@@ -251,6 +251,15 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 
 ## Recent Changes & Known Issues
 
+### Phase 11 — Word-parity + Thai-gov feature batch 1 (2026-06-07)
+From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, `v0.1.29`. Each is additive + tested + verified live:
+1. **B4 Watermark** — `Watermark` on `PageSetup`; `src/lib/watermark.ts` (pure render attrs + print CSS); `pageNode.ts` emits `--wm-*` vars + `data-watermark`; `globals.css` `.page-node[data-watermark] .page-body::before` diagonal text; `PageSetupDialog` presets (ร่าง/สำเนา/ลับ) + custom; `EditorShell` propagates; HTML export injects fixed print watermark.
+2. **B3 Style gallery** — `src/lib/styles/paragraphStylePresets.ts` (ปกติ/ชื่อเรื่อง/หัวข้อ ๑-๓/ยกข้อความ); dropdown in `RibbonTabHome` Styles group applies heading level + paragraph format + bold across the block.
+3. **C1 Official-letter wizard** — `src/lib/officialLetter/buildLetterHtml.ts` (สารบรรณ HTML for หนังสือภายนอก/บันทึกข้อความ) + `OfficialLetterDialog.tsx` form (mounted in `DialogManager`, `uiStore.officialLetterOpen`, Insert-ribbon button). Auto-fills today's Thai Buddhist date.
+4. **C2 Signature block** — `src/lib/officialLetter/signatureBlock.ts`; Insert-ribbon "บล็อกลงนาม" button inserts centered sign-line + (name) + position.
+5. **C4 Thai page tokens** — `{page_th}`/`{total_th}` (Thai numerals) added to `replacePageTokens` + `PAGE_TOKEN_REGEX`.
+**487 unit tests pass; lint + build clean.** Remaining proposal items (A1/A2 header-footer & layout, A3 table split, B1 footnotes, B2 captions, B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list) are larger/riskier — each gets its own spec before implementation.
+
 ### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
 Sub-project A's last open item (intra-paragraph splitting) — `v0.1.28`:
 1. **Over-tall paragraphs now split across pages (soft-split).** A single paragraph taller than one page is split into adjacent `<p data-soft-split="true">` pieces during reflow, so it flows across pages like Microsoft Word instead of being clipped. Implemented in `src/lib/pagination/repaginate.ts` (`findParagraphSegments` + `expandTallBlocks`); marked via the `softSplit` global attribute in `src/lib/tiptap/paragraphFormat.ts`.
@@ -485,7 +494,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.28**
+- **Current version**: **v0.1.29**
 
 ### Patch bump rule (deploy default)
 
