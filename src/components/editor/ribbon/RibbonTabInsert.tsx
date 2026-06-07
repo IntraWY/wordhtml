@@ -17,7 +17,9 @@ import {
   Sigma,
   TextCursorInput,
   FileText,
+  PenLine,
 } from "lucide-react";
+import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
@@ -170,6 +172,10 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     window.dispatchEvent(new CustomEvent("wordhtml:open-math-dialog"));
   }, []);
 
+  const handleSignatureBlock = useCallback(() => {
+    editor?.chain().focus().insertContent(buildSignatureBlockHtml()).run();
+  }, [editor]);
+
   return (
     <>
       <RibbonGroup label="ลิงก์ & รูปภาพ">
@@ -227,6 +233,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
           onClick={() => useUiStore.getState().openOfficialLetter()}
         >
           <FileText className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="บล็อกลงนาม (Signature block)" onClick={handleSignatureBlock} disabled={!hasEditor}>
+          <PenLine className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 
