@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import type { PageSetup } from "@/types";
 import { A4, LETTER, mmToPx } from "@/lib/page";
+import { watermarkRenderAttrs } from "@/lib/watermark";
 
 export interface PageNodeAttributes {
   pageNumber: number;
@@ -99,11 +100,15 @@ export const PageNode = Node.create<PageNodeOptions>({
     const marginBottomPx = Math.round(mmToPx(setup.marginMm.bottom));
     const marginLeftPx = Math.round(mmToPx(setup.marginMm.left));
 
+    const wm = watermarkRenderAttrs(setup.watermark);
+    const baseStyle = `width:${widthPx}px;height:${heightPx}px;--page-margin-top:${marginTopPx}px;--page-margin-right:${marginRightPx}px;--page-margin-bottom:${marginBottomPx}px;--page-margin-left:${marginLeftPx}px;`;
+
     return [
       "div",
       mergeAttributes(HTMLAttributes, {
         class: "page-node",
-        style: `width:${widthPx}px;height:${heightPx}px;--page-margin-top:${marginTopPx}px;--page-margin-right:${marginRightPx}px;--page-margin-bottom:${marginBottomPx}px;--page-margin-left:${marginLeftPx}px;`,
+        style: wm.styleVars ? baseStyle + wm.styleVars : baseStyle,
+        ...(wm.dataWatermark ? { "data-watermark": wm.dataWatermark } : {}),
       }),
       0,
     ];

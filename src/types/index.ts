@@ -79,11 +79,25 @@ export interface HeaderFooterConfig {
   evenFooterHtml?: string;
 }
 
+export interface Watermark {
+  /** Watermark text, e.g. "ร่าง", "สำเนา", "ลับ". Empty/absent = no watermark. */
+  text: string;
+  /** 0–1, default 0.12 */
+  opacity?: number;
+  /** px, default 90 (editor) */
+  fontSize?: number;
+  /** CSS color, default "#1f2937" */
+  color?: string;
+  /** rotation in degrees, default -45 */
+  angle?: number;
+}
+
 export interface PageSetup {
   size: "A4" | "Letter";
   orientation: "portrait" | "landscape";
   marginMm: { top: number; right: number; bottom: number; left: number };
   headerFooter?: HeaderFooterConfig;
+  watermark?: Watermark;
 }
 
 // Template Studio types

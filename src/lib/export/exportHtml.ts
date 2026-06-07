@@ -1,6 +1,8 @@
-import { wrapAsDocument, triggerDownload, deriveFileName, type PageSetup } from "./wrap";
+import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
+import type { PageSetup } from "@/types";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { watermarkPrintCss } from "@/lib/watermark";
 import {
   buildHeaderFooterExportBlocks,
   countPageBreaksInHtml,
@@ -32,10 +34,11 @@ export function buildExportHtmlDocument(
   const totalPages = countPageBreaksInHtml(cleanHtml);
   const hf = buildHeaderFooterExportBlocks(pageSetup, totalPages);
   const body = hf.bodyPrefix ? `${hf.bodyPrefix}\n${cleanHtml}` : cleanHtml;
+  const wmCss = watermarkPrintCss(pageSetup?.watermark);
   return wrapAsDocument(body, {
     title,
     pageSetup,
-    extraCss: hf.css,
+    extraCss: wmCss ? `${hf.css}\n${wmCss}` : hf.css,
   });
 }
 

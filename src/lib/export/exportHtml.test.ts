@@ -57,6 +57,30 @@ describe("buildExportHtmlDocument — round-trip integrity", () => {
     expect(bodyText(out)).toBe("ย่อหน้าหนึ่งย่อหน้าสอง");
   });
 
+  it("injects watermark CSS into the export when pageSetup.watermark is set", () => {
+    const out = buildExportHtmlDocument(`<p>x</p>`, {
+      pageSetup: {
+        size: "A4",
+        orientation: "portrait",
+        marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
+        watermark: { text: "สำเนา" },
+      },
+    });
+    expect(out).toContain('content:"สำเนา"');
+    expect(out).toContain("position:fixed");
+  });
+
+  it("does not inject watermark CSS when no watermark", () => {
+    const out = buildExportHtmlDocument(`<p>x</p>`, {
+      pageSetup: {
+        size: "A4",
+        orientation: "portrait",
+        marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
+      },
+    });
+    expect(out).not.toContain("position:fixed");
+  });
+
   it("produces a self-contained document with <title> and <style>", () => {
     const out = buildExportHtmlDocument(`<p>x</p>`, { title: "งานของฉัน" });
     expect(out).toContain("<!doctype html>");

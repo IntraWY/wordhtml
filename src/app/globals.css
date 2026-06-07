@@ -853,6 +853,30 @@ html[data-theme="dark"] .page-node {
   height: 100%;
 }
 
+/* Watermark (B4) — diagonal text behind content. Driven by --wm-* custom
+   properties set on .page-node by pageNode.ts (watermarkRenderAttrs). */
+.page-node[data-watermark] .page-body::before {
+  content: var(--wm-text, "");
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  font-weight: 800;
+  white-space: nowrap;
+  font-size: var(--wm-size, 90px);
+  color: var(--wm-color, #1f2937);
+  opacity: var(--wm-opacity, 0.12);
+  transform: rotate(var(--wm-angle, -45deg));
+}
+.page-node[data-watermark] .page-body > * {
+  position: relative;
+  z-index: 1;
+}
+
 .page-node[data-page-number]::after {
   content: attr(data-page-number);
   position: absolute;

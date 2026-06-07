@@ -130,6 +130,62 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
                 ))}
               </div>
             </fieldset>
+
+            {/* Watermark (B4) */}
+            <fieldset>
+              <legend className="mb-2 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">
+                ลายน้ำ (Watermark)
+              </legend>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {[
+                  { label: "ไม่มี", value: "" },
+                  { label: "ร่าง", value: "ร่าง" },
+                  { label: "สำเนา", value: "สำเนา" },
+                  { label: "ลับ", value: "ลับ" },
+                ].map((preset) => {
+                  const active = (draft.watermark?.text ?? "") === preset.value;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() =>
+                        setDraft((d) => ({
+                          ...d,
+                          watermark: preset.value
+                            ? { ...d.watermark, text: preset.value }
+                            : undefined,
+                        }))
+                      }
+                      className={cn(
+                        "rounded-md border px-3 py-1.5 text-sm font-medium",
+                        active
+                          ? "border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
+                          : "border-[color:var(--color-border)] bg-[color:var(--color-background)] text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]"
+                      )}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="text"
+                aria-label="ข้อความลายน้ำกำหนดเอง (Custom watermark text)"
+                placeholder="ข้อความลายน้ำกำหนดเอง…"
+                value={draft.watermark?.text ?? ""}
+                onChange={(e) => {
+                  const text = e.target.value;
+                  setDraft((d) => ({
+                    ...d,
+                    watermark: text.trim()
+                      ? { ...d.watermark, text }
+                      : undefined,
+                  }));
+                }}
+                className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
+              />
+            </fieldset>
           </div>
 
           <footer className="flex items-center justify-end gap-2 border-t border-[color:var(--color-border)] px-5 py-3">

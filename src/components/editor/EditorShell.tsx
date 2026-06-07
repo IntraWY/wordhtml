@@ -134,6 +134,8 @@ export function EditorShell() {
       size: pageSetup.size,
       orientation: pageSetup.orientation,
       marginMm: pageSetup.marginMm,
+      // Always forward watermark (even undefined) so clearing it propagates.
+      watermark: pageSetup.watermark,
       ...(pageSetup.headerFooter ? { headerFooter: pageSetup.headerFooter } : {}),
     });
   }, [editor, pageSetup]);
