@@ -263,6 +263,9 @@ From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, 
 8. **A1-area: Thai header/footer tokens** (`v0.1.32`) — `HeaderFooterDialog` quick-insert buttons for `{page_th}` `{total_th}` `{date_th}` `{date_th_short}` (surfaces C4 tokens). Safe config-only change, no pagination-core touch.
 9. **B7 Cross-references** (`v0.1.33`) — Insert-ribbon "อ้างอิงข้าม" → `CrossRefDialog` heading picker inserts internal `<a href="#id">` link; `src/lib/crossref.ts`. Ids re-assigned (same slugify as `generateToc`) so links resolve.
 10. **C3 Distribution list / สำเนาเรียน** (`v0.1.33`) — Insert-ribbon "สำเนาเรียน" → `DistributionDialog` (recipient list + `{{เรียน}}` field) → `downloadDistributionZip` bundles one doc per recipient. `src/lib/export/distributionList.ts`.
+11. **B5 Comments / คอมเมนต์** (`v0.1.34`) — `CommentMark` stores body+resolved on the mark (travels with HTML, no schema/store change); View-ribbon toggles `CommentsPanel` (add on selection / resolve / delete via doc-scanning commands); `stripPaginationWrappers` unwraps comment spans so they never ship. `src/lib/tiptap/commentMark.ts`, `src/lib/comments.ts`.
+
+**542 unit tests pass.** Still pending (each needs own spec — pagination-core or very large): **B6** multi-column, **B8** track changes, **B9** citations, **A1** full header/footer rich editing, **A2** first/odd-even layout, **A3** table/image split.
 **503 unit tests pass; lint + build clean.** Remaining proposal items are larger/riskier and **touch the pagination/page-node core** (A1 header/footer rich editing — schema change; A2 first/odd-even *layout* — affects page-break distribution; A3 table/image split — pagination engine) plus B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list — each gets its own spec + focused pagination testing before implementation (per `wordhtml-feature-proposal.html`).
 
 ### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
@@ -499,7 +502,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.33**
+- **Current version**: **v0.1.34**
 
 ### Patch bump rule (deploy default)
 
