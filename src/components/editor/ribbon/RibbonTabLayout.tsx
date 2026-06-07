@@ -16,12 +16,22 @@ import { RibbonButton } from "./RibbonButton";
 import { RibbonSelect } from "./RibbonSelect";
 import { useEditorStore } from "@/store/editorStore";
 import { dispatchOpenPageSetup, dispatchOpenHeaderFooter } from "@/lib/events";
+import { isLiveEditor } from "@/lib/editorLive";
 import type { PageSetup } from "@/types";
 
 export function RibbonTabLayout({ editor }: { editor: Editor | null }) {
-  void editor;
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
+
+  const handleColumnsChange = useCallback(
+    (value: string) => {
+      if (!isLiveEditor(editor)) return;
+      const n = parseInt(value, 10);
+      if (n >= 2) editor.chain().focus().setColumnLayout(n).run();
+      else editor.chain().focus().unsetColumnLayout().run();
+    },
+    [editor]
+  );
 
   const handleSizeChange = useCallback((size: string) => {
     setPageSetup({ size: size as PageSetup["size"] });
@@ -51,6 +61,21 @@ export function RibbonTabLayout({ editor }: { editor: Editor | null }) {
             { label: "แนวตั้ง (Portrait)", value: "portrait" },
             { label: "แนวนอน (Landscape)", value: "landscape" },
           ]}
+        />
+      </RibbonGroup>
+
+      <RibbonGroup label="คอลัมน์ (Columns)">
+        <RibbonSelect
+          label="คอลัมน์ (Columns)"
+          value=""
+          onChange={handleColumnsChange}
+          options={[
+            { label: "คอลัมน์…", value: "" },
+            { label: "1 คอลัมน์ (ยกเลิก)", value: "1" },
+            { label: "2 คอลัมน์", value: "2" },
+            { label: "3 คอลัมน์", value: "3" },
+          ]}
+          disabled={!isLiveEditor(editor)}
         />
       </RibbonGroup>
 

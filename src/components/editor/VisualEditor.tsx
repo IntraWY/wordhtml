@@ -75,6 +75,7 @@ import { dispatchPaginationCooldown } from "@/lib/events";
 import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
 import { CommentMark } from "@/lib/tiptap/commentMark";
 import { TrackChange } from "@/lib/tiptap/trackChange";
+import { ColumnBlock } from "@/lib/tiptap/columnBlock";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -164,6 +165,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       VariableTypingGuard,
       CommentMark,
       TrackChange,
+      ColumnBlock,
       PageBreak,
       SearchAndReplace.configure({
         searchResultClass: "search-result",
