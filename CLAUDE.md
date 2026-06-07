@@ -267,7 +267,11 @@ From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, 
 
 12. **B9 Citations/bibliography** (`v0.1.35`) — Insert-ribbon "อ้างอิง/บรรณานุกรม" inserts an inline `[N]` marker + appends a numbered bibliography entry (`data-citation` via new `citationIndex` global attribute) at document end. `src/lib/citations.ts` — same reflow-safe pattern as B1.
 
-**547 unit tests pass.** Still pending — **each touches the pagination/page-node core or is very large, so each needs its own spec + pagination regression testing before implementation** (not safe to rush): **B6** multi-column (needs a container node + page-flow handling), **B8** track changes (large: insert/delete tracking + accept/reject), **A1** full WYSIWYG header/footer (pageNode schema change), **A2** first/odd-even *layout* (page-break distribution), **A3** table/image split (pagination engine).
+13. **B8 Track changes** (`v0.1.36`) — `TrackChange` mark (insertion/deletion) + View-ribbon Review group (mark / accept-all / reject-all via doc-scanning commands); export resolves with accept semantics. Manual markup, no live-typing interception → no edit-pipeline risk. `src/lib/tiptap/trackChange.ts`.
+14. **A1 Header/footer rich toolbar** (`v0.1.36`) — `HeaderFooterDialog` B/I/U + center + logo buttons wrap the active field (feeds existing PageChromeLayer + preview). No pageNode schema change.
+15. **A2 Different first-page margins** (`v0.1.36`) — `PageSetup.firstPageMarginMm`; `pageNode` renders page-1 with them; `computePageBreaks` extended to a **per-page limit fn** (backward-compatible) so the reflow gives page 1 less content (no clip). `PageSetupDialog` "หน้าแรกต่าง" toggle.
+
+**551 unit tests pass.** Remaining: **B6** multi-column + **A3** table/image mid-split — both fundamentally re-shape the single-column fill-to-limit reflow model; being implemented as safe scoped versions (atomic column block / clean own-page tables) rather than full mid-flow splitting.
 **503 unit tests pass; lint + build clean.** Remaining proposal items are larger/riskier and **touch the pagination/page-node core** (A1 header/footer rich editing — schema change; A2 first/odd-even *layout* — affects page-break distribution; A3 table/image split — pagination engine) plus B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list — each gets its own spec + focused pagination testing before implementation (per `wordhtml-feature-proposal.html`).
 
 ### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
@@ -504,7 +508,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.35**
+- **Current version**: **v0.1.36**
 
 ### Patch bump rule (deploy default)
 
