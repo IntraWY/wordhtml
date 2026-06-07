@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import { markdownToHtml } from "@/lib/importMarkdown";
+import { normalizeIncomingHtml } from "@/lib/pagination/normalizeIncomingHtml";
 import { parseProjectFile } from "@/lib/project";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { countWords } from "@/lib/text";
@@ -418,8 +419,11 @@ export const useEditorStore = create<EditorState>()(
           }
           clearRecoveryDraft();
           setActiveSnapshotSession(null);
+          // Flatten any pagination wrappers (e.g. opening a previous wordhtml
+          // HTML export) so opened files never inject empty "ghost" pages.
+          const normalizedHtml = normalizeIncomingHtml(html);
           set((state) => ({
-            documentHtml: html,
+            documentHtml: normalizedHtml,
             fileName: name,
             activeSnapshotId: null,
             isLoadingFile: false,
