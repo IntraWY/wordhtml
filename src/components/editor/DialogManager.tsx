@@ -63,6 +63,10 @@ const CrossRefDialog = dynamic(
   () => import("./CrossRefDialog").then((m) => m.CrossRefDialog),
   { ssr: false, loading: () => <FloatingLoader label="กำลังโหลด อ้างอิง…" /> }
 );
+const DistributionDialog = dynamic(
+  () => import("./DistributionDialog").then((m) => m.DistributionDialog),
+  { ssr: false, loading: () => <DialogLoader label="กำลังโหลด สำเนาเรียน…" /> }
+);
 
 interface DialogManagerProps {
   editor: Editor | null;
@@ -110,6 +114,7 @@ export function DialogManager({ editor }: DialogManagerProps) {
   const templateGalleryOpen = useUiStore((s) => s.templateGalleryOpen);
   const officialLetterOpen = useUiStore((s) => s.officialLetterOpen);
   const crossRefOpen = useUiStore((s) => s.crossRefOpen);
+  const distributionOpen = useUiStore((s) => s.distributionOpen);
   const batchConvertOpen = useUiStore((s) => s.batchConvertOpen);
   const commandPaletteOpen = useUiStore((s) => s.commandPaletteOpen);
   const templatePanelOpen = useTemplateStore((s) => s.panelOpen);
@@ -159,6 +164,7 @@ export function DialogManager({ editor }: DialogManagerProps) {
       {templateGalleryOpen && <TemplateGalleryDialog />}
       {officialLetterOpen && <OfficialLetterDialog />}
       {crossRefOpen && <CrossRefDialog editor={editor} />}
+      {distributionOpen && <DistributionDialog />}
       {exportDialogOpen && <ExportDialog />}
       <DialogSystem />
       {batchConvertOpen && <BatchUploadDialog />}

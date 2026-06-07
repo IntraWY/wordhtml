@@ -21,6 +21,7 @@ import {
   Captions as CaptionsIcon,
   Asterisk,
   Link2,
+  Users,
 } from "lucide-react";
 import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
 import { buildCaptionHtml, nextCaptionNumber } from "@/lib/caption";
@@ -300,6 +301,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="ช่องกรอก" onClick={handlePlaceholderField} disabled={!hasEditor}>
           <TextCursorInput className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="สำเนาเรียน (Distribution)" onClick={() => useUiStore.getState().openDistribution()} disabled={!hasEditor}>
+          <Users className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 
