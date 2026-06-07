@@ -23,6 +23,7 @@ import {
   Link2,
   Users,
   Quote,
+  TableRowsSplit,
 } from "lucide-react";
 import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
 import { buildCaptionHtml, nextCaptionNumber } from "@/lib/caption";
@@ -289,6 +290,13 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
       <RibbonGroup label="ตาราง & รายการ">
         <RibbonButton label="แทรกตาราง" onClick={handleTable} disabled={!hasEditor}>
           <Table className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton
+          label="แยกตารางข้ามหน้า (วางเคอร์เซอร์ในตารางก่อน)"
+          onClick={() => editor?.chain().focus().splitTableAtCursor().run()}
+          disabled={!hasEditor}
+        >
+          <TableRowsSplit className="size-3.5" />
         </RibbonButton>
         <RibbonButton label="เส้นแบ่ง" onClick={handleHr} disabled={!hasEditor}>
           <Minus className="size-3.5" />
