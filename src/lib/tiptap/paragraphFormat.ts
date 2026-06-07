@@ -232,6 +232,16 @@ export const ParagraphFormatExtension = Extension.create({
               return parsed?.lineHeight ?? null;
             },
           },
+          // Marks a paragraph as one piece of an auto-split long paragraph.
+          // Pagination splits over-tall paragraphs across pages; export
+          // (stripPaginationWrappers) re-joins adjacent soft-split pieces.
+          softSplit: {
+            default: false,
+            renderHTML: (attrs) =>
+              attrs.softSplit ? { "data-soft-split": "true" } : {},
+            parseHTML: (el): boolean =>
+              el.getAttribute("data-soft-split") === "true",
+          },
         },
       },
     ];

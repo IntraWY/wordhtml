@@ -10,14 +10,14 @@ import { computePageBreaks } from "./computePageBreaks";
 /**
  * Holistic re-pagination.
  *
- * Rather than splitting one overflowing page at a time (which produced an
- * overstuffed first page followed by near-empty trailing pages), this collects
- * the entire content flow, measures each top-level block, computes a
- * fill-to-limit page break set, and rebuilds the `pageNode` structure in a
- * single transaction — preserving the caret by tracking its (block, offset).
+ * Collects the entire content flow, measures each top-level block, splits any
+ * single paragraph taller than one page at a line boundary (soft-split pieces,
+ * re-joined on export), computes a fill-to-limit page break set, and rebuilds
+ * the `pageNode` structure in one transaction — preserving the caret by
+ * tracking its (block, offset).
  *
- * The function is a no-op (`changed:false`) when the current page distribution
- * already matches the desired one, so it is safe to call on every idle tick.
+ * No-op (`changed:false`) when the distribution already matches, so it is safe
+ * to call on every idle tick.
  */
 
 export interface RepaginateResult {
@@ -50,18 +50,142 @@ function isAtomic(el: Element): boolean {
   return !!el.querySelector("img, table");
 }
 
+/* ---- intra-paragraph splitting (line-accurate via DOM Range) ---- */
+
+function textNodesOf(el: Element): Text[] {
+  const out: Text[] = [];
+  if (typeof document === "undefined") return out;
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let n = walker.nextNode();
+  while (n) {
+    out.push(n as Text);
+    n = walker.nextNode();
+  }
+  return out;
+}
+
+function locate(
+  textNodes: Text[],
+  charOffset: number
+): { node: Text; offset: number } | null {
+  let acc = 0;
+  for (const t of textNodes) {
+    const len = t.textContent?.length ?? 0;
+    if (charOffset <= acc + len) return { node: t, offset: charOffset - acc };
+    acc += len;
+  }
+  const last = textNodes[textNodes.length - 1];
+  return last ? { node: last, offset: last.textContent?.length ?? 0 } : null;
+}
+
+/** {top,bottom} of the rendered content up to `charOffset`, relative to el top. */
+function rectAt(
+  el: Element,
+  textNodes: Text[],
+  charOffset: number
+): { top: number; bottom: number } {
+  const loc = locate(textNodes, charOffset);
+  if (!loc) return { top: 0, bottom: 0 };
+  const range = document.createRange();
+  range.setStart(textNodes[0], 0);
+  range.setEnd(loc.node, loc.offset);
+  const r = range.getBoundingClientRect();
+  const elTop = el.getBoundingClientRect().top;
+  return { top: r.top - elTop, bottom: r.bottom - elTop };
+}
+
+/** Snap an offset back to the nearest preceding space (Latin); keep as-is for Thai. */
+function snapBoundary(text: string, offset: number): number {
+  for (let i = offset; i > offset - 16 && i > 0; i--) {
+    if (text[i - 1] === " ") return i;
+  }
+  return offset;
+}
+
+interface Segment {
+  start: number;
+  end: number;
+  height: number;
+}
+
+/** Split a too-tall block's text into page-sized segments at line boundaries. */
+function findParagraphSegments(el: Element, limitPx: number): Segment[] {
+  const textNodes = textNodesOf(el);
+  const total = textNodes.reduce((s, t) => s + (t.textContent?.length ?? 0), 0);
+  if (total === 0) return [{ start: 0, end: 0, height: 0 }];
+  const fullText = textNodes.map((t) => t.textContent ?? "").join("");
+
+  const bottomAt = (o: number) => rectAt(el, textNodes, o).bottom;
+
+  const segments: Segment[] = [];
+  let start = 0;
+  let guard = 0;
+  while (guard++ < 200) {
+    // Cumulative baseline: rendered height already consumed up to `start`.
+    // (rectAt(start).top is the top of the WHOLE [0..start] range — always the
+    // first line — so it must NOT be used here.)
+    const base = start === 0 ? 0 : bottomAt(start);
+    if (bottomAt(total) - base <= limitPx) {
+      segments.push({ start, end: total, height: bottomAt(total) - base });
+      break;
+    }
+    // Largest end with (bottomAt(end) - base) <= limit.
+    let lo = start + 1;
+    let hi = total;
+    let best = start + 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (bottomAt(mid) - base <= limitPx) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    let split = snapBoundary(fullText, best);
+    if (split <= start) split = Math.max(start + 1, best);
+    segments.push({ start, end: split, height: bottomAt(split) - base });
+    start = split;
+    if (start >= total) break;
+  }
+  return segments;
+}
+
+/* ---- measurement ---- */
+
+interface DomMeasurement {
+  heights: number[];
+  atomic: Set<number>;
+  els: Element[];
+}
+
+function measureDomBlocks(): DomMeasurement | null {
+  if (typeof document === "undefined") return null;
+  const pageBodies = Array.from(document.querySelectorAll(".page-body"));
+  const heights: number[] = [];
+  const atomic = new Set<number>();
+  const els: Element[] = [];
+  let i = 0;
+  for (const body of pageBodies) {
+    for (const child of Array.from(body.children)) {
+      heights.push(blockOuterHeight(child));
+      els.push(child);
+      if (isAtomic(child)) atomic.add(i);
+      i++;
+    }
+  }
+  return { heights, atomic, els };
+}
+
+/* ---- flow snapshot ---- */
+
 interface FlowSnapshot {
-  /** Top-level blocks across every pageBody, in document order. */
   blocks: PMNode[];
-  /** Number of blocks currently on each page (for change detection). */
   pageBlockCounts: number[];
-  /** pageSetup attrs from the first pageNode (reused for all rebuilt pages). */
   pageSetup: unknown;
-  /** Absolute content-start position of each block in the current doc. */
   blockStarts: number[];
 }
 
-/** Reads the current pageNode/pageBody structure into a flat block flow. */
 function readFlow(editor: Editor): FlowSnapshot | null {
   const { doc } = editor.state;
   const blocks: PMNode[] = [];
@@ -75,13 +199,11 @@ function readFlow(editor: Editor): FlowSnapshot | null {
     sawPageNode = true;
     if (pageSetup === null) pageSetup = pageNode.attrs.pageSetup;
 
-    // pageNode children: optional header, pageBody, optional footer.
     let countOnPage = 0;
     pageNode.forEach((child, childOffset) => {
       if (child.type.name !== "pageBody") return;
-      // Absolute pos of pageBody = pageOffset + 1 (into pageNode) + childOffset.
       const pageBodyStart = pageOffset + 1 + childOffset;
-      let inner = pageBodyStart + 1; // content start inside pageBody
+      let inner = pageBodyStart + 1;
       child.forEach((block) => {
         blocks.push(block);
         blockStarts.push(inner);
@@ -96,24 +218,6 @@ function readFlow(editor: Editor): FlowSnapshot | null {
   return { blocks, blockStarts, pageBlockCounts, pageSetup };
 }
 
-/** Measures block heights from the DOM, aligned 1:1 with the PM flow. */
-function measureDomBlocks(): { heights: number[]; atomic: Set<number> } | null {
-  if (typeof document === "undefined") return null;
-  const pageBodies = Array.from(document.querySelectorAll(".page-body"));
-  const heights: number[] = [];
-  const atomic = new Set<number>();
-  let i = 0;
-  for (const body of pageBodies) {
-    for (const child of Array.from(body.children)) {
-      heights.push(blockOuterHeight(child));
-      if (isAtomic(child)) atomic.add(i);
-      i++;
-    }
-  }
-  return { heights, atomic };
-}
-
-/** Splits a flat array into segments at the given exclusive break indices. */
 function segmentize<T>(items: T[], breaks: number[]): T[][] {
   const segments: T[][] = [];
   let start = 0;
@@ -123,6 +227,84 @@ function segmentize<T>(items: T[], breaks: number[]): T[][] {
   }
   return segments;
 }
+
+/* ---- expansion (split over-tall paragraphs into soft-split pieces) ---- */
+
+interface ExpandResult {
+  blocks: PMNode[];
+  heights: number[];
+  caretBlock: number;
+  caretInner: number;
+}
+
+function isSplittableText(block: PMNode, el: Element): boolean {
+  const name = block.type.name;
+  if (name !== "paragraph" && name !== "heading") return false;
+  if (isAtomic(el)) return false;
+  // Char offsets must map 1:1 to content positions (pure text + marks).
+  return block.textContent.length === block.content.size;
+}
+
+function expandTallBlocks(
+  flow: FlowSnapshot,
+  measured: DomMeasurement,
+  limitPx: number,
+  caretBlockOrig: number,
+  caretInnerOrig: number
+): ExpandResult {
+  const blocks: PMNode[] = [];
+  const heights: number[] = [];
+  let caretBlock = -1;
+  let caretInner = caretInnerOrig;
+
+  for (let i = 0; i < flow.blocks.length; i++) {
+    const block = flow.blocks[i];
+    const el = measured.els[i];
+    const tooTall = measured.heights[i] > limitPx;
+    // Never re-split a piece that was already soft-split: re-cutting it every
+    // cycle drifts offsets, multiplies pieces, and can drop content. Pieces are
+    // re-joined on export; in-editor they stay as fitting paragraphs.
+    const alreadyPiece = block.attrs.softSplit === true;
+
+    if (tooTall && !alreadyPiece && el && isSplittableText(block, el)) {
+      const segs = findParagraphSegments(el, limitPx);
+      if (segs.length > 1) {
+        segs.forEach((seg) => {
+          const slice = block.content.cut(seg.start, seg.end);
+          const piece = block.type.create(
+            { ...block.attrs, softSplit: true },
+            slice
+          );
+          blocks.push(piece);
+          heights.push(seg.height);
+          if (i === caretBlockOrig) {
+            // Caret lands in the piece whose range covers caretInnerOrig.
+            if (
+              caretInnerOrig >= seg.start &&
+              caretInnerOrig <= seg.end &&
+              caretBlock === -1
+            ) {
+              caretBlock = blocks.length - 1;
+              caretInner = caretInnerOrig - seg.start;
+            }
+          }
+        });
+        continue;
+      }
+    }
+
+    blocks.push(block);
+    heights.push(measured.heights[i]);
+    if (i === caretBlockOrig) {
+      caretBlock = blocks.length - 1;
+      caretInner = caretInnerOrig;
+    }
+  }
+
+  return { blocks, heights, caretBlock, caretInner };
+}
+
+/* ---- main ---- */
 
 export function buildRepaginateTransaction(
   editor: Editor,
@@ -134,30 +316,49 @@ export function buildRepaginateTransaction(
   const measured = measureDomBlocks();
   if (!measured) return { tr: null, changed: false, pageCount: 1 };
 
-  // Alignment guard: DOM blocks must match PM blocks 1:1, or bail (no corruption).
   if (measured.heights.length !== flow.blocks.length) {
     return { tr: null, changed: false, pageCount: flow.pageBlockCounts.length };
   }
 
-  // Effective limit reserves a safety margin against post-split margin growth.
   const limit = Math.max(1, contentHeightPx - REFLOW_SAFETY_PX);
 
-  // Oversized atomic blocks (taller than the page) get their own page.
+  // Locate the caret's original (block, offset) before any expansion.
+  const from = editor.state.selection.from;
+  let caretBlockOrig = -1;
+  let caretInnerOrig = 0;
+  for (let i = 0; i < flow.blocks.length; i++) {
+    const start = flow.blockStarts[i];
+    const end = start + flow.blocks[i].content.size;
+    if (from >= start && from <= end) {
+      caretBlockOrig = i;
+      caretInnerOrig = from - start;
+      break;
+    }
+  }
+
+  // Split any single paragraph taller than the page into line-sized pieces.
+  const expanded = expandTallBlocks(
+    flow,
+    measured,
+    limit,
+    caretBlockOrig,
+    caretInnerOrig
+  );
+
   const atomicOversize = new Set<number>();
-  measured.atomic.forEach((idx) => {
-    if (measured.heights[idx] > limit) atomicOversize.add(idx);
+  expanded.heights.forEach((h, idx) => {
+    // After expansion, remaining oversize blocks are atomic (table/image).
+    if (h > limit) atomicOversize.add(idx);
   });
 
-  const breaks = computePageBreaks(measured.heights, limit, {
-    atomicOversize,
-  });
-
-  // Desired per-page block counts.
-  const desiredSegments = segmentize(flow.blocks, breaks);
+  const breaks = computePageBreaks(expanded.heights, limit, { atomicOversize });
+  const desiredSegments = segmentize(expanded.blocks, breaks);
   const desiredCounts = desiredSegments.map((s) => s.length);
 
-  // No-op if the distribution already matches (avoids churn on every tick).
+  // No-op only when nothing was split AND the page distribution already matches.
+  const noSplit = expanded.blocks.length === flow.blocks.length;
   const same =
+    noSplit &&
     desiredCounts.length === flow.pageBlockCounts.length &&
     desiredCounts.every((c, i) => c === flow.pageBlockCounts[i]);
   if (same) {
@@ -172,7 +373,6 @@ export function buildRepaginateTransaction(
     return { tr: null, changed: false, pageCount: flow.pageBlockCounts.length };
   }
 
-  // Build new pageNodes from the desired segments.
   const newPages: PMNode[] = desiredSegments.map((segment, idx) => {
     const content = segment.length
       ? Fragment.fromArray(segment)
@@ -184,40 +384,23 @@ export function buildRepaginateTransaction(
     );
   });
 
-  // Track the caret as (block index, offset within block) before the rebuild.
-  const sel = editor.state.selection;
-  const from = sel.from;
-  let caretBlock = -1;
-  let caretInner = 0;
-  for (let i = 0; i < flow.blocks.length; i++) {
-    const start = flow.blockStarts[i];
-    const end = start + flow.blocks[i].content.size;
-    if (from >= start && from <= end) {
-      caretBlock = i;
-      caretInner = from - start;
-      break;
-    }
-  }
-
   const tr = editor.state.tr.replaceWith(
     0,
     editor.state.doc.content.size,
     Fragment.fromArray(newPages)
   );
-  // Pagination is layout, not a user edit — keep it out of the undo stack so
-  // Ctrl+Z undoes the user's edit, not the reflow.
+  // Pagination is layout, not a user edit — keep it out of the undo stack.
   tr.setMeta("addToHistory", false);
 
-  // Restore the caret: find the same block's new content-start position.
-  if (caretBlock >= 0) {
+  if (expanded.caretBlock >= 0) {
     const newStarts = blockContentStarts(tr.doc);
-    if (caretBlock < newStarts.length) {
-      const target = newStarts[caretBlock] + caretInner;
+    if (expanded.caretBlock < newStarts.length) {
+      const target = newStarts[expanded.caretBlock] + expanded.caretInner;
       const clamped = Math.min(Math.max(1, target), tr.doc.content.size - 1);
       try {
         tr.setSelection(TextSelection.near(tr.doc.resolve(clamped)));
       } catch {
-        // leave default selection if resolve fails
+        /* keep default selection */
       }
     }
   }
@@ -225,7 +408,6 @@ export function buildRepaginateTransaction(
   return { tr, changed: true, pageCount: newPages.length };
 }
 
-/** Absolute content-start position of each pageBody child block, in order. */
 function blockContentStarts(doc: PMNode): number[] {
   const starts: number[] = [];
   doc.forEach((pageNode, pageOffset) => {

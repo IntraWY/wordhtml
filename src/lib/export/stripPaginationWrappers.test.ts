@@ -103,4 +103,34 @@ describe("stripPaginationWrappers", () => {
     const result = stripPaginationWrappers(html);
     expect(result.trim()).toBe("");
   });
+
+  it("re-joins adjacent soft-split paragraphs into one (across pages)", () => {
+    const html =
+      `<div class="page-node"><div class="page-body">` +
+      `<p data-soft-split="true">Hello </p></div></div>` +
+      `<div class="page-node"><div class="page-body">` +
+      `<p data-soft-split="true">world</p></div></div>`;
+    const out = stripPaginationWrappers(html);
+    expect(out).not.toContain("data-soft-split");
+    expect(out).toContain("Hello world");
+    expect((out.match(/<p/g) || []).length).toBe(1);
+  });
+
+  it("does not merge normal (non-soft-split) paragraphs", () => {
+    const html = `<p>A</p><p>B</p>`;
+    expect((stripPaginationWrappers(html).match(/<p/g) || []).length).toBe(2);
+  });
+
+  it("merges three soft-split pieces but keeps a following normal paragraph", () => {
+    const html =
+      `<div class="page-body">` +
+      `<p data-soft-split="true">one </p>` +
+      `<p data-soft-split="true">two </p>` +
+      `<p data-soft-split="true">three</p>` +
+      `<p>separate</p></div>`;
+    const out = stripPaginationWrappers(html);
+    expect(out).toContain("one two three");
+    expect(out).toContain("<p>separate</p>");
+    expect((out.match(/<p/g) || []).length).toBe(2);
+  });
 });

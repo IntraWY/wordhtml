@@ -251,6 +251,13 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 
 ## Recent Changes & Known Issues
 
+### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
+Sub-project A's last open item (intra-paragraph splitting) — `v0.1.28`:
+1. **Over-tall paragraphs now split across pages (soft-split).** A single paragraph taller than one page is split into adjacent `<p data-soft-split="true">` pieces during reflow, so it flows across pages like Microsoft Word instead of being clipped. Implemented in `src/lib/pagination/repaginate.ts` (`findParagraphSegments` + `expandTallBlocks`); marked via the `softSplit` global attribute in `src/lib/tiptap/paragraphFormat.ts`.
+2. **Critical baseline fix.** First implementation lost ~⅔ of content and produced 200 one-char pieces. Root cause: `rectAt(start).top` returns the top of the whole `[0..start]` range (always the first line ≈0), not the line at `start`. Fixed by using a cumulative baseline `bottomAt(start)`. Re-split guard (`alreadyPiece`) stops pieces from being re-split. Verified live: 8,300-char paragraph → 3 filled pages, content preserved exactly, caret stable, undo removes the edit (not the reflow).
+3. **Export re-join.** `stripPaginationWrappers.ts` merges adjacent soft-split pieces back into a single paragraph and removes the marker, so all five export formats emit clean output.
+4. **Export round-trip guard.** Extracted pure `buildExportHtmlDocument()` from `downloadHtml()` and added `exportHtml.test.ts` (5 tests) asserting `<body>` content is preserved exactly (chrome `<style>`/`<title>` never counted as content), soft-split pieces re-join, and no `page-node`/`page-body`/`data-soft-split` artifacts leak. **450 unit tests pass.**
+
 ### Phase 1 — Stability (2026-05-14)
 1. **Paste + Enter bug fixed** — `pasteCleanup.ts` now unwraps semantic container elements (`<section>`, `<article>`, `<main>`, `<header>`, `<footer>`, `<aside>`, `<nav>`) that previously caused Tiptap paragraph splitting to fail after paste.
 2. **E2E smoke tests** — Playwright tests for app load, typing, export dialog, and .docx upload (`tests/e2e/smoke.spec.ts`).
@@ -282,7 +289,7 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
 ### Known Pending Issues
-- **Single paragraph taller than one page does not split mid-text.** Holistic reflow (Phase 8) breaks *between* blocks and fills each page to the limit, but a single block (e.g. one giant pasted paragraph with no line breaks) that exceeds the page height still stays on one page and is clipped by the frame. Intra-paragraph soft-splitting (plan Task 8/9 in `docs/superpowers/plans/2026-06-07-pagination-reflow-foundation.md`) is the remaining piece. Normal multi-paragraph documents reflow correctly. `pasteCleanup` already splits Word `<br>` runs into paragraphs, so real Word pastes rarely hit this.
+- ~~**Single paragraph taller than one page does not split mid-text.**~~ **Resolved in Phase 10 (A.3)** — over-tall paragraphs now soft-split across pages (see Phase 10 above). Normal multi-paragraph documents continue to reflow correctly.
 - Roadmap (own specs/plans): Sub-project B (Thai official-document templates + mail-merge hardening + batch export) and Sub-project C (IndexedDB crash-safe draft recovery + cloud history sync) — see `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
 
 ### Phase 9 — Thai Documents + Mail-merge (2026-06-07)
@@ -478,7 +485,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.27**
+- **Current version**: **v0.1.28**
 
 ### Patch bump rule (deploy default)
 

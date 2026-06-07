@@ -101,3 +101,60 @@ test("long multi-paragraph content reflows into evenly-filled pages", async ({
     expect(result[i].used).toBeGreaterThan(result[i].box * 0.5);
   }
 });
+
+test("a single over-tall paragraph splits across pages without losing content", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const editor = page.locator(".ProseMirror").first();
+  await expect(editor).toBeVisible();
+  await editor.click();
+
+  const expected = await page.evaluate(() => {
+    const el = document.querySelector(".ProseMirror") as HTMLElement;
+    el.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      sel.selectAllChildren(el);
+      sel.collapseToEnd();
+    }
+    const block =
+      "ประโยคทดสอบการตัดย่อหน้าเดียวที่ยาวมากให้ไหลข้ามหน้ากระดาษโดยอัตโนมัติสำหรับเอกสารราชการไทยเพื่อพิสูจน์ว่าระบบแบ่งย่อหน้าเดียวที่สูงเกินหนึ่งหน้าได้โดยไม่มีเนื้อหาหาย ";
+    const text = block.repeat(45);
+    document.execCommand("insertText", false, text);
+    return text.replace(/\s/g, "");
+  });
+  await page.waitForTimeout(2800);
+
+  const result = await page.evaluate(() => {
+    const pm = document.querySelector(".ProseMirror") as HTMLElement;
+    const bodies = Array.from(document.querySelectorAll(".page-body"));
+    const box = (el: Element) => {
+      const cs = getComputedStyle(el as HTMLElement);
+      return (
+        (el as HTMLElement).clientHeight -
+        (parseFloat(cs.paddingTop) || 0) -
+        (parseFloat(cs.paddingBottom) || 0)
+      );
+    };
+    const used = (el: Element) => {
+      const cs = getComputedStyle(el as HTMLElement);
+      const base =
+        el.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0);
+      let h = 0;
+      for (const ch of Array.from(el.children)) {
+        h = Math.max(h, ch.getBoundingClientRect().bottom - base);
+      }
+      return h;
+    };
+    return {
+      text: pm.textContent?.replace(/\s/g, "") ?? "",
+      pageCount: bodies.length,
+      anyOver: bodies.some((b) => used(b) > box(b) + 2),
+    };
+  });
+
+  expect(result.text).toBe(expected); // no content lost
+  expect(result.pageCount).toBeGreaterThanOrEqual(3);
+  expect(result.anyOver).toBe(false); // no clipping
+});
