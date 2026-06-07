@@ -17,6 +17,7 @@ interface UiState {
   placeholderPanelOpen: boolean;
   commandPaletteOpen: boolean;
   templateGalleryOpen: boolean;
+  officialLetterOpen: boolean;
   lastAction: string | null;
 
   openExportDialog: () => void;
@@ -45,6 +46,8 @@ interface UiState {
   closeCommandPalette: () => void;
   openTemplateGallery: () => void;
   closeTemplateGallery: () => void;
+  openOfficialLetter: () => void;
+  closeOfficialLetter: () => void;
   setLastAction: (action: string | null) => void;
 }
 
@@ -63,6 +66,7 @@ export const useUiStore = create<UiState>()((set) => ({
   placeholderPanelOpen: false,
   commandPaletteOpen: false,
   templateGalleryOpen: false,
+  officialLetterOpen: false,
   lastAction: null,
 
   openExportDialog: () => set({ exportDialogOpen: true }),
@@ -91,5 +95,7 @@ export const useUiStore = create<UiState>()((set) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   openTemplateGallery: () => set({ templateGalleryOpen: true }),
   closeTemplateGallery: () => set({ templateGalleryOpen: false }),
+  openOfficialLetter: () => set({ officialLetterOpen: true }),
+  closeOfficialLetter: () => set({ officialLetterOpen: false }),
   setLastAction: (lastAction) => set({ lastAction }),
 }));

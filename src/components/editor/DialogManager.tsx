@@ -55,6 +55,10 @@ const TemplateGalleryDialog = dynamic(
   () => import("./TemplateGalleryDialog").then((m) => m.TemplateGalleryDialog),
   { ssr: false, loading: () => <DialogLoader label="กำลังโหลด Gallery…" /> }
 );
+const OfficialLetterDialog = dynamic(
+  () => import("./OfficialLetterDialog").then((m) => m.OfficialLetterDialog),
+  { ssr: false, loading: () => <DialogLoader label="กำลังโหลด หนังสือราชการ…" /> }
+);
 
 interface DialogManagerProps {
   editor: Editor | null;
@@ -100,6 +104,7 @@ export function DialogManager({ editor }: DialogManagerProps) {
 
   const exportDialogOpen = useUiStore((s) => s.exportDialogOpen);
   const templateGalleryOpen = useUiStore((s) => s.templateGalleryOpen);
+  const officialLetterOpen = useUiStore((s) => s.officialLetterOpen);
   const batchConvertOpen = useUiStore((s) => s.batchConvertOpen);
   const commandPaletteOpen = useUiStore((s) => s.commandPaletteOpen);
   const templatePanelOpen = useTemplateStore((s) => s.panelOpen);
@@ -147,6 +152,7 @@ export function DialogManager({ editor }: DialogManagerProps) {
       )}
       {commandPaletteOpen && <CommandPalette editor={editor} />}
       {templateGalleryOpen && <TemplateGalleryDialog />}
+      {officialLetterOpen && <OfficialLetterDialog />}
       {exportDialogOpen && <ExportDialog />}
       <DialogSystem />
       {batchConvertOpen && <BatchUploadDialog />}

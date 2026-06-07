@@ -16,12 +16,14 @@ import {
   Braces,
   Sigma,
   TextCursorInput,
+  FileText,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
 import { useDialogStore } from "@/store/dialogStore";
 import { useEditorStore } from "@/store/editorStore";
+import { useUiStore } from "@/store/uiStore";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
 import { assignHeadingIds, buildTocHtml, generateToc } from "@/lib/toc";
 import { editorCan, isLiveEditor } from "@/lib/editorLive";
@@ -219,6 +221,12 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="เพิ่มหน้าใหม่" onClick={handleAddPage} disabled={!hasEditor || !editorCan(editor, (c) => c.insertPageBreak())}>
           <FilePlus className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton
+          label="หนังสือราชการ (Official letter)"
+          onClick={() => useUiStore.getState().openOfficialLetter()}
+        >
+          <FileText className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 
