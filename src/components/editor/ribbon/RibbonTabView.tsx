@@ -9,6 +9,7 @@ import {
   Keyboard,
   BookOpen,
   Braces,
+  MessageSquare,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -29,6 +30,8 @@ export function RibbonTabView({ editor }: { editor: Editor | null }) {
   const spellcheckEnabled = useEditorStore((s) => s.spellcheckEnabled);
   const toggleSpellcheck = useEditorStore((s) => s.toggleSpellcheck);
   const openPlaceholderPanel = useUiStore((s) => s.openPlaceholderPanel);
+  const commentsOpen = useUiStore((s) => s.commentsOpen);
+  const toggleComments = useUiStore((s) => s.toggleComments);
 
   return (
     <>
@@ -61,6 +64,9 @@ export function RibbonTabView({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="Placeholder" onClick={openPlaceholderPanel}>
           <Braces className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="คอมเมนต์ (Comments)" onClick={toggleComments} active={commentsOpen}>
+          <MessageSquare className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 

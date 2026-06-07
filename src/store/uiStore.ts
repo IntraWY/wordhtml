@@ -20,6 +20,7 @@ interface UiState {
   officialLetterOpen: boolean;
   crossRefOpen: boolean;
   distributionOpen: boolean;
+  commentsOpen: boolean;
   lastAction: string | null;
 
   openExportDialog: () => void;
@@ -54,6 +55,8 @@ interface UiState {
   closeCrossRef: () => void;
   openDistribution: () => void;
   closeDistribution: () => void;
+  toggleComments: () => void;
+  closeComments: () => void;
   setLastAction: (action: string | null) => void;
 }
 
@@ -75,6 +78,7 @@ export const useUiStore = create<UiState>()((set) => ({
   officialLetterOpen: false,
   crossRefOpen: false,
   distributionOpen: false,
+  commentsOpen: false,
   lastAction: null,
 
   openExportDialog: () => set({ exportDialogOpen: true }),
@@ -109,5 +113,7 @@ export const useUiStore = create<UiState>()((set) => ({
   closeCrossRef: () => set({ crossRefOpen: false }),
   openDistribution: () => set({ distributionOpen: true }),
   closeDistribution: () => set({ distributionOpen: false }),
+  toggleComments: () => set((s) => ({ commentsOpen: !s.commentsOpen })),
+  closeComments: () => set({ commentsOpen: false }),
   setLastAction: (lastAction) => set({ lastAction }),
 }));

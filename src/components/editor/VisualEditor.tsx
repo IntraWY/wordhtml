@@ -73,6 +73,7 @@ import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
 import { runPaginationMaintenance } from "@/lib/pagination/paginationMaintenance";
 import { dispatchPaginationCooldown } from "@/lib/events";
 import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
+import { CommentMark } from "@/lib/tiptap/commentMark";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -160,6 +161,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TableCell,
       VariableMark,
       VariableTypingGuard,
+      CommentMark,
       PageBreak,
       SearchAndReplace.configure({
         searchResultClass: "search-result",

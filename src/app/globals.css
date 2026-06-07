@@ -886,6 +886,20 @@ html[data-theme="dark"] .page-node {
   margin-top: 4px;
 }
 
+/* Comments (B5) — highlighted span; resolved fades out */
+.prose-editor .wh-comment,
+.paper .wh-comment {
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
+  border-bottom: 1px dotted #d97706;
+  border-radius: 2px;
+  cursor: help;
+}
+.prose-editor .wh-comment[data-comment-resolved="true"],
+.paper .wh-comment[data-comment-resolved="true"] {
+  background: transparent;
+  border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
 /* Footnotes / endnotes (B1) */
 .prose-editor p[data-footnote],
 .paper p[data-footnote] {

@@ -121,6 +121,14 @@ describe("stripPaginationWrappers", () => {
     expect((stripPaginationWrappers(html).match(/<p/g) || []).length).toBe(2);
   });
 
+  it("unwraps comment spans (B5) so comments never ship in exports", () => {
+    const html = `<p>Hi <span class="wh-comment" data-comment-id="c1" data-comment-text="note">there</span>!</p>`;
+    const out = stripPaginationWrappers(html);
+    expect(out).toContain("Hi there!");
+    expect(out).not.toContain("data-comment-id");
+    expect(out).not.toContain("wh-comment");
+  });
+
   it("merges three soft-split pieces but keeps a following normal paragraph", () => {
     const html =
       `<div class="page-body">` +

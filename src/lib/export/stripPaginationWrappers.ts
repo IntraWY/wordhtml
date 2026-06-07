@@ -10,7 +10,8 @@ export function stripPaginationWrappers(html: string): string {
   const hasWrappers =
     html.includes("page-node") || html.includes("page-body");
   const hasSoftSplit = html.includes("data-soft-split");
-  if (!hasWrappers && !hasSoftSplit) return html;
+  const hasComments = html.includes("data-comment-id");
+  if (!hasWrappers && !hasSoftSplit && !hasComments) return html;
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
@@ -24,6 +25,14 @@ export function stripPaginationWrappers(html: string): string {
     while (el.firstChild) {
       parent.insertBefore(el.firstChild, el);
     }
+    parent.removeChild(el);
+  });
+
+  // Unwrap comment spans (B5) — review annotations never ship in exports.
+  doc.querySelectorAll("span[data-comment-id]").forEach((el) => {
+    const parent = el.parentNode;
+    if (!parent) return;
+    while (el.firstChild) parent.insertBefore(el.firstChild, el);
     parent.removeChild(el);
   });
 

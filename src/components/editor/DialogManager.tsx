@@ -67,6 +67,10 @@ const DistributionDialog = dynamic(
   () => import("./DistributionDialog").then((m) => m.DistributionDialog),
   { ssr: false, loading: () => <DialogLoader label="กำลังโหลด สำเนาเรียน…" /> }
 );
+const CommentsPanel = dynamic(
+  () => import("./CommentsPanel").then((m) => m.CommentsPanel),
+  { ssr: false }
+);
 
 interface DialogManagerProps {
   editor: Editor | null;
@@ -115,6 +119,7 @@ export function DialogManager({ editor }: DialogManagerProps) {
   const officialLetterOpen = useUiStore((s) => s.officialLetterOpen);
   const crossRefOpen = useUiStore((s) => s.crossRefOpen);
   const distributionOpen = useUiStore((s) => s.distributionOpen);
+  const commentsOpen = useUiStore((s) => s.commentsOpen);
   const batchConvertOpen = useUiStore((s) => s.batchConvertOpen);
   const commandPaletteOpen = useUiStore((s) => s.commandPaletteOpen);
   const templatePanelOpen = useTemplateStore((s) => s.panelOpen);
@@ -165,6 +170,7 @@ export function DialogManager({ editor }: DialogManagerProps) {
       {officialLetterOpen && <OfficialLetterDialog />}
       {crossRefOpen && <CrossRefDialog editor={editor} />}
       {distributionOpen && <DistributionDialog />}
+      {commentsOpen && <CommentsPanel editor={editor} />}
       {exportDialogOpen && <ExportDialog />}
       <DialogSystem />
       {batchConvertOpen && <BatchUploadDialog />}
