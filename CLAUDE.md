@@ -54,8 +54,10 @@ src/
 │   ├── layout.tsx                # root layout, fonts, metadata
 │   ├── globals.css               # Tailwind + design tokens + .prose-editor / .paper +
 │   │                             # image-align styles + ruler styles + print stylesheet
-│   ├── page.tsx                  # / landing
-│   ├── app/page.tsx              # /app editor
+│   ├── page.tsx                  # / editor (EditorShell) — the app lives at root
+│   ├── landing/page.tsx          # /landing marketing page
+│   ├── procurement/page.tsx      # /procurement — Thai 3-stage จัดซื้อจัดจ้าง builder
+│   ├── privacy/page.tsx          # /privacy
 │   └── help/page.tsx             # /help docs
 ├── components/
 │   ├── editor/
@@ -280,7 +282,15 @@ VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-s
 4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
 
 ### Known Pending Issues
-- None — Phase 7 production-hardening complete and tested.
+- **Single paragraph taller than one page does not split mid-text.** Holistic reflow (Phase 8) breaks *between* blocks and fills each page to the limit, but a single block (e.g. one giant pasted paragraph with no line breaks) that exceeds the page height still stays on one page and is clipped by the frame. Intra-paragraph soft-splitting (plan Task 8/9 in `docs/superpowers/plans/2026-06-07-pagination-reflow-foundation.md`) is the remaining piece. Normal multi-paragraph documents reflow correctly. `pasteCleanup` already splits Word `<br>` runs into paragraphs, so real Word pastes rarely hit this.
+- Roadmap (own specs/plans): Sub-project B (Thai official-document templates + mail-merge hardening + batch export) and Sub-project C (IndexedDB crash-safe draft recovery + cloud history sync) — see `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
+
+### Phase 8 — Pagination Reflow Foundation (2026-06-07)
+Editor route is `/` (root, `src/app/page.tsx` → `EditorShell`); `/landing` is marketing; `/procurement` is the Thai 3-stage จัดซื้อจัดจ้าง builder. Live Chrome exploration found three real "หน้าเพี้ยน" defects; fixed two of three:
+1. **Ghost pages on open/paste fixed** — `src/lib/pagination/normalizeIncomingHtml.ts` strips `.page-node/.page-body/.page-break` wrappers from incoming HTML. Wired into `loadFile` (.docx/.html/.md); pasted external HTML is already flattened by `pasteCleanup`'s `normalizePastedStructure` (regression-guarded).
+2. **Mis-distribution fixed** — replaced greedy one-split-per-cycle (which gave 34/2/2/2/2/2/2 for 40 paragraphs) with holistic `src/lib/pagination/repaginate.ts` (`buildRepaginateTransaction`) using the pure `computePageBreaks` fill-to-limit distributor. One transaction rebuilds the whole page flow; 32px safety margin prevents clipping; caret tracked by (block index, offset) and restored; `addToHistory:false` keeps reflow out of the undo stack. Runs on idle (covers insert + delete/merge). Verified live: 40 paragraphs → 5 evenly-filled pages, caret stable, Ctrl+Z undoes the edit not the reflow.
+3. **Still open** — intra-paragraph splitting (see Known Pending Issues).
+Tests: `computePageBreaks.test.ts`, `normalizeIncomingHtml.test.ts`, paste regression guards, and `tests/e2e/pagination-reflow.spec.ts` (ghost-page + even-distribution). 411 unit tests pass.
 
 ### Phase 7 — Production Hardening (2026-06-06)
 1. **Repo cleanup** — removed 22 committed QA-screenshot PNGs + `tsc-errors.txt` from the repo root (gitignored `/*.png` + `tsc-errors.txt`, keeping `tests/e2e/screenshots/`); moved ~15 audit/plan markdown files into `docs/audits/` and `docs/plans/`.
@@ -458,7 +468,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.5**
+- **Current version**: **v0.1.26**
 
 ### Patch bump rule (deploy default)
 
