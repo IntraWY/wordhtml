@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wordhtml — ข้อเสนอฟีเจอร์ (Feature Proposal)</title>
+<style>
+  :root{
+    --word-blue:#2B579A;       /* Microsoft Word primary */
+    --word-blue-dark:#1E3A6B;
+    --word-blue-soft:#D4E0F0;
+    --word-blue-tint:#EFF4FB;
+    --canvas:#F3F3F3;
+    --paper:#FFFFFF;
+    --ink:#1A1A1A;
+    --muted:#5A6472;
+    --line:#E2E6EC;
+    --p1:#C0392B;  /* red */
+    --p2:#D9821E;  /* orange */
+    --p3:#7A8794;  /* gray */
+    --ok:#2E7D32;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Segoe UI","IBM Plex Sans Thai",Tahoma,Arial,sans-serif;
+    background:var(--canvas);
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== Word-style ribbon header ===== */
+  .ribbon{
+    position:sticky;top:0;z-index:50;
+    background:linear-gradient(180deg,var(--word-blue) 0%,var(--word-blue-dark) 100%);
+    color:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);
+  }
+  .ribbon-inner{
+    max-width:880px;margin:0 auto;padding:14px 28px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .ribbon .logo{
+    width:38px;height:38px;border-radius:6px;background:#fff;color:var(--word-blue);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;
+    box-shadow:inset 0 0 0 2px var(--word-blue-soft);
+  }
+  .ribbon h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px;}
+  .ribbon .sub{font-size:12.5px;opacity:.85;margin-top:1px;}
+  .ribbon .ver{margin-left:auto;font-size:12px;background:rgba(255,255,255,.16);
+    padding:5px 11px;border-radius:20px;white-space:nowrap;}
+  .ribbon-tabs{
+    background:var(--word-blue-dark);font-size:12.5px;
+  }
+  .ribbon-tabs .ti{max-width:880px;margin:0 auto;padding:0 28px;display:flex;gap:2px;}
+  .ribbon-tabs span{padding:7px 14px;color:#cfe0f7;}
+  .ribbon-tabs span.active{background:var(--canvas);color:var(--word-blue);font-weight:700;
+    border-radius:6px 6px 0 0;}
+
+  /* ===== Paper ===== */
+  .paper{
+    max-width:880px;margin:26px auto 60px;background:var(--paper);
+    box-shadow:0 1px 4px rgba(0,0,0,.10),0 12px 28px rgba(0,0,0,.07);
+    border-radius:3px;padding:54px 64px 64px;
+  }
+  .doc-title{font-size:27px;font-weight:800;color:var(--word-blue);margin:0 0 4px;}
+  .doc-meta{color:var(--muted);font-size:13.5px;margin-bottom:8px;}
+  .lead{font-size:15px;color:#33404e;border-left:4px solid var(--word-blue-soft);
+    background:var(--word-blue-tint);padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0 30px;}
+
+  h2.section{
+    font-size:20px;color:var(--word-blue);margin:40px 0 6px;padding-bottom:7px;
+    border-bottom:2px solid var(--word-blue-soft);font-weight:800;
+    display:flex;align-items:center;gap:10px;
+  }
+  h2.section .tag{font-size:12px;background:var(--word-blue);color:#fff;
+    padding:2px 9px;border-radius:5px;font-weight:700;}
+  .section-note{color:var(--muted);font-size:13.5px;margin:4px 0 18px;}
+
+  /* ===== Summary table ===== */
+  table.roadmap{width:100%;border-collapse:collapse;margin:14px 0 8px;font-size:13.5px;}
+  table.roadmap th{background:var(--word-blue);color:#fff;text-align:left;padding:9px 11px;font-weight:600;}
+  table.roadmap td{padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top;}
+  table.roadmap tr:nth-child(even) td{background:#FAFBFD;}
+  table.roadmap a{color:var(--word-blue);text-decoration:none;font-weight:600;}
+  table.roadmap a:hover{text-decoration:underline;}
+
+  /* ===== TOC ===== */
+  .toc{background:#FAFBFD;border:1px solid var(--line);border-radius:10px;padding:16px 22px;margin:24px 0;}
+  .toc b{display:block;color:var(--word-blue);margin-bottom:8px;font-size:14px;}
+  .toc ul{margin:0;padding-left:18px;columns:2;column-gap:30px;}
+  .toc li{margin:3px 0;font-size:13.5px;}
+  .toc a{color:#33404e;text-decoration:none;}
+  .toc a:hover{color:var(--word-blue);text-decoration:underline;}
+
+  /* ===== Feature cards ===== */
+  .card{
+    border:1px solid var(--line);border-radius:11px;padding:16px 18px;margin:14px 0;
+    background:#fff;transition:box-shadow .15s;
+  }
+  .card:hover{box-shadow:0 4px 14px rgba(43,87,154,.10);}
+  .card-head{display:flex;align-items:flex-start;gap:11px;flex-wrap:wrap;}
+  .card-id{font-weight:800;color:var(--word-blue);font-size:14px;
+    background:var(--word-blue-tint);border:1px solid var(--word-blue-soft);
+    border-radius:6px;padding:2px 8px;white-space:nowrap;}
+  .card-title{font-weight:700;font-size:15.5px;flex:1;min-width:200px;}
+  .card-title .en{color:var(--muted);font-weight:500;font-size:13px;}
+  .badge{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap;}
+  .p1{background:var(--p1);} .p2{background:var(--p2);} .p3{background:var(--p3);}
+  .card-body{margin:9px 0 0;font-size:13.8px;color:#33404e;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:12.5px;color:var(--muted);
+    border-top:1px dashed var(--line);padding-top:9px;}
+  .meta-row b{color:#33404e;font-weight:600;}
+  .stars{color:var(--word-blue);letter-spacing:1px;}
+  .ok{color:var(--ok);font-weight:700;}
+  .warn{color:var(--p2);font-weight:700;}
+  code{background:#F1F3F6;border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+    font-family:"Cascadia Code",Consolas,monospace;font-size:12px;color:var(--word-blue-dark);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:18px;font-size:12.5px;color:var(--muted);
+    background:#FAFBFD;border:1px solid var(--line);border-radius:8px;padding:11px 16px;margin:8px 0 4px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+
+  .footer-note{margin-top:42px;padding:18px 20px;background:var(--word-blue-tint);
+    border-radius:10px;font-size:13.5px;color:#33404e;border:1px solid var(--word-blue-soft);}
+  .footer-note b{color:var(--word-blue);}
+
+  @media print{
+    body{background:#fff;}
+    .ribbon,.ribbon-tabs{position:static;box-shadow:none;}
+    .paper{box-shadow:none;margin:0;max-width:none;padding:24px;}
+    .card{break-inside:avoid;}
+    @page{size:A4;margin:14mm;}
+  }
+  @media (max-width:640px){
+    .paper{padding:28px 20px;}
+    .toc ul{columns:1;}
+  }
+</style>
+</head>
+<body>
+
+<header class="ribbon">
+  <div class="ribbon-inner">
+    <div class="logo">W</div>
+    <div>
+      <h1>wordhtml — ข้อเสนอฟีเจอร์เพิ่มเติม</h1>
+      <div class="sub">Feature &amp; System Proposal · จัดทำจากการสำรวจโค้ดจริง</div>
+    </div>
+    <div class="ver">v0.1.28 · 7 มิ.ย. 2026</div>
+  </div>
+  <div class="ribbon-tabs">
+    <div class="ti">
+      <span class="active">หน้าแรก (Home)</span>
+      <span>แทรก (Insert)</span>
+      <span>เค้าโครง (Layout)</span>
+      <span>ทำความสะอาด (Clean)</span>
+      <span>มุมมอง (View)</span>
+    </div>
+  </div>
+</header>
+
+<main class="paper">
+  <p class="doc-title">สิ่งที่ควรเพิ่มให้ wordhtml</p>
+  <div class="doc-meta">โรดแมปฟีเจอร์ที่คัดมาแล้ว · จัดลำดับความสำคัญ P1 → P3 · ทุกข้อทำงานได้แบบ static client (ไม่มี server)</div>
+
+  <div class="lead">
+    เอกสารนี้สรุปจากการสำรวจโค้ดทั้งโปรเจคด้วยเอเจนต์ 3 ตัว เพื่อ <b>ไม่เสนอของที่มีอยู่แล้ว</b>
+    (เช่น TOC, นับคำ, Find&amp;Replace, mail-merge, ตัดย่อหน้าข้ามหน้า, ตัวช่วยภาษาไทย ฯลฯ ทำเสร็จหมดแล้ว)
+    แต่เสนอ 3 กลุ่ม: <b>(A)</b> เก็บงานที่สร้างค้างไว้ให้จบ · <b>(B)</b> ทำให้เหมือน Microsoft Word มากขึ้น ·
+    <b>(C)</b> ระบบงานเอกสารราชการไทยโดยเฉพาะ
+  </div>
+
+  <div class="legend">
+    <span><b style="color:var(--ink)">ลำดับ:</b></span>
+    <span><span class="badge p1">P1</span> ทำก่อน · คุ้มสุด</span>
+    <span><span class="badge p2">P2</span> ทำตามมา</span>
+    <span><span class="badge p3">P3</span> ทำทีหลัง · ใหญ่/เสี่ยง</span>
+    <span><b>ความพยายาม:</b> <span class="stars">★</span> เล็ก · <span class="stars">★★</span> กลาง · <span class="stars">★★★</span> ใหญ่</span>
+  </div>
+
+  <!-- ===== Summary roadmap ===== -->
+  <h2 class="section" id="summary"><span class="tag">สรุป</span> ตารางโรดแมป (Roadmap)</h2>
+  <table class="roadmap">
+    <thead><tr><th style="width:62px">รหัส</th><th>ฟีเจอร์</th><th style="width:60px">ลำดับ</th><th style="width:74px">พยายาม</th><th style="width:90px">กลุ่ม</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#a1">A1</a></td><td>แก้ไขหัว/ท้ายกระดาษแบบ rich-text</td><td><span class="badge p1">P1</span></td><td class="stars">★★</td><td>เก็บงานค้าง</td></tr>
+      <tr><td><a href="#b1">B1</a></td><td>เชิงอรรถ / อ้างอิงท้ายเรื่อง (Footnotes)</td><td><span class="badge p1">P1</span></td><td class="stars">★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#b2">B2</a></td><td>คำบรรยายรูป/ตาราง + เลขอัตโนมัติ</td><td><span class="badge p1">P1</span></td><td class="stars">★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#b3">B3</a></td><td>ชุดสไตล์ย่อหน้า (Style Gallery)</td><td><span class="badge p1">P1</span></td><td class="stars">★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#b4">B4</a></td><td>ลายน้ำ "ร่าง / สำเนา" (Watermark)</td><td><span class="badge p1">P1</span></td><td class="stars">★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#c1">C1</a></td><td>ตัวช่วยร่างหนังสือราชการ (Wizard)</td><td><span class="badge p1">P1</span></td><td class="stars">★★</td><td>ราชการไทย</td></tr>
+      <tr><td><a href="#c2">C2</a></td><td>บล็อกลงนาม + เลขหนังสืออัตโนมัติ</td><td><span class="badge p1">P1</span></td><td class="stars">★★</td><td>ราชการไทย</td></tr>
+      <tr><td><a href="#a2">A2</a></td><td>หน้าแรก/คู่-คี่ ต่างกัน (layout จริง)</td><td><span class="badge p2">P2</span></td><td class="stars">★★</td><td>เก็บงานค้าง</td></tr>
+      <tr><td><a href="#b5">B5</a></td><td>คอมเมนต์/หมายเหตุ (Comments)</td><td><span class="badge p2">P2</span></td><td class="stars">★★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#b6">B6</a></td><td>จัดคอลัมน์หลายคอลัมน์</td><td><span class="badge p2">P2</span></td><td class="stars">★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#b7">B7</a></td><td>บุ๊กมาร์ก / อ้างอิงข้าม (ดูข้อ X)</td><td><span class="badge p2">P2</span></td><td class="stars">★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#c3">C3</a></td><td>รายชื่อผู้รับ / "สำเนาเรียน" ส่งทีละชุด</td><td><span class="badge p2">P2</span></td><td class="stars">★★</td><td>ราชการไทย</td></tr>
+      <tr><td><a href="#c4">C4</a></td><td>เลขหน้า "หน้า X/Y" ไทย + บาทถ้วนในตาราง</td><td><span class="badge p2">P2</span></td><td class="stars">★</td><td>ราชการไทย</td></tr>
+      <tr><td><a href="#a3">A3</a></td><td>ตัดตาราง/รูปข้ามหน้า</td><td><span class="badge p3">P3</span></td><td class="stars">★★★</td><td>เก็บงานค้าง</td></tr>
+      <tr><td><a href="#b8">B8</a></td><td>ติดตามการแก้ไข (Track Changes)</td><td><span class="badge p3">P3</span></td><td class="stars">★★★</td><td>เหมือน Word</td></tr>
+      <tr><td><a href="#b9">B9</a></td><td>การอ้างอิง/บรรณานุกรม · กล่องข้อความลอย</td><td><span class="badge p3">P3</span></td><td class="stars">★★★</td><td>เหมือน Word</td></tr>
+    </tbody>
+  </table>
+
+  <div class="toc">
+    <b>สารบัญ</b>
+    <ul>
+      <li><a href="#secA">A · เก็บงานที่สร้างค้างไว้ให้จบ</a></li>
+      <li><a href="#secB">B · ทำให้เหมือน Microsoft Word</a></li>
+      <li><a href="#secC">C · ระบบงานเอกสารราชการไทย</a></li>
+      <li><a href="#next">ขั้นต่อไป</a></li>
+    </ul>
+  </div>
+
+  <!-- =================== SECTION A =================== -->
+  <h2 class="section" id="secA"><span class="tag">A</span> เก็บงานที่สร้างค้างไว้ให้จบ (Finish)</h2>
+  <p class="section-note">โค้ดมีโครงไว้แล้วบางส่วน — เก็บให้ครบจะได้ฟีเจอร์เร็วและเสี่ยงน้อย</p>
+
+  <div class="card" id="a1">
+    <div class="card-head">
+      <span class="card-id">A1</span>
+      <span class="card-title">แก้ไขหัว/ท้ายกระดาษแบบพิมพ์ได้จริง <span class="en">(Header/Footer rich-text editing)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      ตอนนี้กรอกหัว/ท้ายได้ผ่านกล่องข้อความใน dialog เท่านั้น แต่ node สำหรับแก้แบบ WYSIWYG มีอยู่แล้ว
+      (<code>pageHeader.ts</code> / <code>pageFooter.ts</code>) เพียงแต่ยังไม่ได้ต่อเข้าโครงสร้างหน้าและไม่มีปุ่มเปิดโหมดแก้
+      → ทำให้แก้หัว/ท้ายได้เหมือนพิมพ์ในเนื้อหา (จัดฟอนต์ ใส่โลโก้ เลขหน้า) ตรงในกระดาษ
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง — งานราชการต้องมีหัวกระดาษ/ตราครุฑ/เลขหน้าเกือบทุกฉบับ</span>
+      <span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ ทำงานแบบ static ได้</span>
+      <span><b>แตะ:</b> <code>pageNode.ts</code>, <code>RibbonTabLayout</code>, <code>HeaderFooterDialog</code></span>
+    </div>
+  </div>
+
+  <div class="card" id="a2">
+    <div class="card-head">
+      <span class="card-id">A2</span>
+      <span class="card-title">หน้าแรก / หน้าคู่-คี่ ต่างกันจริง <span class="en">(Different first / odd-even layout)</span></span>
+      <span class="badge p2">P2</span>
+    </div>
+    <div class="card-body">
+      มีช่องตั้งค่า "หน้าแรกต่าง" และ "คู่-คี่ต่าง" ใน dialog แล้ว (<code>HeaderFooterDialog.tsx</code>) และมีตัว resolve
+      (<code>headerFooterResolve.ts</code>) — แต่ปัจจุบันเปลี่ยนแค่ "เนื้อหาหัว/ท้าย" ยังไม่เปลี่ยน layout จริง
+      → ทำให้หน้าแรกเว้นหัวกระดาษ/ระยะขอบต่างได้ (เช่น หน้าแรกมีตราครุฑเต็ม หน้าถัดไปย่อ)
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> กลาง-สูง สำหรับเอกสารทางการ</span>
+      <span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span>
+      <span><b>แตะ:</b> <code>pageNode.ts</code>, pagination layout</span>
+    </div>
+  </div>
+
+  <div class="card" id="a3">
+    <div class="card-head">
+      <span class="card-id">A3</span>
+      <span class="card-title">ตัดตาราง/รูปข้ามหน้า <span class="en">(Table/Image splitting)</span></span>
+      <span class="badge p3">P3</span>
+    </div>
+    <div class="card-body">
+      ปัจจุบันตาราง/รูปที่ยาวเกินหน้า จะถูกย้ายทั้งก้อนไปหน้าถัดไป (atomic) ทำให้เหลือที่ว่างด้านล่าง
+      → ขยาย <code>splitter.ts</code> ให้ตัดกลางตารางได้ (พร้อมซ้ำหัวตารางบนหน้าใหม่) เหมือน Word
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> กลาง</span>
+      <span><b>พยายาม:</b> <span class="stars">★★★</span></span>
+      <span class="warn">⚠ เสี่ยง — กระทบ engine จัดหน้า ควรมีเทสต์แน่น</span>
+      <span><b>แตะ:</b> <code>pagination/splitter.ts</code>, <code>engine.ts</code></span>
+    </div>
+  </div>
+
+  <!-- =================== SECTION B =================== -->
+  <h2 class="section" id="secB"><span class="tag">B</span> ทำให้เหมือน Microsoft Word (Parity)</h2>
+  <p class="section-note">ฟีเจอร์ที่ผู้ใช้ Word คุ้นเคยแต่แอปยังไม่มี — ส่วนใหญ่ทำได้ฝั่ง client ล้วน</p>
+
+  <div class="card" id="b1">
+    <div class="card-head">
+      <span class="card-id">B1</span>
+      <span class="card-title">เชิงอรรถ / อ้างอิงท้ายเรื่อง <span class="en">(Footnotes / Endnotes)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      ใส่ตัวเลขยกกำลังในเนื้อหา แล้วแสดงข้อความเชิงอรรถท้ายหน้า/ท้ายเอกสาร พร้อมเลขอัตโนมัติที่ปรับเมื่อเพิ่ม/ลบ
+      → จำเป็นมากกับรายงานและเอกสารวิชาการ/ราชการ
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span>
+      <span><b>เพิ่ม:</b> Tiptap node ใหม่ + export ทุกฟอร์แมต</span>
+    </div>
+  </div>
+
+  <div class="card" id="b2">
+    <div class="card-head">
+      <span class="card-id">B2</span>
+      <span class="card-title">คำบรรยายรูป/ตาราง + เลขอัตโนมัติ <span class="en">(Captions)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      เพิ่ม "รูปที่ 1", "ตารางที่ 2" ใต้รูป/ตาราง พร้อมเลขรันอัตโนมัติและอ้างอิงข้าม ("ดังรูปที่ 1")
+      → ต่อยอดจาก <code>imageWithAlign.ts</code> ที่มีอยู่
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง (รายงานราชการ)</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span><span><b>แตะ:</b> <code>imageWithAlign.ts</code>, node ใหม่</span>
+    </div>
+  </div>
+
+  <div class="card" id="b3">
+    <div class="card-head">
+      <span class="card-id">B3</span>
+      <span class="card-title">ชุดสไตล์ย่อหน้า / แกลเลอรีสไตล์ <span class="en">(Style Gallery)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      นิยามสไตล์ใช้ซ้ำ (ปกติ / หัวข้อ 1-3 / ชื่อเรื่อง / คำพูดอ้างอิง) แล้วคลิกเดียวเปลี่ยนทั้งย่อหน้าให้สม่ำเสมอทั้งเอกสาร
+      → ลดงานจัดฟอร์แมตซ้ำ ๆ และทำให้เอกสารดูเป็นระเบียบแบบมืออาชีพ
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span>
+      <span><b>ต่อยอด:</b> <code>paragraphFormat.ts</code> + กลุ่มใหม่ใน RibbonTabHome</span>
+    </div>
+  </div>
+
+  <div class="card" id="b4">
+    <div class="card-head">
+      <span class="card-id">B4</span>
+      <span class="card-title">ลายน้ำ "ร่าง / สำเนา / ลับ" <span class="en">(Watermark)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      ใส่ลายน้ำข้อความหรือรูปทแยงกลางหน้า ("ร่าง", "สำเนาถูกต้อง", "ลับ") แสดงในทุกหน้าและติดไปกับ PDF/พิมพ์
+      → คุณค่าสูงมากต่อราชการ ทำได้ง่ายด้วย CSS overlay
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง</span><span><b>พยายาม:</b> <span class="stars">★</span> (เล็ก คุ้มสุดในกลุ่ม)</span>
+      <span class="ok">✓ static</span><span><b>แตะ:</b> page setup + print/PDF css</span>
+    </div>
+  </div>
+
+  <div class="card" id="b5">
+    <div class="card-head">
+      <span class="card-id">B5</span>
+      <span class="card-title">คอมเมนต์ / หมายเหตุ <span class="en">(Comments / Annotations)</span></span>
+      <span class="badge p2">P2</span>
+    </div>
+    <div class="card-body">
+      ไฮไลต์ข้อความแล้วแนบคอมเมนต์ แสดงเป็นแถบด้านข้าง — เก็บลงไฟล์โปรเจค <code>.wordhtml.json</code> ได้เลย (ไม่ต้องมี server)
+      → ดีสำหรับตรวจทาน/ส่งกลับแก้
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง (งานเป็นทีม)</span><span><b>พยายาม:</b> <span class="stars">★★★</span></span>
+      <span class="ok">✓ static (เก็บใน project json)</span><span><b>ต่อยอด:</b> <code>project.ts</code></span>
+    </div>
+  </div>
+
+  <div class="card" id="b6">
+    <div class="card-head">
+      <span class="card-id">B6</span>
+      <span class="card-title">จัดหลายคอลัมน์ <span class="en">(Multi-column layout)</span></span>
+      <span class="badge p2">P2</span>
+    </div>
+    <div class="card-body">
+      แบ่งเนื้อหาเป็น 2-3 คอลัมน์แบบหนังสือพิมพ์/แผ่นพับ ผ่าน CSS columns ระดับ section
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> กลาง</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span>
+    </div>
+  </div>
+
+  <div class="card" id="b7">
+    <div class="card-head">
+      <span class="card-id">B7</span>
+      <span class="card-title">บุ๊กมาร์ก / อ้างอิงข้าม <span class="en">(Bookmarks / Cross-references)</span></span>
+      <span class="badge p2">P2</span>
+    </div>
+    <div class="card-body">
+      ปักหมุดตำแหน่งในเอกสาร แล้วสร้างลิงก์ "ดูข้อ 3" / "ดูหน้า 5" ที่อัปเดตเลขเองเมื่อเนื้อหาขยับ
+      → ต่อยอดจากระบบ id หัวข้อที่มีใน <code>headingWithId.ts</code>
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> กลาง</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span><span><b>ต่อยอด:</b> <code>headingWithId.ts</code>, <code>toc.ts</code></span>
+    </div>
+  </div>
+
+  <div class="card" id="b8">
+    <div class="card-head">
+      <span class="card-id">B8</span>
+      <span class="card-title">ติดตามการแก้ไข <span class="en">(Track Changes)</span></span>
+      <span class="badge p3">P3</span>
+    </div>
+    <div class="card-body">
+      แสดงข้อความที่เพิ่ม/ลบเป็นสีและขีดฆ่า พร้อมปุ่มยอมรับ/ปฏิเสธทีละจุด — เป็นฟีเจอร์ใหญ่และซับซ้อนที่สุด
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง แต่เฉพาะกลุ่ม</span><span><b>พยายาม:</b> <span class="stars">★★★</span></span>
+      <span class="warn">⚠ ใหญ่/ซับซ้อน — แนะนำทำทีหลัง</span>
+    </div>
+  </div>
+
+  <div class="card" id="b9">
+    <div class="card-head">
+      <span class="card-id">B9</span>
+      <span class="card-title">การอ้างอิง/บรรณานุกรม · กล่องข้อความลอย <span class="en">(Citations · Text boxes)</span></span>
+      <span class="badge p3">P3</span>
+    </div>
+    <div class="card-body">
+      จัดการรายการอ้างอิงและสร้างบรรณานุกรมท้ายเล่ม / กล่องข้อความลอยที่จัดวางอิสระ — ลำดับความสำคัญต่ำสำหรับงานทั่วไป
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> เฉพาะกลุ่มวิชาการ</span><span><b>พยายาม:</b> <span class="stars">★★–★★★</span></span>
+    </div>
+  </div>
+
+  <!-- =================== SECTION C =================== -->
+  <h2 class="section" id="secC"><span class="tag">C</span> ระบบงานเอกสารราชการไทย (Thai-gov)</h2>
+  <p class="section-note">จุดแข็งเฉพาะตัวของแอปนี้ — ต่อยอดจากตัวช่วยภาษาไทยและ template gallery ที่มีอยู่แล้ว</p>
+
+  <div class="card" id="c1">
+    <div class="card-head">
+      <span class="card-id">C1</span>
+      <span class="card-title">ตัวช่วยร่างหนังสือราชการ <span class="en">(Thai official-letter wizard)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      ฟอร์มกรอกทีละช่อง (เลขที่หนังสือ · ส่วนราชการ · วันที่ · เรื่อง · เรียน · อ้างถึง · สิ่งที่ส่งมาด้วย · เนื้อความ)
+      แล้วสร้างเอกสารตามระเบียบงานสารบรรณให้ถูกฟอร์แมตทันที (หนังสือภายนอก/บันทึกข้อความ/ประกาศ/คำสั่ง)
+      → <b>คุณค่าสูงสุดในเอกสารนี้</b> ต่อยอดจาก <code>templateGallery.ts</code> + <code>/procurement</code>
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูงสุด</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span><span><b>ต่อยอด:</b> <code>templateGallery.ts</code>, mergeFields</span>
+    </div>
+  </div>
+
+  <div class="card" id="c2">
+    <div class="card-head">
+      <span class="card-id">C2</span>
+      <span class="card-title">บล็อกลงนาม + เลขหนังสืออัตโนมัติ <span class="en">(Signature block + running number)</span></span>
+      <span class="badge p1">P1</span>
+    </div>
+    <div class="card-body">
+      บล็อกลงนามมาตรฐาน (เว้นบรรทัดลายเซ็น / ชื่อ-นามสกุล / ตำแหน่ง) แทรกคลิกเดียว
+      + token เลขที่หนังสือแบบรันอัตโนมัติ (เช่น ศธ ๐๔xxx/ปี) ต่อยอดจากระบบ page token ที่มีอยู่
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> สูง</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span><span><b>ต่อยอด:</b> <code>pageTokens.ts</code>, placeholderField</span>
+    </div>
+  </div>
+
+  <div class="card" id="c3">
+    <div class="card-head">
+      <span class="card-id">C3</span>
+      <span class="card-title">รายชื่อผู้รับ / "สำเนาเรียน" ส่งทีละชุด <span class="en">(Distribution list)</span></span>
+      <span class="badge p2">P2</span>
+    </div>
+    <div class="card-body">
+      จากรายชื่อผู้รับหลายหน่วยงาน สร้างหนังสือทีละฉบับ (เปลี่ยนคำขึ้นต้น/เรียน อัตโนมัติ) แล้วรวมเป็น ZIP
+      → ต่อยอดโดยตรงจาก <code>exportMailMerge.ts</code> ที่ทำเสร็จแล้ว
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> กลาง-สูง</span><span><b>พยายาม:</b> <span class="stars">★★</span></span>
+      <span class="ok">✓ static</span><span><b>ต่อยอด:</b> <code>exportMailMerge.ts</code></span>
+    </div>
+  </div>
+
+  <div class="card" id="c4">
+    <div class="card-head">
+      <span class="card-id">C4</span>
+      <span class="card-title">เลขหน้า "หน้า ๑/๕" ไทย + บาทถ้วนในตารางอัตโนมัติ <span class="en">(Thai page no. + auto baht)</span></span>
+      <span class="badge p2">P2</span>
+    </div>
+    <div class="card-body">
+      เลขหน้าแบบเลขไทย "หน้า ๑/๕" ในหัว/ท้ายกระดาษ + เปิด UI ให้ใช้ฟิลเตอร์ <code>{{ยอดเงิน|baht}}</code>
+      (แปลงเป็น "หนึ่งพันบาทถ้วน") ที่มีในโค้ดแล้วได้สะดวกขึ้น
+    </div>
+    <div class="meta-row">
+      <span><b>คุณค่า:</b> กลาง</span><span><b>พยายาม:</b> <span class="stars">★</span></span>
+      <span class="ok">✓ static (ตรรกะมีแล้ว)</span><span><b>ต่อยอด:</b> <code>thai/*</code>, <code>mergeFields.ts</code></span>
+    </div>
+  </div>
+
+  <!-- =================== NEXT =================== -->
+  <h2 class="section" id="next"><span class="tag">→</span> ขั้นต่อไป</h2>
+  <div class="footer-note">
+    เอกสารนี้เป็น <b>เมนูให้เลือก</b> — ยังไม่ได้แตะโค้ดแอปจริง<br><br>
+    <b>คำแนะนำลำดับ:</b> เริ่มจากกลุ่ม <b>P1</b> ที่คุ้มและเสี่ยงต่ำก่อน — แนะนำ
+    <b>C1 (ตัวช่วยร่างหนังสือราชการ)</b> และ <b>B4 (ลายน้ำ)</b> เป็นจุดเริ่มที่ให้ผลเร็วและเห็นผลชัดกับงานของคุณ
+    ตามด้วย <b>A1 (หัว/ท้ายกระดาษ)</b> และ <b>B1/B2/B3</b><br><br>
+    เมื่อคุณเลือกฟีเจอร์ที่อยากได้ บอกรหัส (เช่น "เอา C1 กับ B4") แล้วผมจะทำ spec + แผน + ลงมือสร้างจริงให้เป็นรอบ ๆ ต่อไปครับ
+  </div>
+</main>
+
+</body>
+</html>
