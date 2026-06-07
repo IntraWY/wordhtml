@@ -50,4 +50,14 @@ describe("Thai date page tokens", () => {
   it("{date_th_short} renders a short Thai date", () => {
     expect(replacePageTokens("{date_th_short}", ctx)).toBe("๗ มิ.ย. ๒๕๖๙");
   });
+
+  it("{page_th}/{total_th} render page numbers in Thai numerals", () => {
+    const c = { pageNumber: 3, totalPages: 12, now: new Date(2026, 5, 7) };
+    expect(replacePageTokens("หน้า {page_th}/{total_th}", c)).toBe("หน้า ๓/๑๒");
+  });
+
+  it("{page}/{total} stay Arabic", () => {
+    const c = { pageNumber: 3, totalPages: 12, now: new Date(2026, 5, 7) };
+    expect(replacePageTokens("{page}/{total}", c)).toBe("3/12");
+  });
 });

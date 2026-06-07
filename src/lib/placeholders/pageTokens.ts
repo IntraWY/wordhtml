@@ -1,6 +1,6 @@
 import { escapeHtml } from "./escapeHtml";
 import { PAGE_TOKEN_REGEX } from "./constants";
-import { formatThaiDate } from "@/lib/thai";
+import { formatThaiDate, toThaiDigits } from "@/lib/thai";
 
 export interface PageTokenContext {
   pageNumber: number;
@@ -13,6 +13,7 @@ export interface PageTokenContext {
 /**
  * Replace header/footer/body tokens:
  *   {page} {total} {date}
+ *   {page_th} {total_th}  page/total in Thai numerals (๑, ๕)
  *   {date_th}        full Buddhist-era date, Thai numerals  (๗ มิถุนายน ๒๕๖๙)
  *   {date_th_short}  short Buddhist-era date, Thai numerals (๗ มิ.ย. ๒๕๖๙)
  *   {date_en}        Gregorian date, Arabic numerals        (7 มิถุนายน 2026)
@@ -26,6 +27,8 @@ export function replacePageTokens(html: string, ctx: PageTokenContext): string {
   const values: Record<string, string> = {
     page: String(ctx.pageNumber),
     total: String(ctx.totalPages),
+    page_th: toThaiDigits(ctx.pageNumber),
+    total_th: toThaiDigits(ctx.totalPages),
     date: localeDate,
     date_th: formatThaiDate(now),
     date_th_short: formatThaiDate(now, { month: "short" }),

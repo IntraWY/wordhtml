@@ -10,6 +10,6 @@ export const MERGE_FIELD_FILTERS = ["baht", "thai", "date"] as const;
 export const FILTERED_MERGE_FIELD_REGEX_SOURCE =
   "\\{\\{([A-Za-z_\\u0E00-\\u0E7F][\\w\\u0E00-\\u0E7F_]*)\\|(baht|thai|date)\\}\\}";
 
-/** Page/header/footer tokens: {page}, {total}, {date}, {date_th}, {date_th_short}, {date_en} */
+/** Page/header/footer tokens: {page}, {total}, {page_th}, {total_th}, {date}, {date_th}, {date_th_short}, {date_en} */
 export const PAGE_TOKEN_REGEX =
-  /\{(page|total|date_th_short|date_th|date_en|date)\}/g;
+  /\{(page_th|total_th|page|total|date_th_short|date_th|date_en|date)\}/g;
