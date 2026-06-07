@@ -11,6 +11,7 @@ import {
   type SplitCandidate,
 } from "@/lib/pagination/engine";
 import { buildRepaginateTransaction } from "@/lib/pagination/repaginate";
+import { mmToPx } from "@/lib/page";
 import {
   runPaginationMaintenance,
   PAGINATION_COOLDOWN_MS,
@@ -181,7 +182,19 @@ export function usePagination(
         pageSetup,
         headerFooterReservePx ?? 0
       );
-      const result = buildRepaginateTransaction(editor, metrics.contentHeightPx);
+      // A2: when page 1 has different margins, its content area differs.
+      let firstPageContentHeightPx: number | undefined;
+      const fp = pageSetup.firstPageMarginMm;
+      if (fp) {
+        const m = pageSetup.marginMm;
+        const deltaMm = fp.top - m.top + (fp.bottom - m.bottom);
+        firstPageContentHeightPx = metrics.contentHeightPx - mmToPx(deltaMm);
+      }
+      const result = buildRepaginateTransaction(
+        editor,
+        metrics.contentHeightPx,
+        firstPageContentHeightPx
+      );
       if (result.changed && result.tr && isLiveEditor(editor)) {
         editor.view.dispatch(result.tr);
       }

@@ -136,6 +136,7 @@ export function EditorShell() {
       marginMm: pageSetup.marginMm,
       // Always forward watermark (even undefined) so clearing it propagates.
       watermark: pageSetup.watermark,
+      firstPageMarginMm: pageSetup.firstPageMarginMm,
       ...(pageSetup.headerFooter ? { headerFooter: pageSetup.headerFooter } : {}),
     });
   }, [editor, pageSetup]);

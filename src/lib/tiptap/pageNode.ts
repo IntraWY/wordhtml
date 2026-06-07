@@ -95,10 +95,16 @@ export const PageNode = Node.create<PageNodeOptions>({
     const heightMm = isLandscape ? base.wMm : base.hMm;
     const widthPx = Math.round(mmToPx(widthMm));
     const heightPx = Math.round(mmToPx(heightMm));
-    const marginTopPx = Math.round(mmToPx(setup.marginMm.top));
-    const marginRightPx = Math.round(mmToPx(setup.marginMm.right));
-    const marginBottomPx = Math.round(mmToPx(setup.marginMm.bottom));
-    const marginLeftPx = Math.round(mmToPx(setup.marginMm.left));
+    // A2: page 1 may use different (e.g. larger top) margins for letterhead.
+    const pageNumber = (node.attrs.pageNumber as number) ?? 1;
+    const margins =
+      pageNumber === 1 && setup.firstPageMarginMm
+        ? setup.firstPageMarginMm
+        : setup.marginMm;
+    const marginTopPx = Math.round(mmToPx(margins.top));
+    const marginRightPx = Math.round(mmToPx(margins.right));
+    const marginBottomPx = Math.round(mmToPx(margins.bottom));
+    const marginLeftPx = Math.round(mmToPx(margins.left));
 
     const wm = watermarkRenderAttrs(setup.watermark);
     const baseStyle = `width:${widthPx}px;height:${heightPx}px;--page-margin-top:${marginTopPx}px;--page-margin-right:${marginRightPx}px;--page-margin-bottom:${marginBottomPx}px;--page-margin-left:${marginLeftPx}px;`;

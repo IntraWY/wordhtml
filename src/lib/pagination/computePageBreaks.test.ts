@@ -8,6 +8,22 @@ describe("computePageBreaks", () => {
     expect(computePageBreaks([100, 200, 300], LIMIT, {})).toEqual([]);
   });
 
+  it("supports a per-page limit (A2 different first page)", () => {
+    // First page smaller (500), rest 900. Blocks of 300 each.
+    // Page 0 (limit 500): 300+300=600 > 500 -> break at 1; page 0 = [0]
+    // Page 1 (limit 900): 300+300+300=900 fits -> [1,2,3]; +300 -> break at 4
+    // Page 2 (limit 900): [4...]
+    const heights = Array(7).fill(300);
+    const limitFor = (p: number) => (p === 0 ? 500 : 900);
+    const breaks = computePageBreaks(heights, limitFor, {});
+    // page0:[0] page1:[1,2,3] page2:[4,5,6]
+    expect(breaks).toEqual([1, 4]);
+  });
+
+  it("constant-limit behavior is unchanged when passed a number", () => {
+    expect(computePageBreaks([400, 400, 400], 900, {})).toEqual([2]);
+  });
+
   it("breaks before the block that would overflow", () => {
     // 400+400=800 fits; +400 -> 1200 overflows -> break before index 2
     expect(computePageBreaks([400, 400, 400], LIMIT, {})).toEqual([2]);

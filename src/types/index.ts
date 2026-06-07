@@ -98,6 +98,8 @@ export interface PageSetup {
   marginMm: { top: number; right: number; bottom: number; left: number };
   headerFooter?: HeaderFooterConfig;
   watermark?: Watermark;
+  /** A2: when set, page 1 uses these margins (e.g. extra top for letterhead). */
+  firstPageMarginMm?: { top: number; right: number; bottom: number; left: number };
 }
 
 // Template Studio types

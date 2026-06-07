@@ -308,7 +308,9 @@ function expandTallBlocks(
 
 export function buildRepaginateTransaction(
   editor: Editor,
-  contentHeightPx: number
+  contentHeightPx: number,
+  /** A2: page 1 content height when first-page margins differ (optional). */
+  firstPageContentHeightPx?: number
 ): RepaginateResult {
   const flow = readFlow(editor);
   if (!flow) return { tr: null, changed: false, pageCount: 1 };
@@ -321,6 +323,12 @@ export function buildRepaginateTransaction(
   }
 
   const limit = Math.max(1, contentHeightPx - REFLOW_SAFETY_PX);
+  const firstLimit =
+    firstPageContentHeightPx != null
+      ? Math.max(1, firstPageContentHeightPx - REFLOW_SAFETY_PX)
+      : limit;
+  // Per-page capacity: page 0 may be smaller (A2). Others use the normal limit.
+  const limitFor = (pageIndex: number) => (pageIndex === 0 ? firstLimit : limit);
 
   // Locate the caret's original (block, offset) before any expansion.
   const from = editor.state.selection.from;
@@ -351,7 +359,7 @@ export function buildRepaginateTransaction(
     if (h > limit) atomicOversize.add(idx);
   });
 
-  const breaks = computePageBreaks(expanded.heights, limit, { atomicOversize });
+  const breaks = computePageBreaks(expanded.heights, limitFor, { atomicOversize });
   const desiredSegments = segmentize(expanded.blocks, breaks);
   const desiredCounts = desiredSegments.map((s) => s.length);
 

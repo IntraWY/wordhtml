@@ -22,29 +22,42 @@ export interface ComputePageBreaksOptions {
  */
 export function computePageBreaks(
   heights: number[],
-  limitPx: number,
+  /**
+   * Page capacity in px. Either a constant (every page same height) or a
+   * function of the zero-based page index — used by A2 "different first page",
+   * where page 0 may have a smaller content area (larger margin).
+   */
+  limitPx: number | ((pageIndex: number) => number),
   options: ComputePageBreaksOptions = {}
 ): number[] {
   const atomicOversize = options.atomicOversize ?? new Set<number>();
+  const limitFor =
+    typeof limitPx === "function" ? limitPx : () => limitPx;
   const breaks: number[] = [];
   let pageStart = 0;
   let acc = 0;
+  let pageIndex = 0;
 
   for (let i = 0; i < heights.length; i++) {
     const h = heights[i];
 
     if (atomicOversize.has(i)) {
       // Close the current page before the oversized block (unless empty).
-      if (i > pageStart) breaks.push(i);
+      if (i > pageStart) {
+        breaks.push(i);
+        pageIndex++;
+      }
       // The oversized block occupies its own page; next block starts after it.
       breaks.push(i + 1);
+      pageIndex++;
       pageStart = i + 1;
       acc = 0;
       continue;
     }
 
-    if (acc + h > limitPx && i > pageStart) {
+    if (acc + h > limitFor(pageIndex) && i > pageStart) {
       breaks.push(i);
+      pageIndex++;
       pageStart = i;
       acc = 0;
     }

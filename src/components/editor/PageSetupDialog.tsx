@@ -131,6 +131,61 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
               </div>
             </fieldset>
 
+            {/* Different first-page margins (A2) */}
+            <fieldset>
+              <legend className="mb-2 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">
+                หน้าแรกต่าง (First page)
+              </legend>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!draft.firstPageMarginMm}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      firstPageMarginMm: e.target.checked
+                        ? { ...d.marginMm }
+                        : undefined,
+                    }))
+                  }
+                  className="size-4 accent-[color:var(--color-accent)]"
+                />
+                ใช้ระยะขอบหน้าแรกต่างจากหน้าอื่น (เช่น เว้นบนสำหรับหัวกระดาษ)
+              </label>
+              {draft.firstPageMarginMm && (
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {(["top", "right", "bottom", "left"] as const).map((side) => {
+                    const fpm = draft.firstPageMarginMm ?? draft.marginMm;
+                    return (
+                    <label key={side} className="flex flex-col gap-1 text-sm">
+                      <span className="text-xs text-[color:var(--color-muted-foreground)]">
+                        {{ top: "บน", right: "ขวา", bottom: "ล่าง", left: "ซ้าย" }[side]}
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={150}
+                        step={1}
+                        value={fpm[side]}
+                        onChange={(e) => {
+                          const v = Number.parseInt(e.target.value, 10) || 0;
+                          setDraft((d) => ({
+                            ...d,
+                            firstPageMarginMm: {
+                              ...(d.firstPageMarginMm ?? d.marginMm),
+                              [side]: v,
+                            },
+                          }));
+                        }}
+                        className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1.5 outline-none focus:border-[color:var(--color-accent)]"
+                      />
+                    </label>
+                    );
+                  })}
+                </div>
+              )}
+            </fieldset>
+
             {/* Watermark (B4) */}
             <fieldset>
               <legend className="mb-2 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">
