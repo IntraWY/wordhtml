@@ -197,4 +197,20 @@ describe("cleanPastedHtml", () => {
     expect(result).toContain("<p>Line two</p>");
     expect(result).toContain("<p>Line three</p>");
   });
+
+  it("strips editor page wrappers from pasted html (no ghost pages)", () => {
+    const html = `<div class="page-node"><div class="page-body"><p>X</p></div></div>`;
+    const out = cleanPastedHtml(html);
+    expect(out).not.toContain("page-node");
+    expect(out).not.toContain("page-body");
+    expect(out).toContain("X");
+  });
+
+  it("drops pasted page-break separators", () => {
+    const html = `<p>A</p><div class="page-break"></div><p>B</p>`;
+    const out = cleanPastedHtml(html);
+    expect(out).not.toContain("page-break");
+    expect(out).toContain("A");
+    expect(out).toContain("B");
+  });
 });
