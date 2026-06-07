@@ -6,10 +6,11 @@ import type { Editor } from "@tiptap/react";
 import type { PageSetup } from "@/types";
 import {
   PaginationEngine,
+  calculatePageMetrics,
   type PaginationOptions,
   type SplitCandidate,
 } from "@/lib/pagination/engine";
-import { buildSplitTransaction } from "@/lib/pagination/splitter";
+import { buildRepaginateTransaction } from "@/lib/pagination/repaginate";
 import {
   runPaginationMaintenance,
   PAGINATION_COOLDOWN_MS,
@@ -160,52 +161,62 @@ export function usePagination(
     }, STABLE_DELAY_MS);
   }, [countPages, detectCurrentPage]);
 
-  const applyPendingSplits = useCallback(() => {
+  /**
+   * Holistic re-pagination: rebuild the whole page flow in one transaction so
+   * each page is filled to the limit (no overstuffed first page / near-empty
+   * trailing pages). A no-op when the distribution is already optimal, so it is
+   * safe to call on every idle tick (covers both growth and deletion/merge).
+   */
+  const repaginateNow = useCallback(() => {
     if (!isLiveEditor(editor)) {
       pendingSplitsRef.current = [];
       return;
     }
     if (isApplyingRef.current) return;
 
-    const candidate = pendingSplitsRef.current.shift();
-    if (!candidate) return;
-
     isApplyingRef.current = true;
     setIsPaginating(true);
-
     try {
-      const result = buildSplitTransaction(
-        {
-          state: editor.state,
-          schema: editor.state.schema,
-          pageBreakNodeName: "pageBreak",
-        },
-        candidate
+      const metrics = calculatePageMetrics(
+        pageSetup,
+        headerFooterReservePx ?? 0
       );
-      if (result.splitsInserted > 0 && isLiveEditor(editor)) {
+      const result = buildRepaginateTransaction(editor, metrics.contentHeightPx);
+      if (result.changed && result.tr && isLiveEditor(editor)) {
         editor.view.dispatch(result.tr);
       }
-
       const { pruned } = runPaginationMaintenance(editor);
       if (pruned > 0) {
         engineRef.current?.pauseFor(PAGINATION_COOLDOWN_MS);
       }
     } catch (e) {
-      console.error("Pagination split failed", e);
+      console.error("Repaginate failed", e);
     } finally {
       isApplyingRef.current = false;
       setIsPaginating(false);
       setPageCount(countPages());
       setCurrentPage(detectCurrentPage());
-      if (pendingSplitsRef.current.length > 0) {
-        scheduleStableCheck();
-      }
     }
-  }, [editor, countPages, detectCurrentPage, scheduleStableCheck]);
+  }, [editor, pageSetup, headerFooterReservePx, countPages, detectCurrentPage]);
+
+  const applyPendingSplits = useCallback(() => {
+    if (!isLiveEditor(editor)) {
+      pendingSplitsRef.current = [];
+      return;
+    }
+    // One holistic repagination resolves every queued overflow at once.
+    pendingSplitsRef.current = [];
+    repaginateNow();
+  }, [editor, repaginateNow]);
 
   useEffect(() => {
     applyPendingSplitsRef.current = applyPendingSplits;
   }, [applyPendingSplits]);
+
+  const repaginateNowRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    repaginateNowRef.current = repaginateNow;
+  }, [repaginateNow]);
 
   /* -- engine lifecycle -- */
 
@@ -271,12 +282,9 @@ export function usePagination(
       typingIdleTimerRef.current = setTimeout(() => {
         typingIdleTimerRef.current = null;
         if (!isApplyingRef.current && isLiveEditor(editor)) {
-          const { pruned } = runPaginationMaintenance(editor);
-          if (pruned > 0) {
-            setPageCount(countPages());
-            setCurrentPage(detectCurrentPage());
-            engineRef.current?.pauseFor(PAGINATION_COOLDOWN_MS);
-          }
+          // Reflow holistically on idle — fixes both overflow (insert) and
+          // underflow (delete/merge) so the page count stays honest.
+          repaginateNowRef.current();
           engineRef.current?.scheduleCheck();
         }
       }, PAGINATION_TYPING_IDLE_MS);
