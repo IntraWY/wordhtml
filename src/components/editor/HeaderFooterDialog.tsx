@@ -63,7 +63,11 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
   const variableButtons = [
     { label: "{page}", desc: "เลขหน้า (Page number)" },
     { label: "{total}", desc: "จำนวนหน้าทั้งหมด (Total pages)" },
+    { label: "{page_th}", desc: "เลขหน้าเลขไทย (Page no., Thai numerals)" },
+    { label: "{total_th}", desc: "จำนวนหน้าเลขไทย (Total, Thai numerals)" },
     { label: "{date}", desc: "วันที่ (Date)" },
+    { label: "{date_th}", desc: "วันที่ไทย พ.ศ. (Thai Buddhist date)" },
+    { label: "{date_th_short}", desc: "วันที่ไทยแบบสั้น (Short Thai date)" },
   ];
 
   return (
@@ -171,7 +175,7 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
                     className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-accent)]"
                   />
                   <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-                    รองรับ HTML และตัวแปร: {"{page}"}, {"{total}"}, {"{date}"}
+                    รองรับ HTML และตัวแปร: {"{page}"}, {"{total}"}, {"{page_th}"}, {"{total_th}"}, {"{date}"}, {"{date_th}"}
                   </p>
                 </div>
 
