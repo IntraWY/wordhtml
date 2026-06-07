@@ -258,7 +258,8 @@ From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, 
 3. **C1 Official-letter wizard** — `src/lib/officialLetter/buildLetterHtml.ts` (สารบรรณ HTML for หนังสือภายนอก/บันทึกข้อความ) + `OfficialLetterDialog.tsx` form (mounted in `DialogManager`, `uiStore.officialLetterOpen`, Insert-ribbon button). Auto-fills today's Thai Buddhist date.
 4. **C2 Signature block** — `src/lib/officialLetter/signatureBlock.ts`; Insert-ribbon "บล็อกลงนาม" button inserts centered sign-line + (name) + position.
 5. **C4 Thai page tokens** — `{page_th}`/`{total_th}` (Thai numerals) added to `replacePageTokens` + `PAGE_TOKEN_REGEX`.
-**487 unit tests pass; lint + build clean.** Remaining proposal items (A1/A2 header-footer & layout, A3 table split, B1 footnotes, B2 captions, B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list) are larger/riskier — each gets its own spec before implementation.
+6. **B2 Figure captions** (`v0.1.30`) — Insert-ribbon "คำบรรยายภาพ" inserts a numbered caption ("รูปที่ N"); `src/lib/caption.ts` computes the number; `data-caption` persists via a new `captionKind` global attribute on `ParagraphFormatExtension` (same pattern as `softSplit`), styled by CSS `p[data-caption]`.
+**498 unit tests pass; lint + build clean.** Remaining proposal items (A1/A2 header-footer & layout, A3 table split, B1 footnotes, B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list) are larger/riskier — each gets its own spec before implementation.
 
 ### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
 Sub-project A's last open item (intra-paragraph splitting) — `v0.1.28`:
@@ -494,7 +495,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.29**
+- **Current version**: **v0.1.30**
 
 ### Patch bump rule (deploy default)
 
