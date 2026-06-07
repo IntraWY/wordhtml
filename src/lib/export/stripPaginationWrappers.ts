@@ -11,7 +11,9 @@ export function stripPaginationWrappers(html: string): string {
     html.includes("page-node") || html.includes("page-body");
   const hasSoftSplit = html.includes("data-soft-split");
   const hasComments = html.includes("data-comment-id");
-  if (!hasWrappers && !hasSoftSplit && !hasComments) return html;
+  const hasTrackChanges = html.includes("data-track");
+  if (!hasWrappers && !hasSoftSplit && !hasComments && !hasTrackChanges)
+    return html;
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
@@ -34,6 +36,18 @@ export function stripPaginationWrappers(html: string): string {
     if (!parent) return;
     while (el.firstChild) parent.insertBefore(el.firstChild, el);
     parent.removeChild(el);
+  });
+
+  // Resolve track changes (B8) on export: accept = keep insertions, drop deletions.
+  doc.querySelectorAll("span[data-track]").forEach((el) => {
+    const parent = el.parentNode;
+    if (!parent) return;
+    if (el.getAttribute("data-track") === "deletion") {
+      parent.removeChild(el);
+    } else {
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    }
   });
 
   mergeSoftSplitParagraphs(doc.body);

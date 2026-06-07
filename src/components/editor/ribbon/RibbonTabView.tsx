@@ -10,7 +10,12 @@ import {
   BookOpen,
   Braces,
   MessageSquare,
+  FilePlus2,
+  FileMinus2,
+  CheckCheck,
+  Undo2,
 } from "lucide-react";
+import { isLiveEditor } from "@/lib/editorLive";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
@@ -67,6 +72,37 @@ export function RibbonTabView({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="คอมเมนต์ (Comments)" onClick={toggleComments} active={commentsOpen}>
           <MessageSquare className="size-3.5" />
+        </RibbonButton>
+      </RibbonGroup>
+
+      <RibbonGroup label="ตรวจทาน (Review)">
+        <RibbonButton
+          label="ทำเครื่องหมายเพิ่ม (Insertion)"
+          onClick={() => editor?.chain().focus().markInsertion().run()}
+          disabled={!isLiveEditor(editor)}
+        >
+          <FilePlus2 className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton
+          label="ทำเครื่องหมายลบ (Deletion)"
+          onClick={() => editor?.chain().focus().markDeletion().run()}
+          disabled={!isLiveEditor(editor)}
+        >
+          <FileMinus2 className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton
+          label="ยอมรับทั้งหมด (Accept all)"
+          onClick={() => editor?.chain().focus().acceptAllChanges().run()}
+          disabled={!isLiveEditor(editor)}
+        >
+          <CheckCheck className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton
+          label="ปฏิเสธทั้งหมด (Reject all)"
+          onClick={() => editor?.chain().focus().rejectAllChanges().run()}
+          disabled={!isLiveEditor(editor)}
+        >
+          <Undo2 className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 

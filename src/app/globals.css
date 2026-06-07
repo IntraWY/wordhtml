@@ -900,6 +900,19 @@ html[data-theme="dark"] .page-node {
   border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
 }
 
+/* Track changes (B8) */
+.prose-editor .wh-track-ins,
+.paper .wh-track-ins {
+  color: #15803d;
+  text-decoration: underline;
+  text-decoration-color: #15803d;
+}
+.prose-editor .wh-track-del,
+.paper .wh-track-del {
+  color: #b91c1c;
+  text-decoration: line-through;
+}
+
 /* Footnotes / endnotes (B1) */
 .prose-editor p[data-footnote],
 .paper p[data-footnote] {

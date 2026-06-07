@@ -74,6 +74,7 @@ import { runPaginationMaintenance } from "@/lib/pagination/paginationMaintenance
 import { dispatchPaginationCooldown } from "@/lib/events";
 import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
 import { CommentMark } from "@/lib/tiptap/commentMark";
+import { TrackChange } from "@/lib/tiptap/trackChange";
 
 interface VisualEditorProps {
   onEditorReady?: (editor: Editor | null) => void;
@@ -162,6 +163,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       VariableMark,
       VariableTypingGuard,
       CommentMark,
+      TrackChange,
       PageBreak,
       SearchAndReplace.configure({
         searchResultClass: "search-result",
