@@ -18,6 +18,7 @@ interface UiState {
   commandPaletteOpen: boolean;
   templateGalleryOpen: boolean;
   officialLetterOpen: boolean;
+  crossRefOpen: boolean;
   lastAction: string | null;
 
   openExportDialog: () => void;
@@ -48,6 +49,8 @@ interface UiState {
   closeTemplateGallery: () => void;
   openOfficialLetter: () => void;
   closeOfficialLetter: () => void;
+  openCrossRef: () => void;
+  closeCrossRef: () => void;
   setLastAction: (action: string | null) => void;
 }
 
@@ -67,6 +70,7 @@ export const useUiStore = create<UiState>()((set) => ({
   commandPaletteOpen: false,
   templateGalleryOpen: false,
   officialLetterOpen: false,
+  crossRefOpen: false,
   lastAction: null,
 
   openExportDialog: () => set({ exportDialogOpen: true }),
@@ -97,5 +101,7 @@ export const useUiStore = create<UiState>()((set) => ({
   closeTemplateGallery: () => set({ templateGalleryOpen: false }),
   openOfficialLetter: () => set({ officialLetterOpen: true }),
   closeOfficialLetter: () => set({ officialLetterOpen: false }),
+  openCrossRef: () => set({ crossRefOpen: true }),
+  closeCrossRef: () => set({ crossRefOpen: false }),
   setLastAction: (lastAction) => set({ lastAction }),
 }));

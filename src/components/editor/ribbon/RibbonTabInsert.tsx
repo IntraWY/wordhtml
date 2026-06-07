@@ -20,6 +20,7 @@ import {
   PenLine,
   Captions as CaptionsIcon,
   Asterisk,
+  Link2,
 } from "lucide-react";
 import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
 import { buildCaptionHtml, nextCaptionNumber } from "@/lib/caption";
@@ -287,6 +288,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="เชิงอรรถ (Footnote)" onClick={handleFootnote} disabled={!hasEditor}>
           <Asterisk className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="อ้างอิงข้าม (Cross-reference)" onClick={() => useUiStore.getState().openCrossRef()} disabled={!hasEditor}>
+          <Link2 className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 
