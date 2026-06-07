@@ -33,6 +33,7 @@ import { resolveHtmlPlaceholders } from "@/lib/placeholders";
 import { checkExportHealth } from "@/lib/export/exportHealthCheck";
 import { inlinePlaceholderFields } from "@/lib/export/inlinePlaceholderFields";
 import { buildProjectBlob, projectFileName } from "@/lib/project";
+import { downloadMailMergeZip } from "@/lib/export/exportMailMerge";
 
 type ExportKind = ExportFormat;
 
@@ -219,6 +220,28 @@ export function ExportDialog() {
     }
   };
 
+  // Mail-merge: one resolved document per data row, bundled as a ZIP.
+  const rowCount = dataSet?.rows.length ?? 0;
+  const canMailMerge = templateMode && rowCount > 0;
+  const handleMailMergeExport = async () => {
+    if (!dataSet || rowCount === 0) return;
+    try {
+      await downloadMailMergeZip({
+        html: documentHtml,
+        variables,
+        dataSet,
+        pageSetup,
+        title: fileName ?? "document",
+        zipName: "mail-merge.zip",
+      });
+      useToastStore
+        .getState()
+        .show(`ส่งออก mail-merge ${rowCount} ฉบับแล้ว (ZIP)`);
+    } catch {
+      useToastStore.getState().show("ส่งออก mail-merge ไม่สำเร็จ", "error");
+    }
+  };
+
   return (
     <Dialog.Root open={open} onOpenChange={(o) => (o ? null : close())}>
       <Dialog.Portal>
@@ -400,6 +423,22 @@ export function ExportDialog() {
                     บันทึกงาน (.json)
                   </Button>
                 </div>
+
+                {canMailMerge && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-3 py-2">
+                    <p className="text-xs text-[color:var(--color-muted-foreground)]">
+                      Mail-merge — สร้างเอกสารแยกฉบับจากข้อมูลทุกแถว ({rowCount} แถว)
+                      แล้วดาวน์โหลดเป็น ZIP
+                    </p>
+                    <Button
+                      variant="secondary"
+                      onClick={() => void handleMailMergeExport()}
+                    >
+                      <FileArchive />
+                      ส่งออก mail-merge ({rowCount})
+                    </Button>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
