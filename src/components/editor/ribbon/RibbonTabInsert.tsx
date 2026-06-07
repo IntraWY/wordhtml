@@ -19,9 +19,15 @@ import {
   FileText,
   PenLine,
   Captions as CaptionsIcon,
+  Asterisk,
 } from "lucide-react";
 import { buildSignatureBlockHtml } from "@/lib/officialLetter/signatureBlock";
 import { buildCaptionHtml, nextCaptionNumber } from "@/lib/caption";
+import {
+  nextFootnoteNumber,
+  buildFootnoteRefHtml,
+  buildFootnoteNoteHtml,
+} from "@/lib/footnotes";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
@@ -184,6 +190,37 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     editor.chain().focus().insertContent(buildCaptionHtml("figure", num)).run();
   }, [editor]);
 
+  const handleFootnote = useCallback(() => {
+    if (!isLiveEditor(editor)) return;
+    useDialogStore.getState().openPrompt(
+      "เชิงอรรถ (Footnote)",
+      "ข้อความเชิงอรรถ:",
+      "",
+      (text) => {
+        const ed = liveEditor();
+        if (!isLiveEditor(ed) || !text || !text.trim()) return;
+        const num = nextFootnoteNumber(ed.getHTML());
+        // 1) inline superscript ref at the cursor
+        ed.chain().focus().insertContent(buildFootnoteRefHtml(num)).run();
+        // 2) append the numbered note at the end of the last page body
+        let lastBodyEnd = -1;
+        ed.state.doc.descendants((node, pos) => {
+          if (node.type.name === "pageBody") {
+            lastBodyEnd = pos + node.nodeSize - 1;
+          }
+          return true;
+        });
+        if (lastBodyEnd > 0) {
+          ed.chain()
+            .insertContentAt(lastBodyEnd, buildFootnoteNoteHtml(num, text))
+            .run();
+        } else {
+          ed.chain().focus().insertContent(buildFootnoteNoteHtml(num, text)).run();
+        }
+      }
+    );
+  }, [editor]);
+
   return (
     <>
       <RibbonGroup label="ลิงก์ & รูปภาพ">
@@ -247,6 +284,9 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="บล็อกลงนาม (Signature block)" onClick={handleSignatureBlock} disabled={!hasEditor}>
           <PenLine className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton label="เชิงอรรถ (Footnote)" onClick={handleFootnote} disabled={!hasEditor}>
+          <Asterisk className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 

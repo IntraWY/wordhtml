@@ -886,6 +886,21 @@ html[data-theme="dark"] .page-node {
   margin-top: 4px;
 }
 
+/* Footnotes / endnotes (B1) */
+.prose-editor p[data-footnote],
+.paper p[data-footnote] {
+  font-size: 0.85em;
+  color: var(--color-muted-foreground, #555);
+  margin: 2px 0;
+  line-height: 1.4;
+}
+.prose-editor p[data-footnote="1"],
+.paper p[data-footnote="1"] {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border, #ddd);
+}
+
 .page-node[data-page-number]::after {
   content: attr(data-page-number);
   position: absolute;

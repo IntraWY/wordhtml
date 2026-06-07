@@ -252,6 +252,21 @@ export const ParagraphFormatExtension = Extension.create({
                 : {},
             parseHTML: (el): string | null => el.getAttribute("data-caption"),
           },
+          // Marks a paragraph as a footnote/endnote entry (B1). Numbered note
+          // text lives at document end; styled via CSS `p[data-footnote]`.
+          footnoteIndex: {
+            default: null,
+            renderHTML: (attrs) =>
+              attrs.footnoteIndex
+                ? { "data-footnote": String(attrs.footnoteIndex) }
+                : {},
+            parseHTML: (el): number | null => {
+              const raw = el.getAttribute("data-footnote");
+              if (!raw) return null;
+              const n = parseInt(raw, 10);
+              return Number.isNaN(n) ? null : n;
+            },
+          },
         },
       },
     ];
