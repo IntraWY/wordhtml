@@ -93,6 +93,10 @@ describe("editorStore saveSnapshot in-place", () => {
     expect(state.history[0]!.id).toBe(id);
     expect(state.history[0]!.html).toBe("<p>edited</p>");
     expect(state.activeSnapshotId).toBe(id);
+    // The in-place save stamps a per-device marker so the cloud merge can
+    // protect this edit against a stale remote copy with the same savedAt.
+    expect(state.history[0]!.locallyUpdatedAt).toBeTruthy();
+    expect(state.history[0]!.locallyUpdatedAt).toBe(state.history[0]!.savedAt);
   });
 
   it("restores activeSnapshotId from session after hydrate when id is in history", () => {

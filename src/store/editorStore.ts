@@ -475,23 +475,26 @@ export const useEditorStore = create<EditorState>()(
           let snapshot: DocumentSnapshot;
           let rest: DocumentSnapshot[];
 
+          const now = new Date().toISOString();
           if (activeSnap) {
             if (activeSnap.html === documentHtml) return state;
             snapshot = {
               ...activeSnap,
               fileName: state.fileName,
-              savedAt: new Date().toISOString(),
+              savedAt: now,
               html: documentHtml,
               wordCount: countWords(documentHtml),
+              locallyUpdatedAt: now,
             };
             rest = state.history.filter((s) => s.id !== state.activeSnapshotId);
           } else {
             snapshot = {
               id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
               fileName: state.fileName,
-              savedAt: new Date().toISOString(),
+              savedAt: now,
               html: documentHtml,
               wordCount: countWords(documentHtml),
+              locallyUpdatedAt: now,
             };
             rest = state.history;
           }

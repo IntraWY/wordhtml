@@ -77,6 +77,39 @@ describe("mergeSnapshots", () => {
     const { conflicts } = mergeSnapshotsWithConflicts(local, remote);
     expect(conflicts).toHaveLength(0);
   });
+
+  it("local wins an equal-savedAt tie when it carries locallyUpdatedAt", () => {
+    const ts = "2026-01-02T00:00:00.000Z";
+    const local = [
+      { ...snap("a", ts, "<p>local edit</p>"), locallyUpdatedAt: ts },
+    ];
+    const remote = [snap("a", ts, "<p>stale remote</p>")];
+    const { merged, conflicts } = mergeSnapshotsWithConflicts(local, remote);
+    expect(merged[0].html).toBe("<p>local edit</p>");
+    expect(conflicts[0].winner).toBe("local");
+  });
+
+  it("remote wins an equal-savedAt tie when local has no marker (regression)", () => {
+    const ts = "2026-01-02T00:00:00.000Z";
+    const local = [snap("a", ts, "<p>local</p>")];
+    const remote = [snap("a", ts, "<p>remote</p>")];
+    const { merged, conflicts } = mergeSnapshotsWithConflicts(local, remote);
+    expect(merged[0].html).toBe("<p>remote</p>");
+    expect(conflicts[0].winner).toBe("remote");
+  });
+
+  it("local wins when older savedAt but locallyUpdatedAt is at/after remote", () => {
+    const local = [
+      {
+        ...snap("a", "2026-01-01T00:00:00.000Z", "<p>local edit</p>"),
+        locallyUpdatedAt: "2026-01-03T00:00:00.000Z",
+      },
+    ];
+    const remote = [snap("a", "2026-01-02T00:00:00.000Z", "<p>remote</p>")];
+    const { merged, conflicts } = mergeSnapshotsWithConflicts(local, remote);
+    expect(merged[0].html).toBe("<p>local edit</p>");
+    expect(conflicts[0].winner).toBe("local");
+  });
 });
 
 describe("snapshotsToUpload", () => {
@@ -92,5 +125,22 @@ describe("snapshotsToUpload", () => {
     ];
     const toUpload = snapshotsToUpload(local, remote);
     expect(toUpload.map((s) => s.id).sort()).toEqual(["a", "c"]);
+  });
+
+  it("uploads an equal-savedAt local edit when locallyUpdatedAt is newer", () => {
+    const ts = "2026-01-02T00:00:00.000Z";
+    const local = [
+      { ...snap("a", ts, "<p>local edit</p>"), locallyUpdatedAt: ts },
+    ];
+    const remote = [snap("a", ts, "<p>stale remote</p>")];
+    const toUpload = snapshotsToUpload(local, remote);
+    expect(toUpload.map((s) => s.id)).toEqual(["a"]);
+  });
+
+  it("does not upload an equal-savedAt snapshot whose content matches", () => {
+    const ts = "2026-01-02T00:00:00.000Z";
+    const local = [{ ...snap("a", ts, "<p>same</p>"), locallyUpdatedAt: ts }];
+    const remote = [snap("a", ts, "<p>same</p>")];
+    expect(snapshotsToUpload(local, remote)).toHaveLength(0);
   });
 });

@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 
 import { getFirebaseDb } from "./firebase";
+import { snapshotsToUpload } from "./mergeSnapshots";
 import type { DocumentSnapshot } from "@/types";
 
 interface FirestoreSnapshot {
@@ -101,11 +102,7 @@ export async function uploadLocalSnapshotsToCloud(
   local: DocumentSnapshot[],
   remote: DocumentSnapshot[] = []
 ): Promise<void> {
-  const remoteById = new Map(remote.map((s) => [s.id, s]));
-  const toUpload = local.filter((s) => {
-    const r = remoteById.get(s.id);
-    return !r || Date.parse(s.savedAt) > Date.parse(r.savedAt);
-  });
+  const toUpload = snapshotsToUpload(local, remote);
   if (toUpload.length === 0) return;
   await Promise.allSettled(toUpload.map((s) => saveSnapshotToCloud(uid, s)));
 }

@@ -43,29 +43,33 @@ export function mergeSnapshotsWithConflicts(
         localSnap.html === remoteSnap.html &&
         localSnap.fileName === remoteSnap.fileName;
 
-      if (!sameContent && localTs !== remoteTs) {
-        const winner = localTs >= remoteTs ? localSnap : remoteSnap;
-        const loser = localTs >= remoteTs ? remoteSnap : localSnap;
+      // This device's most-recent local edit time for the snapshot (if any).
+      // It guards against an in-place Save being lost to a stale remote copy
+      // that shares the same `savedAt` (ms-precise round-trip ties) or that
+      // appears newer due to clock skew between devices.
+      const localEditTs = localSnap.locallyUpdatedAt
+        ? Date.parse(localSnap.locallyUpdatedAt)
+        : NaN;
+      const localEditedAfterRemote =
+        !Number.isNaN(localEditTs) && localEditTs >= remoteTs;
+
+      if (sameContent) {
+        byId.set(id, localTs >= remoteTs ? localSnap : remoteSnap);
+      } else {
+        // Different payload — pick a winner. Local wins when it is strictly
+        // newer, OR when this device edited it at/after the remote's savedAt
+        // (covers the equal-ts tie and the older-ts-but-locally-edited case).
+        const localWins = localTs > remoteTs || localEditedAfterRemote;
+        const winner = localWins ? localSnap : remoteSnap;
+        const loser = localWins ? remoteSnap : localSnap;
         conflicts.push({
           id,
           fileName: winner.fileName,
-          winner: localTs >= remoteTs ? "local" : "remote",
+          winner: localWins ? "local" : "remote",
           lostSavedAt: loser.savedAt,
           wonSavedAt: winner.savedAt,
         });
         byId.set(id, winner);
-      } else if (!sameContent && localTs === remoteTs) {
-        // Same timestamp but different payload — prefer remote (cloud source of truth).
-        conflicts.push({
-          id,
-          fileName: remoteSnap.fileName,
-          winner: "remote",
-          lostSavedAt: localSnap.savedAt,
-          wonSavedAt: remoteSnap.savedAt,
-        });
-        byId.set(id, remoteSnap);
-      } else {
-        byId.set(id, localTs >= remoteTs ? localSnap : remoteSnap);
       }
     } else {
       byId.set(id, (localSnap ?? remoteSnap)!);
@@ -88,7 +92,12 @@ export function mergeSnapshots(
   return mergeSnapshotsWithConflicts(local, remote, max).merged;
 }
 
-/** Local snapshots that should be pushed to cloud (missing remotely or locally newer). */
+/**
+ * Local snapshots that should be pushed to cloud: missing remotely, locally
+ * newer by `savedAt`, or edited locally at/after the remote `savedAt` with
+ * differing content (the equal-ts in-place-Save case). Mirrors the merge's
+ * local-edit protection so a saved edit reliably reaches the cloud.
+ */
 export function snapshotsToUpload(
   local: DocumentSnapshot[],
   remote: DocumentSnapshot[]
@@ -96,6 +105,11 @@ export function snapshotsToUpload(
   const remoteById = new Map(remote.map((s) => [s.id, s]));
   return local.filter((s) => {
     const r = remoteById.get(s.id);
-    return !r || Date.parse(s.savedAt) > Date.parse(r.savedAt);
+    if (!r) return true;
+    if (Date.parse(s.savedAt) > Date.parse(r.savedAt)) return true;
+    const sameContent = s.html === r.html && s.fileName === r.fileName;
+    if (sameContent) return false;
+    const localEditTs = s.locallyUpdatedAt ? Date.parse(s.locallyUpdatedAt) : NaN;
+    return !Number.isNaN(localEditTs) && localEditTs >= Date.parse(r.savedAt);
   });
 }

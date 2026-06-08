@@ -121,6 +121,12 @@ export interface DocumentSnapshot {
   savedAt: string;
   html: string;
   wordCount: number;
+  /**
+   * Per-device marker: when THIS device last edited+saved this snapshot locally.
+   * Not synced to cloud — used by merge to protect a just-made local edit from
+   * being overwritten by a stale remote copy that shares the same `savedAt`.
+   */
+  locallyUpdatedAt?: string;
 }
 
 /** Auto-save snapshot preferences (persisted in editor store). */
