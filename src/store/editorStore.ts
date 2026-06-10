@@ -38,6 +38,8 @@ import {
   clearSnapshotsInCloud,
 } from "@/lib/historyFirestore";
 import { clearRecoveryDraft, scheduleRecoveryDraft } from "@/lib/draftRecovery";
+import { isFirebaseConfigured } from "@/lib/firebaseConfig";
+import { saveFeedbackLabel } from "@/lib/saveFeedback";
 
 const MAX_HISTORY = 20;
 const SNAPSHOT_SIZE_LIMIT = 4 * 1024 * 1024; // 4MB serialized cap
@@ -472,7 +474,6 @@ export const useEditorStore = create<EditorState>()(
 
         let snapshotForCloud: DocumentSnapshot | null = null;
         let showFeedback = false;
-        let feedbackLabel = "";
 
         set((state) => {
           const documentHtml = state.documentHtml;
@@ -517,8 +518,6 @@ export const useEditorStore = create<EditorState>()(
 
           snapshotForCloud = snapshot;
           showFeedback = source === "manual" || state.autoSave.notifyOnSave;
-          feedbackLabel =
-            source === "auto" ? "บันทึกอัตโนมัติแล้ว" : "บันทึกแล้ว";
 
           setActiveSnapshotSession(snapshot.id);
           return { history: updated, activeSnapshotId: snapshot.id };
@@ -532,6 +531,10 @@ export const useEditorStore = create<EditorState>()(
         }
 
         if (showFeedback) {
+          const feedbackLabel = saveFeedbackLabel(source, {
+            signedIn: getCloudHistoryUid() !== null,
+            firebaseConfigured: isFirebaseConfigured(),
+          });
           useToastStore.getState().show(feedbackLabel);
           useUiStore
             .getState()

@@ -10,6 +10,9 @@ import { useUiStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UploadButton } from "./UploadButton";
 import { AuthButton } from "./AuthButton";
+import { CloudSyncIndicator } from "./CloudSyncIndicator";
+import { useAuthStore } from "@/store/authStore";
+import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 import {
   dispatchOpenTemplates,
   dispatchInsertPageBreak,
@@ -31,6 +34,13 @@ export function TopBar() {
   const fileName = useEditorStore((s) => s.fileName);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
   const historyCount = useEditorStore((s) => s.history.length);
+  const signedIn = useAuthStore((s) => Boolean(s.user));
+
+  const saveTitle = signedIn
+    ? "บันทึกเอกสาร + ซิงก์ขึ้นคลาวด์ (Save + cloud sync)"
+    : isFirebaseConfigured()
+      ? "บันทึกเอกสารในเครื่อง — ลงชื่อเข้าใช้เพื่อซิงก์คลาวด์ (Save; sign in to sync)"
+      : "บันทึกเอกสาร (เปิดใหม่แล้วกลับมาอัตโนมัติ) — Save document";
 
   return (
     <>
@@ -91,12 +101,13 @@ export function TopBar() {
             <Bookmark className="size-4" />
             <span className="hidden md:inline text-sm">Template</span>
           </button>
+          <CloudSyncIndicator compact className="mx-0.5" />
           <button
             type="button"
             onClick={() => saveSnapshot()}
             disabled={!hasDoc}
-            title="บันทึกเอกสาร (เปิดใหม่แล้วกลับมาอัตโนมัติ) — Save document"
-            aria-label="บันทึกเอกสาร (เปิดใหม่แล้วกลับมาอัตโนมัติ)"
+            title={saveTitle}
+            aria-label={saveTitle}
             className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-40"
           >
             <Save className="size-4" />

@@ -8,7 +8,6 @@ import { signInWithGoogle, signOut } from "@/lib/firebaseAuth";
 import { useAuthStore } from "@/store/authStore";
 import { useToastStore } from "@/store/toastStore";
 import { cn } from "@/lib/utils";
-import { CloudSyncIndicator } from "./CloudSyncIndicator";
 
 export function AuthButton() {
   const user = useAuthStore((s) => s.user);
@@ -60,7 +59,6 @@ export function AuthButton() {
     const label = user.displayName ?? user.email ?? "บัญชี";
     return (
       <div className="flex items-center gap-1">
-        <CloudSyncIndicator compact />
         <button
           type="button"
           onClick={() => void handleSignOut()}
