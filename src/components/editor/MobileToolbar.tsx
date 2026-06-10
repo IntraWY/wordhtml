@@ -56,7 +56,7 @@ function MobileBtn({
       disabled={disabled}
       title={title}
       className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors",
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm transition-colors",
         active
           ? "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
           : "text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]",
@@ -376,7 +376,7 @@ export function MobileToolbar({ editor }: { editor: Editor | null }) {
                   handleCleanNow();
                   setShowMore(false);
                 }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-[color:var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-accent-foreground)] transition-colors hover:bg-[color:var(--color-accent-hover)]"
+                className="flex min-h-9 w-full items-center justify-center gap-1.5 rounded-md bg-[color:var(--color-accent)] px-3 py-2 text-xs font-semibold text-[color:var(--color-accent-foreground)] transition-colors hover:bg-[color:var(--color-accent-hover)]"
               >
                 <Sparkles className="size-3.5" />
                 ล้างตอนนี้

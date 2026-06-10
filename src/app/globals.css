@@ -919,6 +919,15 @@ html[data-theme="dark"] .page-node {
   color: #b91c1c;
   text-decoration: line-through;
 }
+/* Dark-mode preview paper (.paper = #1f1f23) — the editor's .page-node stays
+   white, so only the dark preview surface needs brighter track-change colors. */
+html[data-theme="dark"] .paper .wh-track-ins {
+  color: #4ade80;
+  text-decoration-color: #4ade80;
+}
+html[data-theme="dark"] .paper .wh-track-del {
+  color: #f87171;
+}
 
 /* Footnotes / endnotes (B1) */
 .prose-editor p[data-footnote],

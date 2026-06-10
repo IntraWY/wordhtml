@@ -154,7 +154,7 @@ export function VariablePanel() {
     <>
       <aside
         className={cn(
-          "flex h-full shrink-0 flex-col border-l border-[color:var(--color-border)] bg-[color:var(--color-background)] transition-all duration-200",
+          "flex h-full shrink-0 flex-col border-l border-[color:var(--color-border)] bg-[color:var(--color-background)] transition-[width] duration-200",
           collapsed ? "w-10" : "w-[280px]"
         )}
       >

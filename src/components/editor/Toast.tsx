@@ -4,9 +4,9 @@ import { CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
 import { useToastStore } from "@/store/toastStore";
 
 const TYPE_STYLES: Record<string, { icon: typeof CheckCircle; color: string }> = {
-  success: { icon: CheckCircle, color: "text-emerald-400" },
-  error: { icon: AlertCircle, color: "text-red-400" },
-  warning: { icon: AlertTriangle, color: "text-amber-400" },
+  success: { icon: CheckCircle, color: "text-[color:var(--color-success)]" },
+  error: { icon: AlertCircle, color: "text-[color:var(--color-danger)]" },
+  warning: { icon: AlertTriangle, color: "text-[color:var(--color-warning)]" },
 };
 
 export function Toast() {
@@ -25,7 +25,7 @@ export function Toast() {
         "fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-lg px-4 py-2.5",
         "bg-[color:var(--color-foreground)] text-[color:var(--color-background)]",
         "text-sm font-medium shadow-lg",
-        "transition-all duration-300",
+        "transition-[transform,opacity] duration-300",
         message
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-2 opacity-0 pointer-events-none",

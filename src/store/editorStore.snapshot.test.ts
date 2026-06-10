@@ -117,6 +117,48 @@ describe("editorStore saveSnapshot in-place", () => {
     expect(sessionStorage.getItem(ACTIVE_SNAPSHOT_SESSION_KEY)).toBe(id);
   });
 
+  it("auto-restores saved document into empty editor from persisted activeSnapshotId", () => {
+    const id = "snap-persisted";
+    // Simulate a fresh reload: editor empty, but pointer + history hydrated
+    // from localStorage (activeSnapshotId now lives in partialize).
+    useEditorStore.setState({
+      documentHtml: "",
+      activeSnapshotId: id,
+      htmlSyncRevision: 0,
+      history: [
+        {
+          id,
+          fileName: "doc.html",
+          savedAt: "2026-01-01T00:00:00.000Z",
+          html: "<p>saved doc</p>",
+          wordCount: 2,
+        },
+      ],
+    });
+
+    restoreActiveSnapshotFromSession();
+
+    const state = useEditorStore.getState();
+    expect(state.documentHtml).toBe("<p>saved doc</p>");
+    expect(state.activeSnapshotId).toBe(id);
+    expect(state.htmlSyncRevision).toBe(1);
+    expect(sessionStorage.getItem(ACTIVE_SNAPSHOT_SESSION_KEY)).toBe(id);
+  });
+
+  it("clears pointer and leaves editor empty when activeSnapshotId is stale", () => {
+    useEditorStore.setState({
+      documentHtml: "",
+      activeSnapshotId: "missing",
+      history: [],
+    });
+
+    restoreActiveSnapshotFromSession();
+
+    const state = useEditorStore.getState();
+    expect(state.activeSnapshotId).toBeNull();
+    expect(state.documentHtml).toBe("");
+  });
+
   it("double saveSnapshot sync does not grow history length", () => {
     useEditorStore.setState({ documentHtml: "<p>v1</p>" });
     const store = useEditorStore.getState();

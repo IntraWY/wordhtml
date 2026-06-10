@@ -129,7 +129,7 @@ export function CommentsPanel({ editor }: { editor: Editor | null }) {
                     onClick={() =>
                       editor?.chain().focus().removeCommentById(c.commentId).run()
                     }
-                    className="grid h-6 w-6 place-items-center rounded text-[color:var(--color-danger,#c0392b)] hover:bg-[color:var(--color-muted)]"
+                    className="grid h-6 w-6 place-items-center rounded text-[color:var(--color-danger)] hover:bg-[color:var(--color-muted)]"
                   >
                     <Trash2 className="size-3.5" />
                   </button>

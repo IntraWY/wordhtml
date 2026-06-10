@@ -26,7 +26,7 @@ export function MobileBlock() {
   return (
     <div
       role="status"
-      className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900"
+      className="banner-warning flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2 text-xs"
     >
       <div className="flex items-center gap-2">
         <Monitor className="size-3.5 shrink-0" />
@@ -38,7 +38,7 @@ export function MobileBlock() {
         type="button"
         onClick={() => setDismissed(true)}
         aria-label="ปิดข้อความ"
-        className="rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
+        className="rounded-md p-1 text-[color:var(--color-warning-foreground)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-warning)_18%,transparent)]"
       >
         <X className="size-3.5" />
       </button>

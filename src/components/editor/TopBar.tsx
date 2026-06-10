@@ -95,8 +95,8 @@ export function TopBar() {
             type="button"
             onClick={() => saveSnapshot()}
             disabled={!hasDoc}
-            title="บันทึก Snapshot"
-            aria-label="บันทึก Snapshot"
+            title="บันทึกเอกสาร (เปิดใหม่แล้วกลับมาอัตโนมัติ) — Save document"
+            aria-label="บันทึกเอกสาร (เปิดใหม่แล้วกลับมาอัตโนมัติ)"
             className="inline-flex h-8 w-8 md:w-auto items-center justify-center gap-1.5 rounded-md px-0 md:px-2.5 text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-40"
           >
             <Save className="size-4" />

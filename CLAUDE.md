@@ -170,6 +170,7 @@ Persists to localStorage under `wordhtml-editor`. `partialize` whitelists:
 - `enabledCleaners` — user's cleaner preferences
 - `imageMode` — `"inline"` vs `"separate"` for ZIP export
 - `history` — up to 20 `DocumentSnapshot[]`, with 4MB total size guard
+- `activeSnapshotId` — pointer to the saved document; on load it auto-restores that snapshot into the editor
 - `pageSetup` — `{ size, orientation, marginMm }`
 
 Session-scoped (not persisted): `documentHtml`, `sourceOpen`, `pendingExportFormat`, `lastLoadWarnings`, `lastEditAt`.
@@ -182,7 +183,7 @@ Auto-snapshot: `setHtml` debounces 2 minutes idle and saves a snapshot if HTML d
 - **Store as single source of truth for editor state.** UI components read with separate selectors (`useEditorStore((s) => s.x)`) — avoid destructuring the whole store, which causes unnecessary re-renders. (A stale whole-store destructure in a past Ribbon tab was exactly this pattern.)
 - **Cleaners are pure.** Each cleaner takes an HTML string and returns a new one. They use `DOMParser`, which is a browser API and also available under jsdom for tests.
 - **Cleaners apply only at export.** Editing should stay snappy; the paper editor shows the *current* document, not the cleaned-for-export version.
-- **Document never persists.** localStorage holds only preferences (cleaners, imageMode, pageSetup) and **history snapshots (device-local only)**. The current document is gone on reload — by design, for privacy. `beforeunload` warns if there are unsaved changes (current HTML differs from latest snapshot). History does **not** sync across devices; use Export or save as **Template** (Firestore) to move work between machines.
+- **Saved document auto-restores; unsaved edits stay volatile.** localStorage holds preferences (cleaners, imageMode, pageSetup), **history snapshots (device-local only)**, and the **`activeSnapshotId` pointer** (persisted in `partialize`). On load, `restoreActiveSnapshotFromSession()` (`editorStore.ts`) auto-loads the active snapshot's HTML back into the editor via `loadSnapshot()` (bumps `htmlSyncRevision` so Tiptap re-applies content) — so the **last saved document survives reload/reopen** on the same device. Pressing **บันทึก / Ctrl+S** is therefore a real save. Edits made *after* the last save are still volatile and only covered by the recovery-draft prompt (`useDraftRecovery`). `beforeunload` warns when current HTML differs from the latest snapshot. History/saved docs do **not** sync across devices; use Export or save as **Template** (Firestore) to move work between machines. (This intentionally supersedes the earlier "document never persists" privacy stance, per user request.)
 - **UI toggles are session-scoped.** `sourceOpen` (HTML source pane) and `isFullscreen` reset on reload.
 - **History is local-only.** Up to 20 document snapshots in localStorage. Auto-snapshot fires after 2 min idle. Total serialized size is capped at 4MB; oldest snapshots are dropped first.
 - **Templates use Firebase Firestore** when `NEXT_PUBLIC_FIREBASE_*` env vars are set at build time (`src/lib/templateFirestore.ts`, `templateStore.ts`). Up to 50 templates; real-time `onSnapshot` when the Template panel is open. JSON export/import still works for backup. **Firebase Auth is implemented** (Google sign-in via `src/lib/firebaseAuth.ts`); templates are stored **per-user** at `users/{uid}/templates`, with one-time migration from the legacy global `templates` collection on first sign-in (`migrateLegacyTemplatesToUser`). When Firebase is configured but the user is not signed in, cloud template save requires sign-in first (the legacy global path is read-only via `firestore.rules`). **History remains local-only** in `wordhtml-editor` localStorage — do not confuse with Templates.
@@ -235,8 +236,8 @@ Wired in `EditorShell.tsx`:
 
 | Shortcut | Action |
 |----------|--------|
-| Ctrl+S | Save snapshot + open Export dialog (if doc has content) |
-| Ctrl+Shift+S | Save snapshot only (no dialog) |
+| Ctrl+S | Save document (persists + auto-restores on reload) + open Export dialog (if doc has content) |
+| Ctrl+Shift+S | Save document only (no dialog) |
 | Ctrl+O | Open file picker |
 | Ctrl+Shift+N | Reset to new document |
 | Ctrl+F | Toggle Find & Replace panel |
@@ -249,121 +250,25 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (block indent +0.5cm, or sink list), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-space tab block), Ctrl+Enter (insert page break node).
 
-## Recent Changes & Known Issues
+## Current state (v0.2.0)
 
-### Phase 12 — Word-style Tab behavior (2026-06-07)
-`v0.1.38`. Tab in a paragraph felt unlike Word because the only live handler always indented the whole block. Reworked to be **position-aware** + render real tab stops. Spec: `docs/superpowers/specs/2026-06-07-word-style-tab-design.md`. **560 unit tests pass; lint + build clean; live grid-snap verified.**
-1. **Position-aware Tab** (`paragraphFormat.ts` `addKeyboardShortcuts`): caret at `parentOffset===0` of paragraph/heading → block indent +0.5cm (Word indents here); multi-block selection (`!$from.sameParent($to)`) → indent all; otherwise → insert a real `\t`; code block → `\t`; list → `sinkListItem`. Shift-Tab: list lift · delete a `\t` immediately before caret · else outdent −0.5cm.
-2. **Removed dead code** — the orphaned "delete 4-space block" Backspace branch in `VisualEditor.tsx` (Tab never inserted 4 spaces; CLAUDE.md note was stale). Kept Case 1 (outdent at start of indented paragraph).
-3. **Tab-stop CSS** — `tab-size: 1.27cm` (Word default 0.5") + `white-space: pre-wrap` on shared `.prose-editor/.paper` p/h1–h3/li in `globals.css`, plus `wrap.ts` (standalone HTML) and `exportPdf.ts` static CSS, so tabs snap to a 1.27cm grid in editor, preview, HTML, and PDF.
-4. **Cleaner preserves tabs** — `collapseSpaces` (`cleaners.ts`) now collapses only runs of regular spaces (`/ {2,}/g`) and keeps `\t` (was `/[ \t]+/g`, which destroyed tabs on export — the real breakage).
-5. **Tests** — `tabBehavior.test.ts` (keymap via `someProp("handleKeyDown")`), `wrap.test.ts` (tab-size/pre-wrap/`\t` preserved), `cleaners.test.ts` (single/double/inter-space tabs preserved). Out of scope: custom click-to-set ruler tab stops (uniform 1.27cm grid for now).
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **562 unit tests pass; lint + build clean.**
 
-### Phase 11 — Word-parity + Thai-gov feature batch 1 (2026-06-07)
-From the feature proposal (`wordhtml-feature-proposal.html`) — P1 quick wins, `v0.1.29`. Each is additive + tested + verified live:
-1. **B4 Watermark** — `Watermark` on `PageSetup`; `src/lib/watermark.ts` (pure render attrs + print CSS); `pageNode.ts` emits `--wm-*` vars + `data-watermark`; `globals.css` `.page-node[data-watermark] .page-body::before` diagonal text; `PageSetupDialog` presets (ร่าง/สำเนา/ลับ) + custom; `EditorShell` propagates; HTML export injects fixed print watermark.
-2. **B3 Style gallery** — `src/lib/styles/paragraphStylePresets.ts` (ปกติ/ชื่อเรื่อง/หัวข้อ ๑-๓/ยกข้อความ); dropdown in `RibbonTabHome` Styles group applies heading level + paragraph format + bold across the block.
-3. **C1 Official-letter wizard** — `src/lib/officialLetter/buildLetterHtml.ts` (สารบรรณ HTML for หนังสือภายนอก/บันทึกข้อความ) + `OfficialLetterDialog.tsx` form (mounted in `DialogManager`, `uiStore.officialLetterOpen`, Insert-ribbon button). Auto-fills today's Thai Buddhist date.
-4. **C2 Signature block** — `src/lib/officialLetter/signatureBlock.ts`; Insert-ribbon "บล็อกลงนาม" button inserts centered sign-line + (name) + position.
-5. **C4 Thai page tokens** — `{page_th}`/`{total_th}` (Thai numerals) added to `replacePageTokens` + `PAGE_TOKEN_REGEX`.
-6. **B2 Figure captions** (`v0.1.30`) — Insert-ribbon "คำบรรยายภาพ" inserts a numbered caption ("รูปที่ N"); `src/lib/caption.ts` computes the number; `data-caption` persists via a new `captionKind` global attribute on `ParagraphFormatExtension` (same pattern as `softSplit`), styled by CSS `p[data-caption]`.
-7. **B1 Footnotes/endnotes** (`v0.1.31`) — Insert-ribbon "เชิงอรรถ" prompts for text, inserts an inline superscript ref, and appends a numbered note (`data-footnote` via new `footnoteIndex` global attribute) at document end as ordinary reflow-safe content. `src/lib/footnotes.ts`, CSS `p[data-footnote]`.
-8. **A1-area: Thai header/footer tokens** (`v0.1.32`) — `HeaderFooterDialog` quick-insert buttons for `{page_th}` `{total_th}` `{date_th}` `{date_th_short}` (surfaces C4 tokens). Safe config-only change, no pagination-core touch.
-9. **B7 Cross-references** (`v0.1.33`) — Insert-ribbon "อ้างอิงข้าม" → `CrossRefDialog` heading picker inserts internal `<a href="#id">` link; `src/lib/crossref.ts`. Ids re-assigned (same slugify as `generateToc`) so links resolve.
-10. **C3 Distribution list / สำเนาเรียน** (`v0.1.33`) — Insert-ribbon "สำเนาเรียน" → `DistributionDialog` (recipient list + `{{เรียน}}` field) → `downloadDistributionZip` bundles one doc per recipient. `src/lib/export/distributionList.ts`.
-11. **B5 Comments / คอมเมนต์** (`v0.1.34`) — `CommentMark` stores body+resolved on the mark (travels with HTML, no schema/store change); View-ribbon toggles `CommentsPanel` (add on selection / resolve / delete via doc-scanning commands); `stripPaginationWrappers` unwraps comment spans so they never ship. `src/lib/tiptap/commentMark.ts`, `src/lib/comments.ts`.
+**v0.2.0 — Real document save.** Pressing **บันทึก / Ctrl+S** now persists the document: `activeSnapshotId` is whitelisted in `partialize`, and on load `restoreActiveSnapshotFromSession()` auto-loads that snapshot's HTML into the editor via `loadSnapshot()`. The saved document survives reload/reopen on the same device (intentionally supersedes the old "document never persists" stance). A `lastSyncedRevision` guard in `VisualEditor.onUpdate` prevents mount-time pagination normalization (which emits empty `<p></p>`) from clobbering the freshly restored document before the store→editor sync applies it.
 
-12. **B9 Citations/bibliography** (`v0.1.35`) — Insert-ribbon "อ้างอิง/บรรณานุกรม" inserts an inline `[N]` marker + appends a numbered bibliography entry (`data-citation` via new `citationIndex` global attribute) at document end. `src/lib/citations.ts` — same reflow-safe pattern as B1.
+**Feature map:**
+- A1 Header/footer rich toolbar · A2 First-page different margins · A3 Discrete table split (`tableSplit.ts`)
+- B1 Footnotes (`footnotes.ts`, `data-footnote`) · B2 Figure captions (`caption.ts`, `data-caption`) · B3 Style gallery (`paragraphStylePresets.ts`) · B4 Watermark (`watermark.ts`, `--wm-*` CSS vars) · B5 Comments (`commentMark.ts`) · B6 Multi-column (`columnBlock.ts`) · B7 Cross-references (`crossref.ts`) · B8 Track changes (`trackChange.ts`) · B9 Citations (`citations.ts`, `data-citation`)
+- C1 Official-letter wizard (`buildLetterHtml.ts`, `OfficialLetterDialog`) · C2 Signature block (`signatureBlock.ts`) · C3 Distribution list / สำเนาเรียน (`distributionList.ts`) · C4 Thai page tokens `{page_th}` / `{total_th}` / `{date_th}`
 
-13. **B8 Track changes** (`v0.1.36`) — `TrackChange` mark (insertion/deletion) + View-ribbon Review group (mark / accept-all / reject-all via doc-scanning commands); export resolves with accept semantics. Manual markup, no live-typing interception → no edit-pipeline risk. `src/lib/tiptap/trackChange.ts`.
-14. **A1 Header/footer rich toolbar** (`v0.1.36`) — `HeaderFooterDialog` B/I/U + center + logo buttons wrap the active field (feeds existing PageChromeLayer + preview). No pageNode schema change.
-15. **A2 Different first-page margins** (`v0.1.36`) — `PageSetup.firstPageMarginMm`; `pageNode` renders page-1 with them; `computePageBreaks` extended to a **per-page limit fn** (backward-compatible) so the reflow gives page 1 less content (no clip). `PageSetupDialog` "หน้าแรกต่าง" toggle.
+**Pagination milestones:** ghost-page fix (`normalizeIncomingHtml.ts`), holistic repaginate (`repaginate.ts`, `computePageBreaks`), intra-paragraph soft-split (`expandTallBlocks` + cumulative baseline fix), export re-join in `stripPaginationWrappers.ts`.
 
-16. **B6 Multi-column** (`v0.1.37`) — `ColumnBlock` node (group=block, atomic to pagination) wraps a selected run in 2/3 CSS columns; Layout-ribbon "คอลัมน์" select (wrapIn/lift). `src/lib/tiptap/columnBlock.ts`.
-17. **A3 Table split** (`v0.1.37`) — `TableSplit.splitTableAtCursor` splits the cursor's table into two (header repeated, every cell preserved); Insert-ribbon "แยกตารางข้ามหน้า". Discrete command, not mid-flow — reflow model untouched; the two tables flow normally. `src/lib/tiptap/tableSplit.ts`.
+**Thai mail-merge:** `src/lib/thai/` (`bahtText`, `toThaiDigits`, `formatThaiDate`), merge-field filters `{{x|baht|thai|date}}`, built-in สารบรรณ gallery (`templateGallery.ts`), batch export (`exportMailMerge.ts`).
 
-**✅ Feature proposal (`wordhtml-feature-proposal.html`) 100% implemented — all 17 items (A1-A3, B1-B9, C1-C4) shipped. 551 unit tests pass.** B6/A3 are scoped safe versions (atomic column block / discrete table split) that keep the single-column fill-to-limit reflow engine intact rather than mid-flow splitting.
-**503 unit tests pass; lint + build clean.** Remaining proposal items are larger/riskier and **touch the pagination/page-node core** (A1 header/footer rich editing — schema change; A2 first/odd-even *layout* — affects page-break distribution; A3 table/image split — pagination engine) plus B5 comments, B6 columns, B7 cross-refs, B8 track changes, C3 distribution list — each gets its own spec + focused pagination testing before implementation (per `wordhtml-feature-proposal.html`).
-
-### Phase 10 — Intra-paragraph Split (A.3) + Export Integrity Guard (2026-06-07)
-Sub-project A's last open item (intra-paragraph splitting) — `v0.1.28`:
-1. **Over-tall paragraphs now split across pages (soft-split).** A single paragraph taller than one page is split into adjacent `<p data-soft-split="true">` pieces during reflow, so it flows across pages like Microsoft Word instead of being clipped. Implemented in `src/lib/pagination/repaginate.ts` (`findParagraphSegments` + `expandTallBlocks`); marked via the `softSplit` global attribute in `src/lib/tiptap/paragraphFormat.ts`.
-2. **Critical baseline fix.** First implementation lost ~⅔ of content and produced 200 one-char pieces. Root cause: `rectAt(start).top` returns the top of the whole `[0..start]` range (always the first line ≈0), not the line at `start`. Fixed by using a cumulative baseline `bottomAt(start)`. Re-split guard (`alreadyPiece`) stops pieces from being re-split. Verified live: 8,300-char paragraph → 3 filled pages, content preserved exactly, caret stable, undo removes the edit (not the reflow).
-3. **Export re-join.** `stripPaginationWrappers.ts` merges adjacent soft-split pieces back into a single paragraph and removes the marker, so all five export formats emit clean output.
-4. **Export round-trip guard.** Extracted pure `buildExportHtmlDocument()` from `downloadHtml()` and added `exportHtml.test.ts` (5 tests) asserting `<body>` content is preserved exactly (chrome `<style>`/`<title>` never counted as content), soft-split pieces re-join, and no `page-node`/`page-body`/`data-soft-split` artifacts leak. **450 unit tests pass.**
-
-### Phase 1 — Stability (2026-05-14)
-1. **Paste + Enter bug fixed** — `pasteCleanup.ts` now unwraps semantic container elements (`<section>`, `<article>`, `<main>`, `<header>`, `<footer>`, `<aside>`, `<nav>`) that previously caused Tiptap paragraph splitting to fail after paste.
-2. **E2E smoke tests** — Playwright tests for app load, typing, export dialog, and .docx upload (`tests/e2e/smoke.spec.ts`).
-3. **GitHub Actions CI** — `.github/workflows/ci.yml` runs lint + unit tests + build + E2E on push/PR to `master`.
-
-### Phase 2 — Advanced Features (2026-05-14)
-4. **KaTeX math equations** — Tiptap Node extension with `MathInputDialog` (Ctrl+Shift+M). Supports inline and block LaTeX. Rendered via KaTeX in editor and exports.
-5. **PDF export** — Client-side PDF generation via `html2pdf.js` with A4/Letter margins, fonts, and image support. Added as 5th export format.
-6. **EditorShell refactor** — Extracted `IndentRuler`, `TemplatePreview`, `SourcePane` into standalone files. Reduced `EditorShell.tsx` from 495 to 376 lines.
-
-### Phase 3 — Polish (2026-05-14)
-7. **Onboarding tour** — 5-step `driver.js` spotlight tour auto-starts on first visit to `/app`. Skippable. State persisted in `localStorage`.
-8. **Virtual scroll** — `content-visibility: auto` + `contain-intrinsic-size` for documents >5 pages. Keeps ProseMirror state intact while improving scroll performance.
-9. **Dark mode paper** — `.paper` now uses `--color-paper` token (`#1f1f23` in dark mode) distinct from canvas. Print stylesheet forces white paper regardless of theme.
-
-### Phase 4 — Modern Clean Pagination (2026-05-21)
-10. **True multi-page canvas display** — Replaced dashed-line page break indicators with stacked white A4 pages on a gray canvas background, matching Microsoft Word visual layout.
-11. **PageCanvas + PageWrapper components** — `PageCanvas` (forwardRef) renders multiple `PageWrapper` pages vertically with 16px gap and gray canvas. `PageWrapper` applies subtle shadow, enforces A4 dimensions, and renders page numbers via CSS `::after` pseudo-element.
-12. **CSS custom properties for margins** — Each `page-node` sets inline CSS variables (`--page-margin-top`, `--page-margin-right`, `--page-margin-bottom`, `--page-margin-left`) driven by `pageSetup.marginMm`. `page-body` uses these variables for internal padding, keeping the page frame and content layout decoupled.
-13. **Dark mode pages** — Canvas background darkens in dark mode (`#0f0f10`), while individual pages stay white (`#ffffff`) for readability. Print stylesheet forces white paper regardless of theme.
-14. **Export wrapper stripping** — `stripPaginationWrappers.ts` removes `.page-node` / `.page-body` containers before all five export paths (HTML, ZIP, DOCX, PDF, Markdown), ensuring clean output without internal pagination artifacts.
-15. **Ctrl+Enter page split** — VisualEditor now calls `splitPage` command (with `insertPageBreak` fallback) to create a new page node at cursor position.
-16. **goToPage scroll** — `PaginationManager` uses `goToPage` from `usePagination.ts` to scroll to `.page-node` top with 24px offset for comfortable viewing.
-
-### Previously (2026-05-12)
-- **Placeholder hints** — `EmptyHint` now shows guidance about `{{variable}}` template syntax; FAQ and PasteTips include variable usage sections.
-2. **Dashed page break indicators** — Automatic pagination separators (`.page-break-indicator`) changed from thick dot-grid bands to simple dashed horizontal lines with centered page labels, matching Microsoft Word style.
-3. **Insert Variable button** — Added to Insert ribbon tab (`RibbonTabInsert.tsx`); inserts `{{variable}}` template mark.
-4. **Tab / Backspace fix** — Tab inserts 4 spaces; Backspace correctly deletes the preceding 4-space block when at appropriate positions (off-by-one bug in `parentOffset` vs `textContent` alignment fixed).
+**v0.1.38 Tab behavior** (`paragraphFormat.ts`): caret at `parentOffset===0` or multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift. Tab-stop CSS: `tab-size: 1.27cm` + `white-space: pre-wrap` on p/h1–h3/li in `globals.css`, `wrap.ts`, and `exportPdf.ts`. `collapseSpaces` cleaner preserves `\t` (regex `/ {2,}/g`, not `/[ \t]+/g`). Spec: `docs/superpowers/specs/2026-06-07-word-style-tab-design.md`.
 
 ### Known Pending Issues
-- ~~**Single paragraph taller than one page does not split mid-text.**~~ **Resolved in Phase 10 (A.3)** — over-tall paragraphs now soft-split across pages (see Phase 10 above). Normal multi-paragraph documents continue to reflow correctly.
-- Roadmap (own specs/plans): Sub-project B (Thai official-document templates + mail-merge hardening + batch export) and Sub-project C (IndexedDB crash-safe draft recovery + cloud history sync) — see `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
-
-### Phase 9 — Thai Documents + Mail-merge (2026-06-07)
-Sub-project B of the production roadmap (`docs/superpowers/specs/2026-06-07-production-roadmap-design.md`):
-- **Thai helpers** (`src/lib/thai/`): `bahtText()` (จำนวนเงินเป็นตัวอักษร, เอ็ด/ยี่/สิบ/ล้าน rules), `toThaiDigits()`, `formatThaiDate()` (Buddhist-era, Thai numerals).
-- **Merge-field filters** (additive — plain `{{name}}` unchanged): `{{x|baht}}`, `{{x|thai}}`, `{{x|date}}` via a filtered-field pass in `mergeFields.ts` (`FILTERED_MERGE_FIELD_REGEX_SOURCE`). The variable-badge system uses `data-variable`, not this regex, so it is unaffected.
-- **Page tokens**: `{date_th}` `{date_th_short}` `{date_en}` in `pageTokens.ts` (accepts injectable `now`).
-- **Built-in gallery** (`src/lib/templateGallery.ts`): proper สารบรรณ formats — หนังสือภายนอก, บันทึกข้อความ, ประกาศ, and รายงานขอซื้อขอจ้าง (showcases `{{วงเงิน|baht}}` + `{date_th}`).
-- **Mail-merge batch export** (`src/lib/export/exportMailMerge.ts`): `buildMergedDocuments()` resolves the template once per `dataSet` row; `downloadMailMergeZip()` bundles them. Surfaced in the Export dialog when `templateMode` + data rows exist.
-- **B.3 (variable panel bugs)** were already fixed on master — the 3 `variable-*` E2E specs pass. **C.1 (crash-safe draft recovery)** already exists (`draftRecovery.ts`, IndexedDB + sessionStorage). Remaining roadmap: A.3 intra-paragraph split (risky, needs spot-check) and C.2 cloud history sync (Firebase, needs a project to verify).
-442 unit tests pass.
-
-### Phase 8 — Pagination Reflow Foundation (2026-06-07)
-Editor route is `/` (root, `src/app/page.tsx` → `EditorShell`); `/landing` is marketing; `/procurement` is the Thai 3-stage จัดซื้อจัดจ้าง builder. Live Chrome exploration found three real "หน้าเพี้ยน" defects; fixed two of three:
-1. **Ghost pages on open/paste fixed** — `src/lib/pagination/normalizeIncomingHtml.ts` strips `.page-node/.page-body/.page-break` wrappers from incoming HTML. Wired into `loadFile` (.docx/.html/.md); pasted external HTML is already flattened by `pasteCleanup`'s `normalizePastedStructure` (regression-guarded).
-2. **Mis-distribution fixed** — replaced greedy one-split-per-cycle (which gave 34/2/2/2/2/2/2 for 40 paragraphs) with holistic `src/lib/pagination/repaginate.ts` (`buildRepaginateTransaction`) using the pure `computePageBreaks` fill-to-limit distributor. One transaction rebuilds the whole page flow; 32px safety margin prevents clipping; caret tracked by (block index, offset) and restored; `addToHistory:false` keeps reflow out of the undo stack. Runs on idle (covers insert + delete/merge). Verified live: 40 paragraphs → 5 evenly-filled pages, caret stable, Ctrl+Z undoes the edit not the reflow.
-3. **Still open** — intra-paragraph splitting (see Known Pending Issues).
-Tests: `computePageBreaks.test.ts`, `normalizeIncomingHtml.test.ts`, paste regression guards, and `tests/e2e/pagination-reflow.spec.ts` (ghost-page + even-distribution). 411 unit tests pass.
-
-### Phase 7 — Production Hardening (2026-06-06)
-1. **Repo cleanup** — removed 22 committed QA-screenshot PNGs + `tsc-errors.txt` from the repo root (gitignored `/*.png` + `tsc-errors.txt`, keeping `tests/e2e/screenshots/`); moved ~15 audit/plan markdown files into `docs/audits/` and `docs/plans/`.
-2. **PWA + metadata** — `src/app/manifest.ts` (force-static, installable `display:"standalone"`), `icon.svg` / `apple-icon.svg`, `robots.ts`, and minimal Twitter-card/OG metadata in `layout.tsx`.
-3. **Privacy page** — `src/app/privacy/page.tsx` (browser-only processing, local history, per-user cloud templates) + footer link.
-4. **Firebase template gating** — `templateStore` now throws `SignInRequiredError` for cloud writes when Firebase is configured but the user is signed out (was a silent permission-denied against the read-only legacy collection). `TemplatePanel` turns Save into a sign-in CTA. `firestore.rules` comment refreshed; per-user paths are the active layout.
-5. **Removed debug telemetry** — deleted the leftover `debugPerfLog` harness (hardcoded localhost POST) and all 7 call sites, eliminating per-keystroke regex/perf work in `VisualEditor.onUpdate`.
-6. **a11y** — associated the GAS function-name `<label>`/input in `ExportDialog` (ruler keyboard handles, search labels, and `aria-busy` were already in place).
-7. **Save/Open project (`.wordhtml.json`)** — `src/lib/project.ts` bundles the full editable state (html + pageSetup + templateMode + variables + dataSet). Save from the Export dialog ("บันทึกงาน"); open via the Upload button (`loadFile` handles `.json`). Survives reload and moves work between machines without cloud.
-8. **Lint clean (0 warnings)**, build type-checks, **396 unit tests** pass (added gating, storage, and project test suites). Stale CLAUDE.md design-system + Firebase notes corrected (warm stone palette, IBM Plex Sans Thai, Auth done).
-
-### Phase 6 — Critical Bug Fixes + Test Coverage (2026-06-05)
-1. **Font Family + Text Color fixed** — `TextStyle` mark from `@tiptap/extension-text-style` was never registered in `VisualEditor.tsx`. Both `Color` and `FontFamily` extensions silently fail without it. Fixed by importing `TextStyle` and inserting it **before** `Color` in the extensions array. Also aligned `fontSize.ts` command declaration signature to match the package's `(fontSize: string)` type to resolve a TypeScript intersection conflict.
-2. **font-family preserved on export** — `removeInlineStyles` cleaner (`src/lib/cleaning/cleaners.ts`) KEEP whitelist was missing `"font-family"`, stripping applied fonts during export. Added it.
-3. **Ruler left-margin handle unblocked** — At `indentLeft=0`, the indent ▽ triangle sat at the identical x-position as the left-margin handle with the same conditional `z-20`. The indent triangle (rendered later in DOM) captured all pointer events. Fixed by adding a permanent `z-10` base class to both margin handles so they always sit above indent handles. Anti-collision test added to verify indent handle is still keyboard-operable after the fix.
-4. **Ribbon Home active-state reactive** — `RibbonTabHome.tsx` read `editor?.isActive()` directly in JSX for Bold, Italic, Underline, Strike, Sub/Sup, Align, List, Heading, Blockquote, Code, CodeBlock (19 states total). Direct calls are not reactive to cursor movement. Replaced with a consolidated `formatState` `useEditorState` selector — pattern from `MobileToolbar.tsx`.
-5. **Tests added** — 8 new unit tests (379 total): `src/lib/tiptap/fontFamily.test.ts` (FontFamily+Color+export round-trip), extended `cleaners.test.ts` (font-family preservation), extended `Ruler.test.tsx` (margin+indent co-existence), `ribbon/RibbonTabHome.state.test.tsx` (aria-pressed regression).
-
-### Phase 5 — Ruler Fix + Accessibility + UI Refresh (2026-06-04/05)
-5. **Ruler horizontal alignment fixed** — `EditorRulerBar` was in a separate sibling container above the scroll area; the scroll container's vertical scrollbar (~17 px on Windows) reduced its `mx-auto` centering width, shifting the ruler 7–8 px right of the paper. Fixed by moving `EditorRulerBar` inside the scroll container with `position: sticky; top: 0; z-index: 10`. Both ruler and paper now share the same container width, so centering is identical. Horizontal scroll also moves ruler + paper together correctly.
-6. **Accessibility fixes** — Hidden `input[type="color"]` and `input[type="file"]` elements given `aria-hidden="true"` + `tabIndex={-1}`. Visible `<select>` elements in `RibbonSelect` auto-derive `name` from label. `FontSizeSelector` has `name="ribbon-font-size"`. Spacing number inputs (`ribbon-space-before`, `ribbon-space-after`) have `id` + `name` + proper `<label htmlFor>`.
-7. **UI refresh** — Accent color changed from amber/orange to blue (`#3B82F6` light / `#60A5FA` dark). Display font changed from Lora to Plus Jakarta Sans. Landing page enhanced with SocialProof section, FAQ accordion, and feature chips in Hero.
+- Roadmap: cloud history sync (Firebase C.2). See `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
 
 ## Pagination Architecture
 
@@ -386,96 +291,17 @@ EditorShell
 
 ### CSS Custom Properties for Margins
 
-Each `.page-node` sets inline CSS variables based on `pageSetup.marginMm`:
+Each `.page-node` sets `--page-margin-{top|right|bottom|left}` inline CSS vars from `pageSetup.marginMm`; `.page-body` consumes them via `padding`. This decouples the visual page frame from content inset so exports can strip wrappers cleanly.
 
-```css
-.page-node {
-  --page-margin-top:    {topMm}mm;
-  --page-margin-right:  {rightMm}mm;
-  --page-margin-bottom: {bottomMm}mm;
-  --page-margin-left:   {leftMm}mm;
-}
-```
+Page numbers rendered via `.page-node::after { content: attr(data-page-number) }`, updated automatically by `splitPage`/`mergePage` commands.
 
-`.page-body` consumes them:
+**Dark mode:** canvas `#0f0f10`, pages always `#ffffff`, print forces white.
 
-```css
-.page-body {
-  padding:
-    var(--page-margin-top)
-    var(--page-margin-right)
-    var(--page-margin-bottom)
-    var(--page-margin-left);
-}
-```
+## Pagination — pending work
 
-This keeps the visual page frame (white background + shadow) separate from the content inset, so exports can strip wrappers without affecting margin logic.
-
-### Page Numbers
-
-Rendered via CSS `::after` on `.page-node`:
-
-```css
-.page-node::after {
-  content: attr(data-page-number);
-  position: absolute;
-  bottom: -24px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
-  color: #9ca3af;
-}
-```
-
-Numbers update automatically when `splitPage` / `mergePage` commands renumber nodes.
-
-### Dark Mode
-
-- Canvas: `#f3f4f6` (light) / `#0f0f10` (dark)
-- Pages: always `#ffffff` so text remains readable
-- Print: forces white paper regardless of theme
-
-## Ongoing Work — Real-time Pagination (Microsoft Word-style)
-
-**Status**: Phase 1 complete. Phase 1.5 (Debug Audit) complete. Phase 4 (UI Integration) complete.
-
-### Completed (2026-05-19)
-
-**Tiptap Extensions** (`src/lib/tiptap/`):
-- `pageNode.ts` — `PageNode` block node with `pageHeader? pageBody pageFooter?` structure, attributes: `pageNumber`, `pageSetup`
-- `pageBody.ts` — `PageBodyNode` measurable content container (`data-page-body`)
-- `pageHeader.ts` / `pageFooter.ts` — placeholder nodes (`contenteditable="false"`) for Phase 2
-- `pageCommands.ts` — Commands: `insertPage`, `splitPage`, `mergePage`, `setPageSetup` (auto-renumber on split/merge)
-- Registered in `VisualEditor.tsx` extensions array
-
-**Pagination Engine** (`src/lib/pagination/` + `src/hooks/`):
-- `engine.ts` — `PaginationEngine` class with ResizeObserver (100ms debounce), `calculatePageMetrics`, `findSplitPosition`, idempotent + infinite-loop-safe
-- `splitter.ts` — `splitNodeAtHeight`, paragraph-level split, atomic unit handling (tables/images move whole), batch transaction builder
-- `usePagination.ts` — React hook wiring engine to editor, returns `{ isPaginating, pageCount, currentPage, goToPage }`, handles window resize and cleanup
-
-**Phase 1.5 — Debug Audit (2026-05-20)**
-- `splitter.ts` — Fixed `Fragment` import (value import, not type-only). Fixed `splitOffset === 0` infinite loop. Removed unused `buildBatchSplitTransaction`.
-- `usePagination.ts` — Added `goToPage` with scroll-to-page logic. Added `scrollContainerRef` option. Fixed size check to `splitsInserted > 0`. Added `scheduleCheck()` debounce.
-- `VisualEditor.tsx` — Changed Ctrl+Enter from `insertPageBreak` to `splitPage` with fallback.
-- `EditorShell.tsx` — Integrated `goToPage` with `PaginationManager`. Added `wordhtml:page-next` / `wordhtml:page-prev` listeners.
-- Export pipeline — Created `stripPaginationWrappers.ts`. Integrated into all 5 export paths (HTML, ZIP, DOCX, PDF, Markdown). PDF export uses static CSS instead of scraping `document.styleSheets`.
-- Verification — `npm test` 193/193 passed, `npm run lint` 0 errors, `npm run build` passed.
-
-### Pending / Not Yet Started
-
-1. **Phase 2** — Header/Footer rich text editing (enable `contenteditable`, add header/footer toolbar/menu, per-page header/footer state)
-2. **Phase 3** — Table/image splitting across pages, different first page, odd-even page headers/footers
-3. **Integration Testing** — Verify Tiptap extensions + layout engine + UI work together without breaking existing export/cleaning/search features
-
-### Architecture Notes
-
-- `PageNode` renders as `<div class="page-node">` with CSS margin custom properties; `PageBodyNode` as `<div class="page-body" data-page-body="true">`
-- Layout engine observes `.page-body` elements and emits `SplitCandidate` when overflow detected
-- Splitter inserts existing `pageBreak` nodes (`src/lib/tiptap/pageBreak.ts`) or uses `splitPage` command
-- Engine only measures and reports; it does NOT mutate document directly (hook applies transactions)
-- Phase 1 scope: paragraph-level splitting. Tables/images that overflow move to next page as atomic units.
-- **Goal**: Editor displays pages visually separated like Microsoft Word, with content flowing automatically across pages in real-time.
-- **Constraint**: Must remain static client-side; no server rendering or API routes.
+- **Phase 2** — Header/footer rich text editing (enable `contenteditable`, toolbar, per-page state)
+- **Phase 3** — Odd/even page headers/footers
+- Cloud history sync (Firebase C.2)
 
 ## Placeholder System
 
@@ -519,7 +345,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.1.38**
+- **Current version**: **v0.2.0**
 
 ### Patch bump rule (deploy default)
 

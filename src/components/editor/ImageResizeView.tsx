@@ -178,13 +178,13 @@ export function ImageResizeView({
 
   // --- Handle appearance ---
   const isDragging = !!drag;
-  const handleColor = liveShift ? "#f59e0b" : "#2563eb";
+  const handleColor = liveShift ? "var(--color-warning)" : "var(--color-accent)";
 
   const handleStyle = (which: "bl" | "br"): React.CSSProperties => ({
     position: "absolute",
     width: 11,
     height: 11,
-    background: drag?.handle === which ? handleColor : "white",
+    background: drag?.handle === which ? handleColor : "var(--color-surface)",
     border: `2px solid ${handleColor}`,
     borderRadius: 2,
     boxShadow: "0 1px 4px rgba(0,0,0,.25)",
@@ -231,8 +231,8 @@ export function ImageResizeView({
             gap: 6,
             marginTop: 6,
             padding: "3px 10px",
-            background: isDragging ? "#1e1e1e" : "white",
-            border: isDragging ? "none" : "1px solid #e5e7eb",
+            background: isDragging ? "var(--color-foreground)" : "var(--color-surface)",
+            border: isDragging ? "none" : "1px solid var(--color-border)",
             borderRadius: 7,
             boxShadow: "0 2px 10px rgba(0,0,0,.1)",
             fontSize: 11,
@@ -245,25 +245,25 @@ export function ImageResizeView({
               fontWeight: 600,
               color: isDragging
                 ? liveShift
-                  ? "#f59e0b"
-                  : "white"
-                : "#111",
+                  ? "var(--color-warning)"
+                  : "var(--color-background)"
+                : "var(--color-foreground)",
             }}
           >
             {sizeLabel}
           </span>
           {!isDragging && (
             <>
-              <span style={{ color: "#d1d5db" }}>·</span>
+              <span style={{ color: "var(--color-border-strong)" }}>·</span>
               {(["25%", "50%", "75%", "100%"] as const).map((p) => (
                 <button
                   key={p}
                   onMouseDown={applyPreset(p)}
                   style={{
                     padding: "2px 6px",
-                    border: `1px solid ${imageWidthMatchesPreset(width, p, bodyWidthPx) ? "#93c5fd" : "#e5e7eb"}`,
-                    background: imageWidthMatchesPreset(width, p, bodyWidthPx) ? "#dbeafe" : "#f9fafb",
-                    color: imageWidthMatchesPreset(width, p, bodyWidthPx) ? "#1d4ed8" : "#555",
+                    border: `1px solid ${imageWidthMatchesPreset(width, p, bodyWidthPx) ? "color-mix(in srgb, var(--color-accent) 50%, var(--color-border))" : "var(--color-border)"}`,
+                    background: imageWidthMatchesPreset(width, p, bodyWidthPx) ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))" : "var(--color-muted)",
+                    color: imageWidthMatchesPreset(width, p, bodyWidthPx) ? "var(--color-accent)" : "var(--color-muted-foreground)",
                     borderRadius: 4,
                     fontSize: 10,
                     fontWeight: 500,

@@ -21,7 +21,7 @@ export function RibbonButton({ label, onClick, disabled, active, children, class
       aria-label={label}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-7 items-center justify-center rounded-md px-2 text-[color:var(--color-muted-foreground)] transition-all",
+        "inline-flex h-7 items-center justify-center rounded-md px-2 text-[color:var(--color-muted-foreground)] transition-[background-color,color,box-shadow]",
         "hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]",
         "active:bg-[color:color-mix(in_srgb,var(--color-muted)_70%,var(--color-accent)_12%)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--color-surface)]",

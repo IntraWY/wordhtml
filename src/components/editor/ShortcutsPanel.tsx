@@ -16,8 +16,8 @@ interface ShortcutItem {
 }
 
 const SHORTCUTS: ShortcutItem[] = [
-  { keys: "Ctrl+S", labelTh: "บันทึก Snapshot + เปิดส่งออก", labelEn: "Save snapshot + open export" },
-  { keys: "Ctrl+Shift+S", labelTh: "บันทึก Snapshot", labelEn: "Save snapshot only" },
+  { keys: "Ctrl+S", labelTh: "บันทึกเอกสาร + เปิดส่งออก", labelEn: "Save document + open export" },
+  { keys: "Ctrl+Shift+S", labelTh: "บันทึกเอกสาร", labelEn: "Save document only" },
   { keys: "Ctrl+O", labelTh: "เปิดไฟล์", labelEn: "Open file" },
   { keys: "Ctrl+Shift+N", labelTh: "เอกสารใหม่", labelEn: "New document" },
   { keys: "Ctrl+F", labelTh: "ค้นหา/แทนที่", labelEn: "Find & Replace" },

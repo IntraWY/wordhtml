@@ -56,29 +56,39 @@ export function getActiveSnapshotSession(): string | null {
   return sessionStorage.getItem(ACTIVE_SNAPSHOT_SESSION_KEY);
 }
 
-/** Restore or clear active snapshot after persisted state hydrates. */
+/**
+ * Restore the saved document after persisted state hydrates.
+ *
+ * `activeSnapshotId` now persists in localStorage (see partialize), so on a
+ * fresh load we auto-restore the saved snapshot's HTML back into the editor —
+ * the document survives reload and reopening, not just an in-session refresh.
+ * The session key is kept as a fallback for state persisted before the pointer
+ * was added to partialize.
+ */
 export function restoreActiveSnapshotFromSession(): void {
-  const { documentHtml, history } = useEditorStore.getState();
-  const sessionId = getActiveSnapshotSession();
-  const validSession =
-    sessionId !== null && history.some((s) => s.id === sessionId);
+  const { documentHtml, history, activeSnapshotId } = useEditorStore.getState();
+  const candidateId = activeSnapshotId ?? getActiveSnapshotSession();
+  const valid =
+    candidateId !== null && history.some((s) => s.id === candidateId);
 
-  if (!documentHtml.trim()) {
-    if (validSession) {
-      useEditorStore.setState({ activeSnapshotId: sessionId });
-      return;
-    }
+  if (!valid) {
     setActiveSnapshotSession(null);
     useEditorStore.setState({ activeSnapshotId: null });
     return;
   }
 
-  if (validSession) {
-    useEditorStore.setState({ activeSnapshotId: sessionId });
-  } else {
-    setActiveSnapshotSession(null);
-    useEditorStore.setState({ activeSnapshotId: null });
+  // Fresh load with an empty editor → restore the saved document. loadSnapshot
+  // sets documentHtml + activeSnapshotId and bumps htmlSyncRevision so the
+  // Tiptap editor re-applies the content regardless of mount timing.
+  if (!documentHtml.trim()) {
+    useEditorStore.getState().loadSnapshot(candidateId);
+    return;
   }
+
+  // Document already present (e.g. recovery draft restored it) — just bind the
+  // pointer so saving updates the same entry.
+  setActiveSnapshotSession(candidateId);
+  useEditorStore.setState({ activeSnapshotId: candidateId });
 }
 
 function syncSnapshotToCloud(snapshot: DocumentSnapshot): void {
@@ -508,7 +518,7 @@ export const useEditorStore = create<EditorState>()(
           snapshotForCloud = snapshot;
           showFeedback = source === "manual" || state.autoSave.notifyOnSave;
           feedbackLabel =
-            source === "auto" ? "บันทึกอัตโนมัติแล้ว" : "บันทึก Snapshot แล้ว";
+            source === "auto" ? "บันทึกอัตโนมัติแล้ว" : "บันทึกแล้ว";
 
           setActiveSnapshotSession(snapshot.id);
           return { history: updated, activeSnapshotId: snapshot.id };
@@ -709,6 +719,10 @@ export const useEditorStore = create<EditorState>()(
         enabledCleaners: state.enabledCleaners,
         imageMode: state.imageMode,
         history: state.history,
+        // Persisted so the saved document auto-restores on reload/reopen.
+        // Additive field — defaults to null for older persisted state via the
+        // base store, so no version bump/migration is required.
+        activeSnapshotId: state.activeSnapshotId,
         pageSetup: state.pageSetup,
         templateMode: state.templateMode,
         variables: state.variables,

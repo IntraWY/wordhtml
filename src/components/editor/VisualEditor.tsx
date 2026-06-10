@@ -198,6 +198,17 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
   const onUpdate = useCallback(
     ({ editor }: { editor: Editor }) => {
+      // Ignore editor-originated updates while an external load (e.g. the
+      // saved-document restore on startup, a file open, or a snapshot load) is
+      // still pending application. Otherwise mount-time pagination
+      // normalization fires onUpdate with empty content and clobbers the
+      // freshly restored document before the store→editor sync applies it.
+      if (
+        lastSyncedRevision.current <
+        useEditorStore.getState().htmlSyncRevision
+      ) {
+        return;
+      }
       const html = unwrapPageNode(editor.getHTML());
       lastWrittenHtml.current = html;
       setHtml(html, { debounce: true });
@@ -420,12 +431,21 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
   useEffect(() => {
     if (!isLiveEditor(editor)) return;
-    if (documentHtml === lastWrittenHtml.current) return;
+    if (documentHtml === lastWrittenHtml.current) {
+      // Editor already matches the store for this revision — mark it synced so
+      // the onUpdate guard (which suppresses writes while an external load is
+      // pending) releases instead of staying stuck.
+      lastSyncedRevision.current = htmlSyncRevision;
+      return;
+    }
 
     const isExternalLoad = htmlSyncRevision > lastSyncedRevision.current;
     if (!isExternalLoad) {
       const editorHtml = unwrapPageNode(editor.getHTML());
-      if (documentHtml === editorHtml) return;
+      if (documentHtml === editorHtml) {
+        lastSyncedRevision.current = htmlSyncRevision;
+        return;
+      }
     }
 
     const wrapped = wrapInPageNode(documentHtml || "");

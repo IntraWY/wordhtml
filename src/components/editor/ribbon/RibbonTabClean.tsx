@@ -88,7 +88,7 @@ export function RibbonTabClean() {
           onClick={handleCleanNow}
           disabled={!hasDoc || isCleaning}
           className={cn(
-            "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-white transition-all",
+            "inline-flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-white transition-colors",
             "bg-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-hover)]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:ring-offset-1",
             "disabled:pointer-events-none disabled:opacity-40"

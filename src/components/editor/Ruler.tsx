@@ -338,7 +338,7 @@ function RulerInner({
               >
                 <div
                   className={cn(
-                    "rounded-sm transition-all duration-150",
+                    "rounded-sm transition-[transform,background-color,box-shadow] duration-150",
                     hovered === "marginLeft"
                       ? "scale-125 bg-gray-800 shadow-md"
                       : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
@@ -376,7 +376,7 @@ function RulerInner({
               >
                 <div
                   className={cn(
-                    "rounded-sm transition-all duration-150",
+                    "rounded-sm transition-[transform,background-color,box-shadow] duration-150",
                     hovered === "marginRight"
                       ? "scale-125 bg-gray-800 shadow-md"
                       : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
@@ -417,7 +417,7 @@ function RulerInner({
               >
                 <div
                   className={cn(
-                    "rounded-sm transition-all duration-150",
+                    "rounded-sm transition-[transform,background-color,box-shadow] duration-150",
                     hovered === "marginTop"
                       ? "scale-125 bg-gray-800 shadow-md"
                       : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
@@ -462,7 +462,7 @@ function RulerInner({
                 >
                   <div
                     className={cn(
-                      "rounded-sm transition-all duration-150",
+                      "rounded-sm transition-[transform,background-color,box-shadow] duration-150",
                       hovered === "marginBottom"
                         ? "scale-125 bg-gray-800 shadow-md"
                         : "bg-gray-600 hover:scale-[1.15] hover:bg-gray-700"
@@ -510,7 +510,7 @@ function RulerInner({
           >
             <div
               className={cn(
-                "transition-all duration-150",
+                "transition-transform duration-150",
                 hovered === "first" ? "scale-125" : "hover:scale-[1.15]"
               )}
               style={{
@@ -518,7 +518,7 @@ function RulerInner({
                 height: 0,
                 borderLeft: "5px solid transparent",
                 borderRight: "5px solid transparent",
-                borderBottom: "7px solid #7c3aed",
+                borderBottom: "7px solid var(--color-accent)",
               }}
             />
           </div>
@@ -552,7 +552,7 @@ function RulerInner({
           >
             <div
               className={cn(
-                "transition-all duration-150",
+                "transition-transform duration-150",
                 hovered === "left" ? "scale-125" : "hover:scale-[1.15]"
               )}
               style={{
@@ -560,7 +560,7 @@ function RulerInner({
                 height: 0,
                 borderLeft: "5px solid transparent",
                 borderRight: "5px solid transparent",
-                borderTop: "7px solid #2563eb",
+                borderTop: "7px solid color-mix(in srgb, var(--color-accent) 80%, var(--color-foreground))",
               }}
             />
           </div>
@@ -574,7 +574,7 @@ function RulerInner({
                 transform: "translateX(-50%)",
                 width: "6px",
                 height: "6px",
-                background: "#93c5fd",
+                background: "color-mix(in srgb, var(--color-accent) 55%, var(--color-surface))",
                 borderRadius: "1px",
                 zIndex: 9,
               }}

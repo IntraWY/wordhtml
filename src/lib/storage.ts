@@ -171,6 +171,7 @@ export const editorStorage = createSafeStorage<{
   enabledCleaners: string[];
   imageMode: string;
   history: DocumentSnapshot[];
+  activeSnapshotId?: string | null;
   pageSetup: PageSetup;
   templateMode: boolean;
   variables: unknown[];
