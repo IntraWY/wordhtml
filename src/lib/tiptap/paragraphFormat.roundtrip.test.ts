@@ -44,4 +44,22 @@ describe("ParagraphFormatExtension HTML roundtrip", () => {
     expect(roundtripped).toMatch(/margin-left:\s*1\.5cm/);
     expect(roundtripped).toMatch(/line-height:\s*1\.5/);
   });
+
+  it("preserves a literal tab character across a setContent roundtrip", () => {
+    // Word-style mid-line Tab inserts a real \t (paragraphFormat.ts). It must
+    // survive the store → editor re-parse (auto-restore on reload, snapshot
+    // load, file open). ProseMirror collapses whitespace by default, so the
+    // parse must opt into preserveWhitespace: "full".
+    editor = createEditor();
+    editor.commands.focus("end");
+    editor.commands.insertContent("before\tafter");
+
+    const html = editor.getHTML();
+    expect(html).toContain("\t");
+
+    editor.commands.setContent(html, {
+      parseOptions: { preserveWhitespace: "full" },
+    });
+    expect(editor.getHTML()).toContain("\t");
+  });
 });

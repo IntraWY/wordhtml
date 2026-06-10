@@ -417,6 +417,11 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
     content: wrapInPageNode(documentHtml),
     editorProps,
     onUpdate,
+    // Preserve literal tab characters (Word-style mid-line Tab inserts a real
+    // \t). Without this, ProseMirror collapses whitespace on parse and the tab
+    // disappears whenever content is re-applied (auto-restore on reload,
+    // snapshot load, file open). Matches the .prose-editor white-space:pre-wrap.
+    parseOptions: { preserveWhitespace: "full" },
   });
 
   useEffect(() => {
@@ -453,7 +458,11 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
 
     const applyContent = () => {
       if (cancelled || !isLiveEditor(editor)) return;
-      editor.commands.setContent(wrapped, { emitUpdate: false });
+      editor.commands.setContent(wrapped, {
+        emitUpdate: false,
+        // Keep literal \t tabs across store → editor re-syncs (see useEditor).
+        parseOptions: { preserveWhitespace: "full" },
+      });
       lastWrittenHtml.current = documentHtml;
       lastSyncedRevision.current = htmlSyncRevision;
     };

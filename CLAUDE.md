@@ -247,12 +247,12 @@ Wired in `EditorShell.tsx`:
 | F11 | Toggle fullscreen |
 
 Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
-ParagraphFormatExtension handles: Tab (block indent +0.5cm, or sink list), Shift+Tab (block indent -0.5cm, or lift list).
-VisualEditor.tsx handles: Tab (insert 4 spaces at cursor), Backspace (delete 4-space tab block), Ctrl+Enter (insert page break node).
+ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
+VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
 ## Current state (v0.2.0)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **562 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **567 unit tests pass; lint + build clean.**
 
 **v0.2.0 — Real document save.** Pressing **บันทึก / Ctrl+S** now persists the document: `activeSnapshotId` is whitelisted in `partialize`, and on load `restoreActiveSnapshotFromSession()` auto-loads that snapshot's HTML into the editor via `loadSnapshot()`. The saved document survives reload/reopen on the same device (intentionally supersedes the old "document never persists" stance). A `lastSyncedRevision` guard in `VisualEditor.onUpdate` prevents mount-time pagination normalization (which emits empty `<p></p>`) from clobbering the freshly restored document before the store→editor sync applies it.
 
@@ -265,7 +265,7 @@ All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9
 
 **Thai mail-merge:** `src/lib/thai/` (`bahtText`, `toThaiDigits`, `formatThaiDate`), merge-field filters `{{x|baht|thai|date}}`, built-in สารบรรณ gallery (`templateGallery.ts`), batch export (`exportMailMerge.ts`).
 
-**v0.1.38 Tab behavior** (`paragraphFormat.ts`): caret at `parentOffset===0` or multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift. Tab-stop CSS: `tab-size: 1.27cm` + `white-space: pre-wrap` on p/h1–h3/li in `globals.css`, `wrap.ts`, and `exportPdf.ts`. `collapseSpaces` cleaner preserves `\t` (regex `/ {2,}/g`, not `/[ \t]+/g`). Spec: `docs/superpowers/specs/2026-06-07-word-style-tab-design.md`.
+**v0.1.38 Tab behavior** (`paragraphFormat.ts`): caret at `parentOffset===0` or multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift. Tab-stop CSS: `tab-size: 1.27cm` + `white-space: pre-wrap` on p/h1–h3/li in `globals.css`, `wrap.ts`, and `exportPdf.ts`. `collapseSpaces` cleaner preserves `\t` (regex `/ {2,}/g`, not `/[ \t]+/g`). **`VisualEditor.tsx` parses content with `parseOptions: { preserveWhitespace: "full" }` on both `useEditor` and `applyContent`'s `setContent`** — without it ProseMirror's DOMParser collapses the literal `\t` on every store→editor re-apply (auto-restore on reload, snapshot load, file open), making tabs silently vanish after save/reload. Locked by a tab round-trip test in `paragraphFormat.roundtrip.test.ts`. Spec: `docs/superpowers/specs/2026-06-07-word-style-tab-design.md`.
 
 ### Known Pending Issues
 - Roadmap: cloud history sync (Firebase C.2). See `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
@@ -345,7 +345,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.0**
+- **Current version**: **v0.2.1**
 
 ### Patch bump rule (deploy default)
 
