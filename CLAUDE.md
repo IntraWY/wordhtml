@@ -250,9 +250,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.0)
+## Current state (v0.2.1)
 
 All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **567 unit tests pass; lint + build clean.**
+
+**v0.2.1 — Tab character survives save/reload.** Word-style mid-line Tab inserts a real `\t` (v0.1.38), but `VisualEditor.tsx` re-parsed store HTML back into the editor without `parseOptions.preserveWhitespace`, so ProseMirror's DOMParser collapsed the tab on every store→editor re-apply (the v0.2.0 auto-restore on reload, snapshot load, file open, dev HMR). Symptom: pressing **บันทึก** then reloading reverted the text to before the Tab. Fix: `parseOptions: { preserveWhitespace: "full" }` on both `useEditor` and `applyContent`'s `setContent` (matches `.prose-editor` `white-space: pre-wrap`); the tab was always stored correctly — only the re-parse dropped it. Locked by a tab round-trip test in `paragraphFormat.roundtrip.test.ts`. Commit `bbe6c8b`.
 
 **v0.2.0 — Real document save.** Pressing **บันทึก / Ctrl+S** now persists the document: `activeSnapshotId` is whitelisted in `partialize`, and on load `restoreActiveSnapshotFromSession()` auto-loads that snapshot's HTML into the editor via `loadSnapshot()`. The saved document survives reload/reopen on the same device (intentionally supersedes the old "document never persists" stance). A `lastSyncedRevision` guard in `VisualEditor.onUpdate` prevents mount-time pagination normalization (which emits empty `<p></p>`) from clobbering the freshly restored document before the store→editor sync applies it.
 
