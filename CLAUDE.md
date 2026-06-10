@@ -367,4 +367,20 @@ npx serve out              # local static preview
 - **GitHub:** `IntraWY/wordhtml` (private repo)
 - **Vercel:** `wordhtml.vercel.app` (auto-deploy on push to `master`)
 
-That's it — no env vars, no secrets, no runtime config required.
+The static converter/editor runs with **no env vars**. Optional cloud sync (Templates + document history) activates only when `NEXT_PUBLIC_FIREBASE_*` is set at build time — see below.
+
+## Firebase cloud sync (activated)
+
+Cloud sync for **Templates** (`users/{uid}/templates`) and **document history / saved snapshots** (`users/{uid}/snapshots`) is **live**. Pressing **บันทึก** writes to local history always, and additionally to `users/{uid}/snapshots/{id}` when signed in (`saveSnapshot` → `syncSnapshotToCloud` → `historyFirestore.ts`); `useCloudHistorySync` merges remote back into local. The save toast / `TopBar` `CloudSyncIndicator` reflect the state (synced / sign-in nudge / local-only) via `src/lib/saveFeedback.ts`. Sign-in is Google OAuth (`AuthButton`, `firebaseAuth.ts`).
+
+**Firebase project:** `webhtml-d6832` (display "Webhtml"), web app `1:1048333810649:web:5ff4999c86685b7626f7c8`.
+
+**What's configured (done):**
+- `.env.local` holds the `NEXT_PUBLIC_FIREBASE_*` web config (gitignored; values are public client config, not secrets). Re-pull anytime with: `firebase apps:sdkconfig WEB <appId> --project webhtml-d6832`.
+- `firestore.rules` deployed (`firebase deploy --only firestore:rules`) — grants `users/{uid}/**` to the owner; legacy global `templates` is read-only.
+- Auth → Google provider **enabled**; Authorized domains include `localhost` + `wordhtml.vercel.app`.
+- Vercel project env has all 7 `NEXT_PUBLIC_FIREBASE_*` (Production/Preview/Development) so the deployed build is Firebase-enabled.
+
+**Verify config without signing in:** authorized domains via `GET identitytoolkit.googleapis.com/v1/projects?key=<apiKey>`; Google provider via `POST identitytoolkit.googleapis.com/v1/accounts:createAuthUri` (returns an `authUri` when enabled). A real end-to-end sign-in must be done in a normal browser — Google blocks OAuth in automation-controlled browsers.
+
+> **Heads-up:** Firebase web `apiKey` is a public client identifier (already embedded in the deployed JS), gated by Firestore rules + authorized domains — not a secret. Still kept out of git via `.env*` ignore.
