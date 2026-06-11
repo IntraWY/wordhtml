@@ -18,6 +18,12 @@ function applyMergeFilter(value: string, filter: string): string {
       const d = new Date(value);
       return Number.isNaN(d.getTime()) ? value : formatThaiDate(d);
     }
+    case "comma": {
+      // "1234567.5" → "1,234,567.5" (tolerates existing commas/spaces)
+      const n = Number(value.replace(/[,\s]/g, ""));
+      if (!Number.isFinite(n) || value.trim() === "") return value;
+      return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+    }
     default:
       return value;
   }

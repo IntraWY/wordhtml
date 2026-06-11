@@ -3,6 +3,10 @@ import {
   extractMergeFieldNames,
   getMergeFieldStatuses,
 } from "@/lib/placeholders";
+import {
+  MERGE_FIELD_FILTERS,
+  ANY_FILTERED_MERGE_FIELD_REGEX_SOURCE,
+} from "@/lib/placeholders/constants";
 import type { TemplateVariable } from "@/types";
 
 export type ExportHealthSeverity = "info" | "warning" | "error";
@@ -70,6 +74,23 @@ export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[]
         severity: "info",
         code: "unset-variable-defaults",
         message: `ตัวแปร ${unset.length} รายการยังไม่มีค่าเริ่มต้นในแผงตัวแปร`,
+      });
+    }
+  }
+
+  if (templateMode) {
+    const knownFilters = new Set<string>(MERGE_FIELD_FILTERS);
+    const anyFiltered = new RegExp(ANY_FILTERED_MERGE_FIELD_REGEX_SOURCE, "g");
+    const unknownFilters = new Set<string>();
+    let fMatch: RegExpExecArray | null;
+    while ((fMatch = anyFiltered.exec(documentHtml)) !== null) {
+      if (!knownFilters.has(fMatch[2])) unknownFilters.add(fMatch[2]);
+    }
+    if (unknownFilters.size > 0) {
+      issues.push({
+        severity: "warning",
+        code: "unknown-merge-filter",
+        message: `Filter ที่ไม่รู้จัก: ${[...unknownFilters].map((f) => `|${f}`).join(", ")} — รองรับเฉพาะ ${MERGE_FIELD_FILTERS.map((f) => `|${f}`).join(", ")} (จะไม่ถูกแทนค่า)`,
       });
     }
   }

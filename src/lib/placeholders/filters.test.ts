@@ -38,6 +38,29 @@ describe("merge-field filters", () => {
     expect(names).toContain("ราคา");
     expect(names).toContain("ปี");
   });
+
+  it("applies |comma to format numbers with thousand separators", () => {
+    const moneyVars: TemplateVariable[] = [
+      { name: "งบ", value: "1234567.5", isList: false },
+      { name: "งบมีคอมมา", value: "1,234,567", isList: false },
+      { name: "ข้อความ", value: "ไม่ใช่เลข", isList: false },
+    ];
+    expect(
+      replaceMergeFields("{{งบ|comma}}", moneyVars, {}, { mode: "export" })
+    ).toContain("1,234,567.5");
+    // Tolerates pre-formatted input
+    expect(
+      replaceMergeFields("{{งบมีคอมมา|comma}}", moneyVars, {}, { mode: "export" })
+    ).toContain("1,234,567");
+    // Non-numeric passes through unchanged
+    expect(
+      replaceMergeFields("{{ข้อความ|comma}}", moneyVars, {}, { mode: "export" })
+    ).toContain("ไม่ใช่เลข");
+  });
+
+  it("extractMergeFieldNames sees the name behind |comma", () => {
+    expect(extractMergeFieldNames("{{งบค่าแรง|comma}}")).toContain("งบค่าแรง");
+  });
 });
 
 describe("Thai date page tokens", () => {

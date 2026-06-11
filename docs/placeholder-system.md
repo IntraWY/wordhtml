@@ -106,6 +106,18 @@ Legacy: `templateEngine.replaceVariables` และ `PageHeaderFooter.replaceVar
 - `bracket` — แสดง `[ชื่อ]`
 - `blank` — เว้นว่าง
 
+**Merge-field filters** (`constants.ts` → `MERGE_FIELD_FILTERS`):
+
+| Filter | ผลลัพธ์ | ตัวอย่าง |
+|--------|---------|----------|
+| `\|baht` | จำนวนเงินเป็นตัวอักษรไทย | `1250.50` → หนึ่งพันสองร้อยห้าสิบบาทห้าสิบสตางค์ |
+| `\|thai` | เลขอารบิก → เลขไทย | `2569` → ๒๕๖๙ |
+| `\|date` | วันที่ไทย พ.ศ. | `2026-06-07` → ๗ มิถุนายน ๒๕๖๙ |
+| `\|comma` | คั่นหลักพัน | `1234567.5` → 1,234,567.5 |
+
+Filter ที่พิมพ์ผิด (เช่น `\|commaa`) จะไม่ถูกแทนค่า — `checkExportHealth` แจ้ง `warning`
+code `unknown-merge-filter` ก่อนส่งออก
+
 ---
 
 ## CSS
