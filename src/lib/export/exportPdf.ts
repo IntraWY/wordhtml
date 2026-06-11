@@ -86,6 +86,7 @@ export async function exportPdf(
     .prose-editor table, .paper table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
     .prose-editor td, .prose-editor th, .paper td, .paper th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
     .prose-editor th, .paper th { background: #f4f4f5; font-weight: 600; }
+    .prose-editor td[data-borders="none"], .prose-editor th[data-borders="none"], .paper td[data-borders="none"], .paper th[data-borders="none"] { border: none; }
     .prose-editor ul[data-type="taskList"], .paper ul[data-type="taskList"] { list-style: none; padding-left: 0; }
     .prose-editor ul[data-type="taskList"] li, .paper ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5em; }
     .prose-editor ul[data-type="taskList"] li > label, .paper ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 0.3em; }
@@ -100,6 +101,7 @@ export async function exportPdf(
     table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
     td, th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
     th { background: #f4f4f5; font-weight: 600; }
+    td[data-borders="none"], th[data-borders="none"] { border: none; }
     blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
     code { background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.92em; }
     pre { background: #f4f4f5; padding: 1em; border-radius: 6px; overflow-x: auto; margin: 1em 0; }

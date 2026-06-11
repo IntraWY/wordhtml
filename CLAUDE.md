@@ -71,7 +71,8 @@ src/
 │   │   │   ├── RibbonButton.tsx  # button primitive (aria-pressed, active highlight)
 │   │   │   ├── RibbonSelect.tsx  # dropdown select in ribbon
 │   │   │   ├── RibbonTabHome.tsx # Font, Bold/Italic/…, Align, List, Heading, Edit group
-│   │   │   ├── RibbonTabInsert.tsx # Link, Image, Table, HR, Variable, Math, Page Break
+│   │   │   ├── RibbonTabInsert.tsx # Link, Image, Table, HR, Variable, Math, Page Break, Symbols (☐☑✓✗)
+│   │   ├── TableSizePicker.tsx # Word-style hover grid (≤8×10) for insert table; withHeaderRow:false
 │   │   │   ├── RibbonTabLayout.tsx # Page Setup, margins, header/footer
 │   │   │   ├── RibbonTabClean.tsx  # cleaner pills (replaces CleaningToolbar)
 │   │   │   ├── RibbonTabView.tsx   # Source HTML, TOC, Shortcuts, Fullscreen
@@ -142,6 +143,8 @@ src/
 │   │   ├── pageBreak.ts          # Block-level page break node
 │   │   ├── variableMark.ts       # Template variable {{name}} mark
 │   │   ├── repeatingRow.ts       # Table row with data-repeat attrs
+│   │   ├── tableCellBorder.ts    # TableCell/TableHeader + borders attr (data-borders="none");
+│   │   │                         #   setSelectedCellBorders/selectionHasCell helpers
 │   │   ├── headingWithId.ts      # Heading with preserved id attr
 │   │   ├── bulletListWithClass.ts# BulletList with preserved class attr
 │   │   ├── imageWithAlign.ts     # Image extension extended with align/width attrs
@@ -251,9 +254,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.3)
+## Current state (v0.2.4)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **580 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **590 unit tests pass; lint + build clean.**
+
+**v0.2.4 — Form-authoring tools (รองรับฟอร์มราชการ/ฟอร์ม Excel).** Driven by the user's real PEA documents (บันทึกขออนุมัติติดตั้งอุปกรณ์ตัดตอน + ฟอร์มใบตัดงบ/เอกสารส่งคืน in Excel). Three additions: (1) **Table size picker** — `ribbon/TableSizePicker.tsx` replaces the fixed 3×3 insert button with a Word-style hover grid (up to 8×10); inserts with `withHeaderRow: false` (Thai forms use plain cells). (2) **Per-cell borders** — `src/lib/tiptap/tableCellBorder.ts` extends TableCell/TableHeader with `borders: "all"|"none"` attr rendering `data-borders="none"` + inline `border:none`; toggled from the editor context menu (ซ่อน/แสดงเส้นขอบเซลล์, works on CellSelection or caret cell via `setSelectedCellBorders`). Editor shows a faint dashed guide (`globals.css`, `!important` over the inline style); print + `wrap.ts` + `exportPdf.ts` CSS render truly borderless. Cleaners whitelist `data-borders` (PRESERVE_ATTRS + GLOBAL_PRESERVE_ATTRS) and `border` (removeInlineStyles KEEP). `wrap.ts` also gained default table CSS (exported HTML previously had NO table borders at all). Note: jsdom serializes `border:none` as `border: medium` — tests assert the attr, not the style string; `parseHTML` falls back to matching `border*: none|0` inline styles for imported HTML (e.g. future xlsx import). (3) **Symbol quick-insert** — ☐ ☑ ✓ ✗ ( ) buttons in RibbonTabInsert ("เครื่องหมาย" group) for form checklists.
 
 **v0.2.3 — Header/Footer Phase 2+3 (rich editing + odd/even).** `HeaderFooterDialog` now uses `HeaderFooterRichEditor.tsx` — a mini Tiptap instance (minimal StarterKit + TextAlign + TextStyle + FontSize + inline Image + Placeholder) with a compact toolbar (B/I/U, align, size, logo, variable dropdown inserting literal `{page}`-style tokens) — replacing the old textareas. Variant tabs ทุกหน้า/หน้าแรก/หน้าคู่ edit all six `HeaderFooterConfig` HTML fields; all are sanitized on save. Form state lives in an inner `HeaderFooterForm` that unmounts with the Radix portal, so every open seeds a fresh draft from the store (no setState-in-effect — React Compiler lint forbids it). `pageChromeReserve.ts` exposes `measureChromeReservePx(hf)` → `{headerPx, footerPx, totalPx}`: header/footer measured separately, max across **active** variants, per-zone clamp 24–80px; `PageChromeLayer` sizes its strips from the measured zones (no more hard-coded `h-[28px]`) and its strips are `pointer-events-auto` with **double-click → `wordhtml:open-header-footer`** (gotcha: the unlayered `.page-chrome-*` rule in `globals.css` previously had `pointer-events:none`, which beat the Tailwind utility — unlayered CSS wins over `@layer utilities`). PDF export (`exportPdf.ts`) now pre-paginates via `splitHtmlIntoPages` when header/footer is enabled and renders per-page chrome absolutely inside the margin bands of exact-height page divs (jsPDF margins switch to 0 in that mode); shared resolution lives in `resolveHeaderFooterForPage` (`headerFooterResolve.ts`), used by both the canvas overlay and the PDF path. DOCX still doesn't support header/footer (noted in ExportDialog). The unreachable `pageHeader.ts`/`pageFooter.ts` stub nodes were deleted (PageNode content is `pageBody` only; `stripPaginationWrappers` keeps `.page-header/.page-footer` selectors for legacy HTML).
 
@@ -351,7 +356,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.3**
+- **Current version**: **v0.2.4**
 
 ### Patch bump rule (deploy default)
 

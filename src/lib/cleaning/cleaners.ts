@@ -8,8 +8,8 @@
 const PRESERVE_ATTRS_BY_TAG: Record<string, ReadonlyArray<string>> = {
   a: ["href", "title", "target", "rel"],
   img: ["src", "alt", "width", "height", "data-align"],
-  td: ["colspan", "rowspan"],
-  th: ["colspan", "rowspan"],
+  td: ["colspan", "rowspan", "data-borders"],
+  th: ["colspan", "rowspan", "data-borders"],
   ol: ["start", "type"],
   span: ["data-type", "data-latex", "data-inline", "data-variable", "data-field-id", "data-placeholder-field"],
   div: ["data-type", "data-page-body", "data-page-header", "data-page-footer", "data-page-number", "data-page-setup"],
@@ -20,7 +20,7 @@ const GLOBAL_PRESERVE_ATTRS = new Set([
   "data-variable", "data-type", "data-latex", "data-inline", "data-align",
   "data-indent", "data-field-id", "data-placeholder-field",
   "data-page-body", "data-page-header", "data-page-footer", "data-page-number", "data-page-setup",
-  "data-repeat", "data-repeat-source",
+  "data-repeat", "data-repeat-source", "data-borders",
 ]);
 
 function shouldPreserveAttribute(tag: string, name: string): boolean {
@@ -64,6 +64,7 @@ export function removeInlineStyles(html: string): string {
     "margin-left", "margin-right", "margin-top", "margin-bottom",
     "text-indent", "width", "height",
     "font-size", "font-family", "color", "background-color", "line-height", "text-align",
+    "border", // borderless form cells render inline border:none
   ];
   doc.body.querySelectorAll("[style]").forEach((el) => {
     const s = (el as HTMLElement).style;

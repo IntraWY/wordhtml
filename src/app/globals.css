@@ -548,6 +548,14 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
   font-weight: 600;
 }
+/* Borderless form cells: the node renders inline `border:none`, but while
+   editing we override it with a faint dashed guide so the table structure
+   stays visible. Print/export drop the guide (see @media print + wrap.ts). */
+.prose-editor td[data-borders="none"],
+.prose-editor th[data-borders="none"] {
+  border: 1px dashed
+    color-mix(in srgb, var(--color-border-strong) 45%, transparent) !important;
+}
 .prose-editor .selectedCell {
   background: var(--color-selected-cell);
   position: relative;
@@ -745,6 +753,14 @@ html[data-theme="dark"] .paper {
 
 /* ── Print stylesheet ── */
 @media print {
+  /* Borderless form cells print without the dashed editing guide */
+  .prose-editor td[data-borders="none"],
+  .prose-editor th[data-borders="none"],
+  .paper td[data-borders="none"],
+  .paper th[data-borders="none"] {
+    border: none !important;
+  }
+
   /* Hide UI chrome */
   .editor-canvas,
   .ruler,

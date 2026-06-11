@@ -16,9 +16,15 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Square,
+  SquareDashed
 } from "lucide-react";
 import { editorCan } from "@/lib/editorLive";
+import {
+  setSelectedCellBorders,
+  selectionHasCell,
+} from "@/lib/tiptap/tableCellBorder";
 
 interface EditorContextMenuProps {
   editor: Editor | null;
@@ -237,6 +243,27 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
         disabled: !editorCan(editor, (c) => c.splitCell()),
       },
       { id: "div-table-3", label: "", divider: true },
+      {
+        id: "hide-cell-borders",
+        label: "ซ่อนเส้นขอบเซลล์ (Hide cell borders)",
+        icon: <SquareDashed className="size-4" />,
+        action: () => {
+          if (editor) setSelectedCellBorders(editor, "none");
+          setOpen(false);
+        },
+        disabled: !editor || !selectionHasCell(editor),
+      },
+      {
+        id: "show-cell-borders",
+        label: "แสดงเส้นขอบเซลล์ (Show cell borders)",
+        icon: <Square className="size-4" />,
+        action: () => {
+          if (editor) setSelectedCellBorders(editor, "all");
+          setOpen(false);
+        },
+        disabled: !editor || !selectionHasCell(editor),
+      },
+      { id: "div-table-4", label: "", divider: true },
       {
         id: "delete-table",
         label: "ลบตาราง (Delete table)",

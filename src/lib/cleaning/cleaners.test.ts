@@ -33,6 +33,15 @@ describe("removeInlineStyles", () => {
     // font-weight is NOT in KEEP — must be stripped
     expect(result).not.toMatch(/font-weight/);
   });
+
+  it("preserves the border style on borderless form cells", () => {
+    const html = `<table><tbody><tr><td style="border:none" data-borders="none">x</td></tr></tbody></table>`;
+    const result = removeInlineStyles(html);
+    // jsdom re-serializes the border shorthand ("border: medium"); assert the
+    // property survives the KEEP filter rather than its exact value.
+    expect(result).toMatch(/style="[^"]*border/);
+    expect(result).toContain(`data-borders="none"`);
+  });
 });
 
 describe("removeEmptyTags", () => {
@@ -95,6 +104,13 @@ describe("removeAttributes", () => {
   it("preserves src and alt on images", () => {
     const html = `<img src="a.png" alt="a" class="x" data-y="1">`;
     expect(removeAttributes(html)).toBe(`<img src="a.png" alt="a">`);
+  });
+
+  it("preserves data-borders on table cells (borderless form zones)", () => {
+    const html = `<table><tbody><tr><td data-borders="none" align="left">x</td></tr></tbody></table>`;
+    const result = removeAttributes(html);
+    expect(result).toContain(`data-borders="none"`);
+    expect(result).not.toContain("align=");
   });
 });
 

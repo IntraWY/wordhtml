@@ -5,7 +5,11 @@ import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { EditorView } from "@tiptap/pm/view";
 // NOTE: dynamic-import for Table extensions deferred — adds complexity
 // not justified by current bundle size. Revisit if Lighthouse flags it.
-import { Table, TableCell, TableHeader } from "@tiptap/extension-table";
+import { Table } from "@tiptap/extension-table";
+import {
+  TableCellWithBorder,
+  TableHeaderWithBorder,
+} from "@/lib/tiptap/tableCellBorder";
 import { RepeatingRow } from "@/lib/tiptap/repeatingRow";
 import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
@@ -158,8 +162,8 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       ParagraphFormatExtension,
       Table.configure({ resizable: true }),
       RepeatingRow,
-      TableHeader,
-      TableCell,
+      TableHeaderWithBorder,
+      TableCellWithBorder,
       VariableMark,
       VariableTypingGuard,
       CommentMark,

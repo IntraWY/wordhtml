@@ -5,7 +5,6 @@ import type { Editor } from "@tiptap/react";
 import {
   Link as LinkIcon,
   Image as ImageIcon,
-  Table,
   Minus,
   WrapText,
   Code2,
@@ -40,6 +39,7 @@ import {
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
+import { TableSizePicker } from "./TableSizePicker";
 import { useDialogStore } from "@/store/dialogStore";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
@@ -48,6 +48,15 @@ import { assignHeadingIds, buildTocHtml, generateToc } from "@/lib/toc";
 import { editorCan, isLiveEditor } from "@/lib/editorLive";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
+/** Quick-insert characters for Thai official form checklists, e.g. "( ✔ ) รื้อถอน". */
+const CHECK_SYMBOLS: { char: string; label: string }[] = [
+  { char: "☐", label: "ช่องว่าง (Empty checkbox)" },
+  { char: "☑", label: "ช่องติ๊กถูก (Checked box)" },
+  { char: "✓", label: "เครื่องหมายถูก (Check mark)" },
+  { char: "✗", label: "เครื่องหมายผิด (Cross mark)" },
+  { char: "( )", label: "วงเล็บว่าง (Empty parentheses)" },
+];
 
 export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,10 +152,6 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     );
   }, []);
 
-  const handleTable = useCallback(() => {
-    editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-  }, [editor]);
-
   const handleHr = useCallback(() => editor?.chain().focus().setHorizontalRule().run(), [editor]);
   const handleSoftBreak = useCallback(() => editor?.chain().focus().setHardBreak().run(), [editor]);
   const handleCodeBlock = useCallback(() => editor?.chain().focus().toggleCodeBlock().run(), [editor]);
@@ -188,6 +193,13 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
   const handleMath = useCallback(() => {
     window.dispatchEvent(new CustomEvent("wordhtml:open-math-dialog"));
   }, []);
+
+  const handleSymbol = useCallback(
+    (symbol: string) => {
+      editor?.chain().focus().insertContent(symbol).run();
+    },
+    [editor]
+  );
 
   const handleCitation = useCallback(() => {
     if (!isLiveEditor(editor)) return;
@@ -288,9 +300,7 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
       </RibbonGroup>
 
       <RibbonGroup label="ตาราง & รายการ">
-        <RibbonButton label="แทรกตาราง" onClick={handleTable} disabled={!hasEditor}>
-          <Table className="size-3.5" />
-        </RibbonButton>
+        <TableSizePicker editor={editor} disabled={!hasEditor} />
         <RibbonButton
           label="แยกตารางข้ามหน้า (วางเคอร์เซอร์ในตารางก่อน)"
           onClick={() => editor?.chain().focus().splitTableAtCursor().run()}
@@ -355,6 +365,19 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         <RibbonButton label="แทรกสมการ" onClick={handleMath} disabled={!hasEditor}>
           <Sigma className="size-3.5" />
         </RibbonButton>
+      </RibbonGroup>
+
+      <RibbonGroup label="เครื่องหมาย">
+        {CHECK_SYMBOLS.map(({ char, label }) => (
+          <RibbonButton
+            key={char}
+            label={label}
+            onClick={() => handleSymbol(char)}
+            disabled={!hasEditor}
+          >
+            <span className="text-sm leading-none">{char}</span>
+          </RibbonButton>
+        ))}
       </RibbonGroup>
     </>
   );
