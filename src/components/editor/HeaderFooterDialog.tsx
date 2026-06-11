@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, FileText, Bold, Italic, Underline, AlignCenter, Image as ImageIcon } from "lucide-react";
+import { X, FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
@@ -10,6 +10,7 @@ import type { HeaderFooterConfig } from "@/types";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { replacePageTokens } from "@/lib/placeholders";
+import { HeaderFooterRichEditor } from "./HeaderFooterRichEditor";
 
 interface HeaderFooterDialogProps {
   open: boolean;
@@ -28,83 +29,35 @@ const DEFAULT_CONFIG: HeaderFooterConfig = {
   evenFooterHtml: "",
 };
 
+type Variant = "all" | "first" | "even";
+
+const VARIANT_FIELDS: Record<
+  Variant,
+  { header: keyof HeaderFooterConfig; footer: keyof HeaderFooterConfig }
+> = {
+  all: { header: "headerHtml", footer: "footerHtml" },
+  first: { header: "firstPageHeaderHtml", footer: "firstPageFooterHtml" },
+  even: { header: "evenHeaderHtml", footer: "evenFooterHtml" },
+};
+
+const HTML_FIELDS = [
+  "headerHtml",
+  "footerHtml",
+  "firstPageHeaderHtml",
+  "firstPageFooterHtml",
+  "evenHeaderHtml",
+  "evenFooterHtml",
+] as const;
+
 export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
-  const pageSetup = useEditorStore((s) => s.pageSetup);
-  const setPageSetup = useEditorStore((s) => s.setPageSetup);
-  const headerFooter = pageSetup.headerFooter ?? DEFAULT_CONFIG;
-
-  // Local form state — reset via key remount whenever dialog opens
-  const [draft, setDraft] = useState<HeaderFooterConfig>(headerFooter);
-  const [activeTab, setActiveTab] = useState<"header" | "footer">("header");
-
-  const handleSave = () => {
-    setPageSetup({ headerFooter: draft });
-    onClose();
-  };
-
-  const updateField = useCallback(
-    <K extends keyof HeaderFooterConfig>(key: K, value: HeaderFooterConfig[K]) => {
-      setDraft((d) => ({ ...d, [key]: value }));
-    },
-    []
-  );
-
-  const insertVariable = useCallback(
-    (variable: string) => {
-      const field = activeTab === "header" ? "headerHtml" : "footerHtml";
-      setDraft((d) => ({
-        ...d,
-        [field]: (d[field as "headerHtml"] || "") + variable,
-      }));
-    },
-    [activeTab]
-  );
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const field = activeTab === "header" ? "headerHtml" : "footerHtml";
-
-  // Plain handlers (not memoized): they read textareaRef.current at click time.
-  // Wrap the current textarea selection (or whole value) with open/close HTML.
-  function applyWrap(openTag: string, closeTag: string) {
-    const ta = textareaRef.current;
-    setDraft((d) => {
-      const value = (d[field as "headerHtml"] as string) || "";
-      const start = ta?.selectionStart ?? value.length;
-      const end = ta?.selectionEnd ?? value.length;
-      const selected = value.slice(start, end) || "ข้อความ";
-      const next =
-        value.slice(0, start) + openTag + selected + closeTag + value.slice(end);
-      return { ...d, [field]: next };
-    });
-  }
-
-  function insertLogo() {
-    const url = window.prompt("URL ของโลโก้/รูป (Logo image URL):", "");
-    if (!url) return;
-    const safe = url.replace(/"/g, "&quot;");
-    setDraft((d) => ({
-      ...d,
-      [field]:
-        ((d[field as "headerHtml"] as string) || "") +
-        `<img src="${safe}" alt="logo" style="height:40px;vertical-align:middle">`,
-    }));
-  }
-
-  const variableButtons = [
-    { label: "{page}", desc: "เลขหน้า (Page number)" },
-    { label: "{total}", desc: "จำนวนหน้าทั้งหมด (Total pages)" },
-    { label: "{page_th}", desc: "เลขหน้าเลขไทย (Page no., Thai numerals)" },
-    { label: "{total_th}", desc: "จำนวนหน้าเลขไทย (Total, Thai numerals)" },
-    { label: "{date}", desc: "วันที่ (Date)" },
-    { label: "{date_th}", desc: "วันที่ไทย พ.ศ. (Thai Buddhist date)" },
-    { label: "{date_th_short}", desc: "วันที่ไทยแบบสั้น (Short Thai date)" },
-  ];
-
   return (
     <Dialog.Root open={open} onOpenChange={(o) => (o ? null : onClose())}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[520px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-lg">
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[620px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-background)] shadow-lg"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <header className="flex items-center justify-between border-b border-[color:var(--color-border)] px-5 py-3">
             <Dialog.Title className="text-base font-semibold tracking-tight">
               หัวกระดาษ/ท้ายกระดาษ (Header & Footer)
@@ -122,8 +75,67 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
               </button>
             </Dialog.Close>
           </header>
+          {/* The form unmounts with the portal on close, so each open seeds a
+              fresh draft from the store — no stale state, no sync effect. */}
+          <HeaderFooterForm onClose={onClose} />
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
 
-          <div key={String(open)} className="space-y-5 px-5 py-4">
+function HeaderFooterForm({ onClose }: { onClose: () => void }) {
+  const setPageSetup = useEditorStore((s) => s.setPageSetup);
+
+  const [draft, setDraft] = useState<HeaderFooterConfig>(
+    () => useEditorStore.getState().pageSetup.headerFooter ?? DEFAULT_CONFIG
+  );
+  const [activeVariant, setActiveVariant] = useState<Variant>("all");
+
+  const handleSave = () => {
+    const sanitized = { ...draft };
+    for (const field of HTML_FIELDS) {
+      const raw = sanitized[field];
+      if (typeof raw === "string" && raw) {
+        sanitized[field] = sanitizeHtml(raw) as never;
+      }
+    }
+    setPageSetup({ headerFooter: sanitized });
+    onClose();
+  };
+
+  const updateField = useCallback(
+    <K extends keyof HeaderFooterConfig>(key: K, value: HeaderFooterConfig[K]) => {
+      setDraft((d) => ({ ...d, [key]: value }));
+    },
+    []
+  );
+
+  const variantTabs: { id: Variant; label: string; visible: boolean }[] = [
+    { id: "all", label: "ทุกหน้า (All pages)", visible: true },
+    {
+      id: "first",
+      label: "หน้าแรก (First page)",
+      visible: draft.differentFirstPage,
+    },
+    {
+      id: "even",
+      label: "หน้าคู่ (Even pages)",
+      visible: draft.differentOddEven,
+    },
+  ];
+
+  // If the active tab's checkbox gets unticked, fall back to the base tab.
+  const effectiveVariant = variantTabs.find((t) => t.id === activeVariant)?.visible
+    ? activeVariant
+    : "all";
+  const fields = VARIANT_FIELDS[effectiveVariant];
+  const headerValue = (draft[fields.header] as string) || "";
+  const footerValue = (draft[fields.footer] as string) || "";
+
+  return (
+    <>
+      <div className="space-y-5 px-5 py-4">
             {/* Enable toggle */}
             <label className="flex items-center gap-3">
               <input
@@ -139,211 +151,141 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
 
             {draft.enabled && (
               <>
-                {/* Tab switcher */}
-                <div className="flex border-b border-[color:var(--color-border)]">
-                  {(["header", "footer"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setActiveTab(tab)}
-                      className={cn(
-                        "relative px-4 py-2 text-sm font-medium",
-                        activeTab === tab
-                          ? "text-[color:var(--color-foreground)]"
-                          : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
-                      )}
-                    >
-                      {tab === "header" ? "ส่วนหัว (Header)" : "ส่วนท้าย (Footer)"}
-                      {activeTab === tab && (
-                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-accent)]" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Variable buttons */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-[color:var(--color-muted-foreground)]">
-                    แทรกตัวแปร (Insert variable)
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {variableButtons.map((v) => (
-                      <button
-                        key={v.label}
-                        type="button"
-                        onClick={() => insertVariable(v.label)}
-                        title={v.desc}
-                        className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-foreground)] transition-colors hover:bg-[color:var(--color-accent)] hover:text-[color:var(--color-accent-foreground)]"
-                      >
-                        {v.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Text input */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-[color:var(--color-foreground)]">
-                    {activeTab === "header"
-                      ? "เนื้อหาส่วนหัว (Header content)"
-                      : "เนื้อหาส่วนท้าย (Footer content)"}
-                  </label>
-                  {/* Rich formatting toolbar (A1) */}
-                  <div className="flex flex-wrap gap-1">
-                    {[
-                      { icon: Bold, label: "ตัวหนา", fn: () => applyWrap("<b>", "</b>") },
-                      { icon: Italic, label: "ตัวเอียง", fn: () => applyWrap("<i>", "</i>") },
-                      { icon: Underline, label: "ขีดเส้นใต้", fn: () => applyWrap("<u>", "</u>") },
-                      {
-                        icon: AlignCenter,
-                        label: "จัดกึ่งกลาง",
-                        fn: () =>
-                          applyWrap('<div style="text-align:center">', "</div>"),
-                      },
-                      { icon: ImageIcon, label: "แทรกโลโก้/รูป", fn: insertLogo },
-                    ].map((b) => (
-                      <button
-                        key={b.label}
-                        type="button"
-                        title={b.label}
-                        aria-label={b.label}
-                        onClick={b.fn}
-                        className="grid h-7 w-7 place-items-center rounded-md border border-[color:var(--color-border)] text-[color:var(--color-foreground)] hover:bg-[color:var(--color-muted)]"
-                      >
-                        <b.icon className="size-3.5" />
-                      </button>
-                    ))}
-                  </div>
-                  <textarea
-                    ref={textareaRef}
-                    rows={3}
-                    value={activeTab === "header" ? draft.headerHtml : draft.footerHtml}
-                    onChange={(e) =>
-                      updateField(
-                        activeTab === "header" ? "headerHtml" : "footerHtml",
-                        e.target.value
-                      )
-                    }
-                    placeholder={
-                      activeTab === "header"
-                        ? "เช่น บริษัท ตัวอย่าง จำกัด · หน้า {page}"
-                        : "เช่น หน้า {page} จาก {total} · {date}"
-                    }
-                    className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-accent)]"
-                  />
-                  <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-                    รองรับ HTML และตัวแปร: {"{page}"}, {"{total}"}, {"{page_th}"}, {"{total_th}"}, {"{date}"}, {"{date_th}"}
-                  </p>
-                </div>
-
                 {/* Options */}
-                <fieldset className="space-y-3 rounded-md border border-[color:var(--color-border)] p-3">
+                <fieldset className="space-y-2 rounded-md border border-[color:var(--color-border)] p-3">
                   <legend className="px-1 text-xs font-semibold tracking-wider uppercase text-[color:var(--color-muted-foreground)]">
                     ตัวเลือกเพิ่มเติม (Options)
                   </legend>
-
                   <label className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       checked={draft.differentFirstPage}
-                      onChange={(e) => updateField("differentFirstPage", e.target.checked)}
+                      onChange={(e) =>
+                        updateField("differentFirstPage", e.target.checked)
+                      }
                       className="size-4 rounded border-[color:var(--color-border)] accent-[color:var(--color-accent)]"
                     />
                     <span className="text-sm">
                       หน้าแรกต่างจากหน้าอื่น (Different first page)
                     </span>
                   </label>
-
-                  {draft.differentFirstPage && (
-                    <div className="ml-7 space-y-2">
-                      <label className="text-xs text-[color:var(--color-muted-foreground)]">
-                        ส่วนหัวหน้าแรก (First page header)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={draft.firstPageHeaderHtml || ""}
-                        onChange={(e) => updateField("firstPageHeaderHtml", e.target.value)}
-                        className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
-                      />
-                      <label className="text-xs text-[color:var(--color-muted-foreground)]">
-                        ส่วนท้ายหน้าแรก (First page footer)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={draft.firstPageFooterHtml || ""}
-                        onChange={(e) => updateField("firstPageFooterHtml", e.target.value)}
-                        className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
-                      />
-                    </div>
-                  )}
-
                   <label className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       checked={draft.differentOddEven}
-                      onChange={(e) => updateField("differentOddEven", e.target.checked)}
+                      onChange={(e) =>
+                        updateField("differentOddEven", e.target.checked)
+                      }
                       className="size-4 rounded border-[color:var(--color-border)] accent-[color:var(--color-accent)]"
                     />
                     <span className="text-sm">
                       เลขคู่/คี่ต่างกัน (Different odd/even)
                     </span>
                   </label>
-
-                  {draft.differentOddEven && (
-                    <div className="ml-7 space-y-2">
-                      <label className="text-xs text-[color:var(--color-muted-foreground)]">
-                        ส่วนหัวเลขคู่ (Even page header)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={draft.evenHeaderHtml || ""}
-                        onChange={(e) => updateField("evenHeaderHtml", e.target.value)}
-                        className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
-                      />
-                      <label className="text-xs text-[color:var(--color-muted-foreground)]">
-                        ส่วนท้ายเลขคู่ (Even page footer)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={draft.evenFooterHtml || ""}
-                        onChange={(e) => updateField("evenFooterHtml", e.target.value)}
-                        className="w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
-                      />
-                    </div>
-                  )}
                 </fieldset>
 
-                {/* Preview */}
+                {/* Variant tabs */}
+                <div
+                  className="flex border-b border-[color:var(--color-border)]"
+                  role="tablist"
+                  aria-label="ชุดหัว/ท้ายกระดาษ (Header/footer variants)"
+                >
+                  {variantTabs
+                    .filter((t) => t.visible)
+                    .map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={effectiveVariant === tab.id}
+                        onClick={() => setActiveVariant(tab.id)}
+                        className={cn(
+                          "relative px-4 py-2 text-sm font-medium",
+                          effectiveVariant === tab.id
+                            ? "text-[color:var(--color-foreground)]"
+                            : "text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
+                        )}
+                      >
+                        {tab.label}
+                        {effectiveVariant === tab.id && (
+                          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--color-accent)]" />
+                        )}
+                      </button>
+                    ))}
+                </div>
+
+                {/* Rich editors for the active variant — keyed so each tab
+                    mounts a fresh editor seeded from the current draft. */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium">
+                      เนื้อหาส่วนหัว (Header content)
+                    </p>
+                    <HeaderFooterRichEditor
+                      key={`header-${effectiveVariant}`}
+                      value={headerValue}
+                      onChange={(html) =>
+                        updateField(fields.header, html as never)
+                      }
+                      ariaLabel="แก้ไขส่วนหัวกระดาษ (Edit header)"
+                      placeholder="เช่น บริษัท ตัวอย่าง จำกัด · หน้า {page}"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium">
+                      เนื้อหาส่วนท้าย (Footer content)
+                    </p>
+                    <HeaderFooterRichEditor
+                      key={`footer-${effectiveVariant}`}
+                      value={footerValue}
+                      onChange={(html) =>
+                        updateField(fields.footer, html as never)
+                      }
+                      ariaLabel="แก้ไขส่วนท้ายกระดาษ (Edit footer)"
+                      placeholder="เช่น หน้า {page} จาก {total} · {date}"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+                    ตัวแปร {"{page}"}, {"{total}"}, {"{date_th}"} ฯลฯ
+                    จะถูกแทนค่าจริงบนกระดาษและตอนส่งออก
+                  </p>
+                </div>
+
+                {/* Preview (page 1, base variant) */}
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-[color:var(--color-muted-foreground)]">
                     ตัวอย่าง (Preview)
                   </p>
                   <div className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-muted)] p-3">
                     <div className="flex items-center gap-2 text-[11px] text-[color:var(--color-muted-foreground)]">
-                      <FileText className="size-3.5" />
-                      <span>หน้า 1 — </span>
+                      <FileText className="size-3.5 shrink-0" />
+                      <span className="shrink-0">หน้า 1 — </span>
                       <span
                         dangerouslySetInnerHTML={{
                           __html: sanitizeHtml(
-                            replacePageTokens(draft.headerHtml || "(ไม่มีส่วนหัว)", {
-                              pageNumber: 1,
-                              totalPages: 1,
-                            })
+                            replacePageTokens(
+                              (draft.differentFirstPage
+                                ? draft.firstPageHeaderHtml
+                                : draft.headerHtml) || "(ไม่มีส่วนหัว)",
+                              { pageNumber: 1, totalPages: 1 }
+                            )
                           ),
                         }}
                       />
                     </div>
                     <div className="my-2 border-t border-dashed border-[color:var(--color-border)]" />
                     <div className="flex items-center gap-2 text-[11px] text-[color:var(--color-muted-foreground)]">
-                      <FileText className="size-3.5" />
-                      <span>หน้า 1 — </span>
+                      <FileText className="size-3.5 shrink-0" />
+                      <span className="shrink-0">หน้า 1 — </span>
                       <span
                         dangerouslySetInnerHTML={{
                           __html: sanitizeHtml(
-                            replacePageTokens(draft.footerHtml || "(ไม่มีส่วนท้าย)", {
-                              pageNumber: 1,
-                              totalPages: 1,
-                            })
+                            replacePageTokens(
+                              (draft.differentFirstPage
+                                ? draft.firstPageFooterHtml
+                                : draft.footerHtml) || "(ไม่มีส่วนท้าย)",
+                              { pageNumber: 1, totalPages: 1 }
+                            )
                           ),
                         }}
                       />
@@ -362,9 +304,6 @@ export function HeaderFooterDialog({ open, onClose }: HeaderFooterDialogProps) {
               บันทึก
             </Button>
           </footer>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    </>
   );
 }
-

@@ -1,8 +1,11 @@
-import type { PageSetup } from "./wrap";
+import type { PageSetup } from "@/types";
 import { deriveFileName } from "./wrap";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
 import { A4, LETTER, mmToPx } from "@/lib/page";
+import { splitHtmlIntoPages } from "@/lib/paginationEngine";
+import { measureChromeReservePx } from "@/lib/pageChromeReserve";
+import { resolveHeaderFooterForPage } from "@/lib/headerFooterResolve";
 
 interface ExportPdfOptions {
   /** Original source filename (if any) — used to derive the export filename */
@@ -49,7 +52,11 @@ export async function exportPdf(
   container.style.lineHeight = "1.7";
   container.style.fontSize = "16px";
   const cleanHtml = stripPaginationWrappers(html);
-  container.innerHTML = sanitizeHtml(cleanHtml);
+  const hf = pageSetup?.headerFooter;
+  const hasChrome = Boolean(hf?.enabled);
+  if (!hasChrome) {
+    container.innerHTML = sanitizeHtml(cleanHtml);
+  }
 
   // Static critical CSS for PDF snapshot — avoids scraping live stylesheets
   // which is fragile and can pull in unexpected rules.
@@ -102,8 +109,20 @@ export async function exportPdf(
     ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 0.3em; }
     ul[data-type="taskList"] li > div { flex: 1; }
   `;
-  styleEl.textContent = cssText;
+  styleEl.textContent =
+    cssText +
+    `
+    .pdf-hf { position: absolute; font-size: 10pt; color: #52525b; overflow: hidden; text-align: center; }
+    .pdf-hf p { margin: 0.15em 0; }
+    .pdf-hf img { display: inline-block; max-height: 40px; width: auto; vertical-align: middle; }
+    .pdf-page { page-break-after: always; }
+    .pdf-page:last-child { page-break-after: auto; }
+  `;
   container.prepend(styleEl);
+
+  if (hasChrome && hf && pageSetup) {
+    appendChromePages(container, cleanHtml, pageSetup, hf, widthPx);
+  }
 
   document.body.appendChild(container);
 
@@ -123,12 +142,12 @@ export async function exportPdf(
       marginMm: { top: 25, right: 19, bottom: 25, left: 19 },
     };
 
-    const margin: [number, number, number, number] = [
-      ps.marginMm.top,
-      ps.marginMm.right,
-      ps.marginMm.bottom,
-      ps.marginMm.left,
-    ];
+    // Chrome mode pre-paginates into exact-height page divs that carry their
+    // own margins (so headers/footers can render inside the margin bands);
+    // jsPDF margins must then be zero or every page would shift.
+    const margin: [number, number, number, number] = hasChrome
+      ? [0, 0, 0, 0]
+      : [ps.marginMm.top, ps.marginMm.right, ps.marginMm.bottom, ps.marginMm.left];
 
     const format = ps.size === "Letter" ? "letter" : "a4";
     const orientation = ps.orientation;
@@ -155,6 +174,71 @@ export async function exportPdf(
   } finally {
     document.body.removeChild(container);
   }
+}
+
+/**
+ * Pre-paginates the document and appends one exact-height page div per page,
+ * with the resolved header/footer placed absolutely inside the margin bands —
+ * mirrors the on-canvas PageChromeLayer so the PDF matches the screen.
+ */
+function appendChromePages(
+  container: HTMLElement,
+  cleanHtml: string,
+  pageSetup: PageSetup,
+  hf: NonNullable<PageSetup["headerFooter"]>,
+  widthPx: number
+): void {
+  const base = pageSetup.size === "Letter" ? LETTER : A4;
+  const isLandscape = pageSetup.orientation === "landscape";
+  // Exact (unrounded) page height so multi-page canvas slices stay aligned.
+  const heightPx = mmToPx(isLandscape ? base.wMm : base.hMm);
+  const mTop = mmToPx(pageSetup.marginMm.top);
+  const mRight = mmToPx(pageSetup.marginMm.right);
+  const mBottom = mmToPx(pageSetup.marginMm.bottom);
+  const mLeft = mmToPx(pageSetup.marginMm.left);
+
+  const reserve = measureChromeReservePx(hf);
+  const pages = splitHtmlIntoPages(cleanHtml, pageSetup, {
+    headerFooterReservePx: reserve.totalPx,
+  });
+
+  pages.forEach((pageHtml, index) => {
+    const pageNumber = index + 1;
+    const { header, footer } = resolveHeaderFooterForPage(
+      pageNumber,
+      pages.length,
+      hf
+    );
+
+    const pageDiv = document.createElement("div");
+    pageDiv.className = "pdf-page prose-editor";
+    pageDiv.style.cssText = `position:relative;width:${widthPx}px;height:${heightPx}px;box-sizing:border-box;overflow:hidden;padding:${mTop}px ${mRight}px ${mBottom}px ${mLeft}px;background:#ffffff;`;
+
+    if (header.trim()) {
+      const headerDiv = document.createElement("div");
+      headerDiv.className = "pdf-hf";
+      // Anchor to the bottom of the top margin band, just above the body.
+      const top = Math.max(4, mTop - (reserve.headerPx || 28) - 4);
+      headerDiv.style.cssText = `top:${top}px;left:${mLeft}px;right:${mRight}px;max-height:${reserve.headerPx || 28}px;`;
+      headerDiv.innerHTML = sanitizeHtml(header);
+      pageDiv.appendChild(headerDiv);
+    }
+
+    const bodyDiv = document.createElement("div");
+    bodyDiv.innerHTML = sanitizeHtml(pageHtml);
+    pageDiv.appendChild(bodyDiv);
+
+    if (footer.trim()) {
+      const footerDiv = document.createElement("div");
+      footerDiv.className = "pdf-hf";
+      const bottom = Math.max(4, mBottom - (reserve.footerPx || 28) - 4);
+      footerDiv.style.cssText = `bottom:${bottom}px;left:${mLeft}px;right:${mRight}px;max-height:${reserve.footerPx || 28}px;`;
+      footerDiv.innerHTML = sanitizeHtml(footer);
+      pageDiv.appendChild(footerDiv);
+    }
+
+    container.appendChild(pageDiv);
+  });
 }
 
 function waitForImages(root: HTMLElement, timeoutMs = 15_000): Promise<void> {

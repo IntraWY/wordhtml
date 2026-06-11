@@ -15,8 +15,6 @@ import { PagedDocument } from "@/lib/tiptap/pagedDocument";
 import { PageNode } from "@/lib/tiptap/pageNode";
 import { PageBodyNode } from "@/lib/tiptap/pageBody";
 import { PageBodyTrailingParagraph } from "@/lib/tiptap/pageBodyTrailingParagraph";
-import { PageHeaderNode } from "@/lib/tiptap/pageHeader";
-import { PageFooterNode } from "@/lib/tiptap/pageFooter";
 import { PageCommands } from "@/lib/tiptap/pageCommands";
 import { PlaceholderField } from "@/lib/tiptap/placeholderField";
 import { ImageSlot, TableSlot } from "@/lib/tiptap/contentSlots";
@@ -185,8 +183,6 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       PageNode,
       PageBodyNode,
       PageBodyTrailingParagraph,
-      PageHeaderNode,
-      PageFooterNode,
       PageCommands,
       PlaceholderField,
       ImageSlot,

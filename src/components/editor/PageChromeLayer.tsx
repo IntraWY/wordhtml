@@ -1,10 +1,10 @@
 "use client";
 
 import { useLayoutEffect, useState, useCallback, useRef, type RefObject } from "react";
-import { measureHeaderFooterReservePx } from "@/lib/pageChromeReserve";
-import { resolveHeaderFooter } from "./PageHeaderFooter";
-import { replacePageTokens } from "@/lib/placeholders";
-import type { HeaderFooterConfig, PageSetup } from "@/types";
+import { measureChromeReservePx, type ChromeReservePx } from "@/lib/pageChromeReserve";
+import { resolveHeaderFooterForPage } from "@/lib/headerFooterResolve";
+import { dispatchOpenHeaderFooter } from "@/lib/events";
+import type { PageSetup } from "@/types";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface PageChromeLayerProps {
@@ -29,27 +29,8 @@ interface PageChromeBox {
   showPlaceholderFooter: boolean;
 }
 
-function resolveForPage(
-  pageNumber: number,
-  totalPages: number,
-  hf: HeaderFooterConfig
-): { header: string; footer: string } {
-  const resolved = resolveHeaderFooter(
-    pageNumber,
-    hf.headerHtml ?? "",
-    hf.footerHtml ?? "",
-    hf.differentFirstPage ?? false,
-    hf.differentOddEven ?? false,
-    hf.firstPageHeaderHtml,
-    hf.firstPageFooterHtml,
-    hf.evenHeaderHtml,
-    hf.evenFooterHtml
-  );
-  return {
-    header: replacePageTokens(resolved.header, { pageNumber, totalPages }),
-    footer: replacePageTokens(resolved.footer, { pageNumber, totalPages }),
-  };
-}
+/** Strip height when the zone has no content (placeholder hint only). */
+const PLACEHOLDER_STRIP_PX = 28;
 
 export function PageChromeLayer({
   pagesRootRef,
@@ -59,6 +40,11 @@ export function PageChromeLayer({
   onReserveHeightChange,
 }: PageChromeLayerProps) {
   const [boxes, setBoxes] = useState<PageChromeBox[]>([]);
+  const [zones, setZones] = useState<ChromeReservePx>({
+    headerPx: 0,
+    footerPx: 0,
+    totalPx: 0,
+  });
   const lastReserveRef = useRef(0);
   const hf = pageSetup.headerFooter;
   const enabled = Boolean(hf?.enabled);
@@ -79,7 +65,7 @@ export function PageChromeLayer({
     pages.forEach((pageEl, index) => {
       const rect = pageEl.getBoundingClientRect();
       const pageNumber = index + 1;
-      const { header, footer } = resolveForPage(pageNumber, pageCount, hf);
+      const { header, footer } = resolveHeaderFooterForPage(pageNumber, pageCount, hf);
       next.push({
         pageNumber,
         top: rect.top - anchorRect.top,
@@ -95,13 +81,11 @@ export function PageChromeLayer({
 
     setBoxes(next);
 
-    const reserve = measureHeaderFooterReservePx(
-      hf.headerHtml,
-      hf.footerHtml
-    );
-    if (reserve !== lastReserveRef.current) {
-      lastReserveRef.current = reserve;
-      onReserveHeightChange?.(reserve);
+    const reserve = measureChromeReservePx(hf);
+    setZones(reserve);
+    if (reserve.totalPx !== lastReserveRef.current) {
+      lastReserveRef.current = reserve.totalPx;
+      onReserveHeightChange?.(reserve.totalPx);
     }
   }, [pagesRootRef, scrollContainerRef, enabled, hf, pageCount, onReserveHeightChange]);
 
@@ -139,6 +123,9 @@ export function PageChromeLayer({
 
   if (!enabled || boxes.length === 0) return null;
 
+  const headerStripPx = zones.headerPx || PLACEHOLDER_STRIP_PX;
+  const footerStripPx = zones.footerPx || PLACEHOLDER_STRIP_PX;
+
   return (
     <div className="pointer-events-none absolute inset-0 z-[5]" aria-hidden="true">
       {boxes.map((box) => (
@@ -152,24 +139,35 @@ export function PageChromeLayer({
             height: box.height,
           }}
         >
-          <div className="page-chrome-header flex h-[28px] items-center justify-center">
+          {/* Strips re-enable pointer events so double-click opens the
+              dialog (Word-style). They sit in the margin band, above the
+              body text, so they don't shadow document content. */}
+          <div
+            className="page-chrome-header pointer-events-auto flex cursor-pointer items-center justify-center"
+            style={{ height: headerStripPx }}
+            title="ดับเบิลคลิกเพื่อแก้ไขส่วนหัว (Double-click to edit header)"
+            onDoubleClick={dispatchOpenHeaderFooter}
+          >
             {box.showPlaceholderHeader ? (
               <span className="page-chrome-placeholder">ส่วนหัว (Header)</span>
             ) : (
               <div
-                className="w-full text-center"
+                className="w-full overflow-hidden text-center"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(box.headerHtml) }}
               />
             )}
           </div>
           <div
-            className="page-chrome-footer absolute bottom-0 left-0 right-0 flex h-[28px] items-center justify-center"
+            className="page-chrome-footer pointer-events-auto absolute bottom-0 left-0 right-0 flex cursor-pointer items-center justify-center"
+            style={{ height: footerStripPx }}
+            title="ดับเบิลคลิกเพื่อแก้ไขส่วนท้าย (Double-click to edit footer)"
+            onDoubleClick={dispatchOpenHeaderFooter}
           >
             {box.showPlaceholderFooter ? (
               <span className="page-chrome-placeholder">ส่วนท้าย (Footer)</span>
             ) : (
               <div
-                className="w-full text-center"
+                className="w-full overflow-hidden text-center"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(box.footerHtml) }}
               />
             )}

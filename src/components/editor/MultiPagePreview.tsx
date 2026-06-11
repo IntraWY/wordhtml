@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { stripPaginationWrappers } from "@/lib/export/stripPaginationWrappers";
 import { splitHtmlIntoPages } from "@/lib/paginationEngine";
-import { measureHeaderFooterReservePx } from "@/lib/pageChromeReserve";
+import { measureChromeReservePx } from "@/lib/pageChromeReserve";
 import { PAGE_CANVAS_PADDING_PX, PAGE_STACK_GAP_PX } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ProcessedContent } from "./ProcessedContent";
@@ -30,7 +30,7 @@ export function MultiPagePreview({
       return headerFooterReservePxProp;
     }
     if (!showHF || !hf) return 0;
-    return measureHeaderFooterReservePx(hf.headerHtml, hf.footerHtml);
+    return measureChromeReservePx(hf).totalPx;
   }, [headerFooterReservePxProp, showHF, hf]);
 
   const pages = useMemo(() => {

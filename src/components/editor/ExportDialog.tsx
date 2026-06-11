@@ -443,6 +443,12 @@ export function ExportDialog() {
                   </div>
                 )}
 
+                {pageSetup.headerFooter?.enabled && (
+                  <p className="text-right text-[11px] text-[color:var(--color-muted-foreground)]">
+                    หัว/ท้ายกระดาษจะรวมอยู่ใน PDF และ HTML (ตอนพิมพ์) — .docx
+                    ยังไม่รองรับหัว/ท้ายกระดาษ
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
                     variant={selectedFormat === "docx" ? "primary" : "secondary"}

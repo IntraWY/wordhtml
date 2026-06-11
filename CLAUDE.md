@@ -93,6 +93,9 @@ src/
 │   │   ├── UploadButton.tsx      # listens "wordhtml:open-file" event
 │   │   ├── HistoryPanel.tsx      # snapshot list with restore/duplicate/delete
 │   │   ├── MathInputDialog.tsx   # KaTeX LaTeX equation editor (Ctrl+Shift+M)
+│   │   ├── HeaderFooterDialog.tsx# Header/footer config: variant tabs + rich editors
+│   │   ├── HeaderFooterRichEditor.tsx # Mini Tiptap sub-editor for header/footer content
+│   │   ├── PageChromeLayer.tsx   # Live header/footer strips over each page (dblclick → dialog)
 │   │   ├── SourcePane.tsx        # HTML source editor panel
 │   │   ├── TemplatePreview.tsx   # processed template preview for preview mode
 │   │   ├── PaginationManager.tsx # page navigation: total/current + goToPage controls
@@ -133,10 +136,8 @@ src/
 │   │   │                         #   spaceBefore/After, lineHeight/lineHeightMode
 │   │   ├── fontSize.ts           # Custom Mark for inline font-size spans
 │   │   ├── indentExtension.ts    # (legacy) replaced by paragraphFormat.ts
-│   │   ├── pageNode.ts           # PageNode block: pageHeader? pageBody pageFooter?
+│   │   ├── pageNode.ts           # PageNode block (content: pageBody)
 │   │   ├── pageBody.ts           # PageBodyNode measurable content container
-│   │   ├── pageHeader.ts         # Placeholder header node (Phase 2)
-│   │   ├── pageFooter.ts         # Placeholder footer node (Phase 2)
 │   │   ├── pageCommands.ts       # insertPage, splitPage, mergePage, setPageSetup
 │   │   ├── pageBreak.ts          # Block-level page break node
 │   │   ├── variableMark.ts       # Template variable {{name}} mark
@@ -250,9 +251,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.1)
+## Current state (v0.2.3)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **567 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **580 unit tests pass; lint + build clean.**
+
+**v0.2.3 — Header/Footer Phase 2+3 (rich editing + odd/even).** `HeaderFooterDialog` now uses `HeaderFooterRichEditor.tsx` — a mini Tiptap instance (minimal StarterKit + TextAlign + TextStyle + FontSize + inline Image + Placeholder) with a compact toolbar (B/I/U, align, size, logo, variable dropdown inserting literal `{page}`-style tokens) — replacing the old textareas. Variant tabs ทุกหน้า/หน้าแรก/หน้าคู่ edit all six `HeaderFooterConfig` HTML fields; all are sanitized on save. Form state lives in an inner `HeaderFooterForm` that unmounts with the Radix portal, so every open seeds a fresh draft from the store (no setState-in-effect — React Compiler lint forbids it). `pageChromeReserve.ts` exposes `measureChromeReservePx(hf)` → `{headerPx, footerPx, totalPx}`: header/footer measured separately, max across **active** variants, per-zone clamp 24–80px; `PageChromeLayer` sizes its strips from the measured zones (no more hard-coded `h-[28px]`) and its strips are `pointer-events-auto` with **double-click → `wordhtml:open-header-footer`** (gotcha: the unlayered `.page-chrome-*` rule in `globals.css` previously had `pointer-events:none`, which beat the Tailwind utility — unlayered CSS wins over `@layer utilities`). PDF export (`exportPdf.ts`) now pre-paginates via `splitHtmlIntoPages` when header/footer is enabled and renders per-page chrome absolutely inside the margin bands of exact-height page divs (jsPDF margins switch to 0 in that mode); shared resolution lives in `resolveHeaderFooterForPage` (`headerFooterResolve.ts`), used by both the canvas overlay and the PDF path. DOCX still doesn't support header/footer (noted in ExportDialog). The unreachable `pageHeader.ts`/`pageFooter.ts` stub nodes were deleted (PageNode content is `pageBody` only; `stripPaginationWrappers` keeps `.page-header/.page-footer` selectors for legacy HTML).
 
 **v0.2.1 — Tab character survives save/reload.** Word-style mid-line Tab inserts a real `\t` (v0.1.38), but `VisualEditor.tsx` re-parsed store HTML back into the editor without `parseOptions.preserveWhitespace`, so ProseMirror's DOMParser collapsed the tab on every store→editor re-apply (the v0.2.0 auto-restore on reload, snapshot load, file open, dev HMR). Symptom: pressing **บันทึก** then reloading reverted the text to before the Tab. Fix: `parseOptions: { preserveWhitespace: "full" }` on both `useEditor` and `applyContent`'s `setContent` (matches `.prose-editor` `white-space: pre-wrap`); the tab was always stored correctly — only the re-parse dropped it. Locked by a tab round-trip test in `paragraphFormat.roundtrip.test.ts`. Commit `bbe6c8b`.
 
@@ -270,7 +273,7 @@ All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9
 **v0.1.38 Tab behavior** (`paragraphFormat.ts`): caret at `parentOffset===0` or multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift. Tab-stop CSS: `tab-size: 1.27cm` + `white-space: pre-wrap` on p/h1–h3/li in `globals.css`, `wrap.ts`, and `exportPdf.ts`. `collapseSpaces` cleaner preserves `\t` (regex `/ {2,}/g`, not `/[ \t]+/g`). **`VisualEditor.tsx` parses content with `parseOptions: { preserveWhitespace: "full" }` on both `useEditor` and `applyContent`'s `setContent`** — without it ProseMirror's DOMParser collapses the literal `\t` on every store→editor re-apply (auto-restore on reload, snapshot load, file open), making tabs silently vanish after save/reload. Locked by a tab round-trip test in `paragraphFormat.roundtrip.test.ts`. Spec: `docs/superpowers/specs/2026-06-07-word-style-tab-design.md`.
 
 ### Known Pending Issues
-- Roadmap: cloud history sync (Firebase C.2). See `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
+- (none tracked) — roadmap history: `docs/superpowers/specs/2026-06-07-production-roadmap-design.md`.
 
 ## Pagination Architecture
 
@@ -281,11 +284,13 @@ EditorShell
 └── PageCanvas (forwardRef → ResizeObserver)
     └── EditorContent (Tiptap)
         └── div.page-node (PageNode)
-            ├── div.page-header (optional, Phase 2)
-            ├── div.page-body (PageBodyNode, data-page-body="true")
-            │   └── …actual document content…
-            └── div.page-footer (optional, Phase 2)
+            └── div.page-body (PageBodyNode, data-page-body="true")
+                └── …actual document content…
 ```
+
+Header/footer chrome is **not** part of the document: `PageChromeLayer` overlays
+each `.page-node` with measured strips (see v0.2.3 above) and the pagination
+engine subtracts `measureChromeReservePx().totalPx` from the content height.
 
 - `PageCanvas` is a `forwardRef` component so `EditorShell` can attach a `ResizeObserver` to the scroll container for vertical ruler extension and pagination engine measurements.
 - Each `page-node` is a Tiptap `PageNode` block with `pageNumber` and `pageSetup` attributes.
@@ -301,9 +306,8 @@ Page numbers rendered via `.page-node::after { content: attr(data-page-number) }
 
 ## Pagination — pending work
 
-- **Phase 2** — Header/footer rich text editing (enable `contenteditable`, toolbar, per-page state)
-- **Phase 3** — Odd/even page headers/footers
-- Cloud history sync (Firebase C.2)
+- ~~Phase 2 — Header/footer rich text editing~~ ✅ v0.2.3 (dialog sub-editor + double-click chrome)
+- ~~Phase 3 — Odd/even page headers/footers~~ ✅ v0.2.3 (variant tabs in HeaderFooterDialog)
 
 ## Placeholder System
 
@@ -347,7 +351,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.1**
+- **Current version**: **v0.2.3**
 
 ### Patch bump rule (deploy default)
 

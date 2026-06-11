@@ -299,10 +299,12 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   border-color: var(--color-warning);
 }
 
-/* Live page chrome overlays (header/footer on canvas) */
+/* Live page chrome overlays (header/footer on canvas).
+   No pointer-events here — the overlay wrapper is pointer-events-none and the
+   strips opt back in (pointer-events-auto) so double-click opens the dialog;
+   an unlayered rule here would beat the Tailwind utility. */
 .page-chrome-header,
 .page-chrome-footer {
-  pointer-events: none;
   flex-shrink: 0;
   font-size: 11px;
   color: var(--color-muted-foreground);
@@ -326,6 +328,20 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Logos in header/footer zones stay inline and bounded (dialog editor + canvas chrome) */
+.hf-rich-content img,
+.page-chrome-header img,
+.page-chrome-footer img {
+  display: inline-block;
+  max-height: 40px;
+  width: auto;
+  vertical-align: middle;
+}
+
+.hf-rich-content p {
+  margin: 0.15em 0;
 }
 
 .page-node.has-page-chrome {
