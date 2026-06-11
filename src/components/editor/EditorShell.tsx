@@ -15,6 +15,7 @@ import { PageCanvas } from "./PageCanvas";
 import { PreviewToggle } from "./PreviewToggle";
 import { VariablePanel } from "./VariablePanel";
 import { VariableFillPopover } from "./VariableFillPopover";
+import { FieldFillPopover } from "./FieldFillPopover";
 import { IndentRuler } from "./IndentRuler";
 import { EditorRulerBar, EditorPaperScrollBody } from "./EditorPaperLayout";
 import { TemplatePreview } from "./TemplatePreview";
@@ -424,6 +425,7 @@ export function EditorShell() {
           </div>
           {templateMode && <VariablePanel editor={editor} />}
           {templateMode && <VariableFillPopover editor={editor} />}
+          <FieldFillPopover editor={editor} />
           {placeholderPanelOpen && <PlaceholderPanel editor={editor} />}
         </main>
 

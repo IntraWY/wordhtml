@@ -54,7 +54,11 @@ import {
   editorEmptyPlaceholderText,
   setEditorEmptyPlaceholderText,
 } from "@/lib/editorEmptyPlaceholder";
-import { dispatchOpenFile, dispatchFillVariable } from "@/lib/events";
+import {
+  dispatchOpenFile,
+  dispatchFillVariable,
+  dispatchFillField,
+} from "@/lib/events";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { Upload, FileText, Keyboard, Braces, Eye } from "lucide-react";
@@ -354,6 +358,34 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         return false;
       },
       handleClick(view: EditorView, pos: number, event: MouseEvent) {
+        // Click on a content-control ช่องกรอก → open its fill popover.
+        const fieldEl = (event.target as HTMLElement | null)?.closest?.(
+          ".placeholder-field"
+        ) as HTMLElement | null;
+        if (fieldEl) {
+          const resolveFieldAt = (p: number) => {
+            const n = view.state.doc.nodeAt(p);
+            return n?.type.name === "placeholderField" ? n : null;
+          };
+          let nodePos = pos;
+          let node = resolveFieldAt(nodePos);
+          if (!node && pos > 0) {
+            nodePos = pos - 1;
+            node = resolveFieldAt(nodePos);
+          }
+          if (node) {
+            const r = fieldEl.getBoundingClientRect();
+            dispatchFillField({
+              pos: nodePos,
+              label: (node.attrs.label as string) ?? "ช่องกรอก",
+              value: (node.attrs.value as string) ?? "",
+              rect: { left: r.left, top: r.top, bottom: r.bottom, width: r.width },
+            });
+            return true;
+          }
+          return false;
+        }
+
         // Click on a {{variable}} → open the inline fill popover. Two forms:
         // badge spans (inserted via panel/suggestion) and plain {{name}} text
         // (gallery templates load as plain text).

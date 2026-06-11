@@ -29,6 +29,11 @@ import { DEFAULT_AUTO_SAVE } from "@/types";
 import type { ExportMissingPolicy } from "@/lib/placeholders";
 import { removeMergeFieldFromHtml } from "@/lib/placeholders/removeMergeField";
 import {
+  compactVariables,
+  mergeRestoredVariables,
+  shouldPersistDataSet,
+} from "@/lib/placeholders/variableStorage";
+import {
   getCloudHistoryUid,
   setPauseCloudHistoryMerge,
 } from "@/lib/cloudHistoryBridge";
@@ -494,14 +499,27 @@ export const useEditorStore = create<EditorState>()(
           let snapshot: DocumentSnapshot;
           let rest: DocumentSnapshot[];
 
+          // Capture variables with the document so a restored snapshot brings
+          // its template values back (Firestore-safe via compactVariables).
+          const savedVariables = state.variables.length
+            ? compactVariables(state.variables)
+            : undefined;
+
           if (activeSnap) {
-            if (activeSnap.html === documentHtml) return state;
+            if (
+              activeSnap.html === documentHtml &&
+              JSON.stringify(activeSnap.variables ?? []) ===
+                JSON.stringify(savedVariables ?? [])
+            ) {
+              return state;
+            }
             snapshot = {
               ...activeSnap,
               fileName: state.fileName,
               savedAt: new Date().toISOString(),
               html: documentHtml,
               wordCount: countWords(documentHtml),
+              variables: savedVariables,
             };
             rest = state.history.filter((s) => s.id !== state.activeSnapshotId);
           } else {
@@ -511,6 +529,7 @@ export const useEditorStore = create<EditorState>()(
               savedAt: new Date().toISOString(),
               html: documentHtml,
               wordCount: countWords(documentHtml),
+              variables: savedVariables,
             };
             rest = state.history;
           }
@@ -562,6 +581,16 @@ export const useEditorStore = create<EditorState>()(
           fileName: snap.fileName,
           activeSnapshotId: id,
           htmlSyncRevision: state.htmlSyncRevision + 1,
+          // Restore captured variables — incoming values fill empty slots
+          // without clobbering anything the user typed this session.
+          ...(snap.variables?.length
+            ? {
+                variables: mergeRestoredVariables(
+                  state.variables,
+                  snap.variables
+                ),
+              }
+            : {}),
         }));
       },
 
@@ -737,6 +766,9 @@ export const useEditorStore = create<EditorState>()(
         pageSetup: state.pageSetup,
         templateMode: state.templateMode,
         variables: state.variables,
+        // Mail-merge data survives reload while it stays small (≤200KB).
+        // Additive optional field — base store defaults to null, no migration.
+        dataSet: shouldPersistDataSet(state.dataSet) ? state.dataSet : null,
         autoCompressImages: state.autoCompressImages,
         spellcheckEnabled: state.spellcheckEnabled,
         exportMissingPolicy: state.exportMissingPolicy,

@@ -175,6 +175,7 @@ export const editorStorage = createSafeStorage<{
   pageSetup: PageSetup;
   templateMode: boolean;
   variables: unknown[];
+  dataSet?: unknown;
   autoCompressImages: boolean;
   spellcheckEnabled?: boolean;
   exportMissingPolicy?: string;

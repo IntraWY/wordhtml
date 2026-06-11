@@ -15,6 +15,7 @@ export const EVENT_NAMES = {
   openHeaderFooter: "wordhtml:open-header-footer",
   insertVariable: "wordhtml:insert-variable",
   fillVariable: "wordhtml:fill-variable",
+  fillField: "wordhtml:fill-field",
   pageNext: "wordhtml:page-next",
   pagePrev: "wordhtml:page-prev",
   insertPageBreak: "wordhtml:insert-page-break",
@@ -92,6 +93,20 @@ export interface FillVariableDetail {
 export function dispatchFillVariable(detail: FillVariableDetail): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(EVENT_NAMES.fillVariable, { detail }));
+  }
+}
+
+export interface FillFieldDetail {
+  /** Document position of the placeholderField node. */
+  pos: number;
+  label: string;
+  value: string;
+  rect: { left: number; top: number; bottom: number; width: number };
+}
+
+export function dispatchFillField(detail: FillFieldDetail): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(EVENT_NAMES.fillField, { detail }));
   }
 }
 

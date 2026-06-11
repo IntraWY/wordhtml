@@ -121,6 +121,8 @@ export interface DocumentSnapshot {
   savedAt: string;
   html: string;
   wordCount: number;
+  /** Template variables captured at save time (optional — added v0.2.9). */
+  variables?: import("./template").TemplateVariable[];
 }
 
 /** Auto-save snapshot preferences (persisted in editor store). */

@@ -15,6 +15,7 @@ import { signInWithGoogle } from "@/lib/firebaseAuth";
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { exportAllSettings, importAllSettings } from "@/lib/settingsExport";
+import { mergeRestoredVariables } from "@/lib/placeholders/variableStorage";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("th-TH", {
@@ -76,6 +77,15 @@ export function TemplatePanel() {
     setHtml(sanitizeHtml(template.html));
     setPageSetup(template.pageSetup);
     setFileName(template.name);
+    // Bring back the template's captured variables (fills empty slots,
+    // never clobbers values the user typed this session).
+    if (template.variables?.length) {
+      useEditorStore
+        .getState()
+        .setVariables((prev) =>
+          mergeRestoredVariables(prev, template.variables ?? [])
+        );
+    }
     clearError();
     clearLoadWarnings();
     closePanel();
@@ -85,7 +95,12 @@ export function TemplatePanel() {
   async function doSave(name: string) {
     setActionLoading("save");
     try {
-      await saveTemplate(name, documentHtml, pageSetup);
+      await saveTemplate(
+        name,
+        documentHtml,
+        pageSetup,
+        useEditorStore.getState().variables
+      );
       setSaveName("");
       useToastStore.getState().show(`บันทึก Template "${name}" แล้ว`);
     } catch (err) {

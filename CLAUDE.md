@@ -256,9 +256,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.8)
+## Current state (v0.2.9)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **621 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **630 unit tests pass; lint + build clean.**
+
+**v0.2.9 — Placeholder polish round 3 (fillable fields + persistence).** (1) **ช่องกรอก (placeholderField) is now fillable** — clicking it opens `FieldFillPopover.tsx` (always mounted, not template-gated); the value writes into the node's `value` **attribute** via `setNodeMarkup`, so it lives in the document HTML and survives save/reload/template/export for free. `inlinePlaceholderFields` priority flipped: node attr > session `fieldValues` > label. (2) **Variables travel with saves** — `DocumentSnapshot.variables?` + `DocumentTemplate.variables?` (both optional, backward-compatible): `saveSnapshot` captures `compactVariables(state.variables)` (JSON round-trip — Firestore rejects `undefined` fields like unset `delimiter`), `loadSnapshot`/template `doLoad` restore via `mergeRestoredVariables` (incoming fills empty slots, never clobbers user-typed values); Firestore serializers in `historyFirestore.ts`/`templateFirestore.ts` include the field only when non-empty; `saveTemplate` stores only `variablesUsedIn(html, vars)`. (3) **dataSet survives reload** — added to `partialize` behind `shouldPersistDataSet` (≤200KB JSON guard); the old `version<3` migration that stripped dataSet only fires for pre-v3 stores, so no version bump needed (additive field). Helpers live in `src/lib/placeholders/variableStorage.ts`.
 
 **v0.2.8 — Placeholder polish round 2 (UI).** Three additions: (1) **Variable panel 2.0** — search box + filter chips ทั้งหมด/ในเอกสาร/ยังไม่กรอก, "ไม่ได้ใช้" badge per row, stale-cleanup button (clears variables no longer in the document), jump-to-next-empty button; pure logic in `src/lib/placeholders/panelFilter.ts` (`filterPanelVariables`/`staleVariableNames`/`nextEmptyVariableName`); `VariablePanel` now takes an `editor` prop from EditorShell. (2) **Repeat-row UI** — context-menu toggle "แถวซ้ำตามรายการ (Repeat row)" via `toggleRepeatRow`/`isRepeatRow` in `repeatingRow.ts` (walks ancestors to the tableRow, setNodeMarkup); editor-only accent stripe `.prose-editor tr[data-repeat="true"] > td:first-child` (box-shadow inset; suppressed in `@media print`). (3) **Click-to-fill popover** — `VisualEditor` `editorProps.handleClick` detects clicks on `.variable-badge` spans **and plain-text `{{name}}`** (gallery templates load fields as plain text — resolve clicked pos → textblock regex match → `coordsAtPos` rect); dispatches `wordhtml:fill-variable` → `VariableFillPopover.tsx` (mounted in EditorShell, templateMode only) edits `variables[].value` in place, Enter=save, "ถัดไป" jumps to next empty field and re-anchors. Gotcha hit twice this round: a raw NUL byte (U+0000) snuck into VisualEditor.tsx as the `textBetween` separator argument — ripgrep then treats the file as binary; separator is now a plain space (1 char, offset math unchanged).
 
@@ -366,7 +368,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.8**
+- **Current version**: **v0.2.9**
 
 ### Patch bump rule (deploy default)
 

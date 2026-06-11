@@ -13,7 +13,9 @@ export function inlinePlaceholderFields(
     const label = el.getAttribute("data-label") ?? "";
     const attrVal = el.getAttribute("data-value") ?? "";
     const stored = id ? fieldValues[id] : "";
-    const text = (stored || attrVal || label).trim();
+    // The node attribute is authoritative (the in-editor fill popover writes
+    // it, and it persists in the HTML); session fieldValues are a fallback.
+    const text = (attrVal || stored || label).trim();
     el.replaceWith(doc.createTextNode(text));
   });
   return doc.body.innerHTML;

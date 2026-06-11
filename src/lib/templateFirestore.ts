@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 import type { DocumentTemplate } from "@/store/templateStore";
-import type { PageSetup } from "@/types";
+import type { PageSetup, TemplateVariable } from "@/types";
 
 const LEGACY_COLLECTION = "templates";
 
@@ -23,6 +23,8 @@ interface FirestoreTemplate {
   html: string;
   pageSetup: PageSetup;
   createdAt: Timestamp;
+  /** Optional — present when the template captured variables (v0.2.9). */
+  variables?: TemplateVariable[];
 }
 
 function toFirestore(template: DocumentTemplate): FirestoreTemplate {
@@ -31,6 +33,9 @@ function toFirestore(template: DocumentTemplate): FirestoreTemplate {
     html: template.html,
     pageSetup: template.pageSetup,
     createdAt: Timestamp.fromDate(new Date(template.createdAt)),
+    // Firestore rejects `undefined` — include only when present (already
+    // compacted by templateStore.saveTemplate).
+    ...(template.variables?.length ? { variables: template.variables } : {}),
   };
 }
 
@@ -41,6 +46,7 @@ function fromFirestore(id: string, data: FirestoreTemplate): DocumentTemplate {
     html: data.html,
     pageSetup: data.pageSetup,
     createdAt: data.createdAt.toDate().toISOString(),
+    ...(data.variables?.length ? { variables: data.variables } : {}),
   };
 }
 

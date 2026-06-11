@@ -14,13 +14,15 @@ import {
 } from "firebase/firestore";
 
 import { getFirebaseDb } from "./firebase";
-import type { DocumentSnapshot } from "@/types";
+import type { DocumentSnapshot, TemplateVariable } from "@/types";
 
 interface FirestoreSnapshot {
   fileName: string | null;
   savedAt: Timestamp;
   html: string;
   wordCount: number;
+  /** Optional — present when the snapshot captured template variables. */
+  variables?: TemplateVariable[];
 }
 
 function snapshotsCollection(uid: string) {
@@ -33,6 +35,9 @@ function toFirestore(snapshot: DocumentSnapshot): FirestoreSnapshot {
     savedAt: Timestamp.fromDate(new Date(snapshot.savedAt)),
     html: snapshot.html,
     wordCount: snapshot.wordCount,
+    // Firestore rejects `undefined` — include only when captured. The
+    // snapshot's variables come through compactVariables (JSON-safe).
+    ...(snapshot.variables?.length ? { variables: snapshot.variables } : {}),
   };
 }
 
@@ -43,6 +48,7 @@ function fromFirestore(id: string, data: FirestoreSnapshot): DocumentSnapshot {
     savedAt: data.savedAt.toDate().toISOString(),
     html: data.html,
     wordCount: data.wordCount,
+    ...(data.variables?.length ? { variables: data.variables } : {}),
   };
 }
 

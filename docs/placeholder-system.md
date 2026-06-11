@@ -99,11 +99,22 @@ Legacy: `templateEngine.replaceVariables` และ `PageHeaderFooter.replaceVar
 - ส่ง `headerFooterReservePx` → `usePagination` เพื่อลดความสูงเนื้อหา
 - Ghost label เมื่อ zone ว่าง: `ส่วนหัว (Header)` / `ส่วนท้าย (Footer)`
 
-### Content controls (Layer 4 — MVP)
+### Content controls (Layer 4 — กรอกได้จริงตั้งแต่ v0.2.9)
 
 - Tiptap node `placeholderField` — attrs: `fieldId`, `label`, `fieldType`, `required`, `value`
 - Insert: Ribbon **แทรก → ช่องกรอก**
-- Store: `fieldValues` (session), `exportMissingPolicy` (persist ใน localStorage)
+- **กรอกค่า: คลิกที่ช่องกรอกในเอกสาร** → `FieldFillPopover.tsx` เขียนค่าเข้า attr `value`
+  ของ node (อยู่ใน HTML → รอด save/reload/template/export อัตโนมัติ)
+- Export: `inlinePlaceholderFields` ใช้ลำดับ **attr > session fieldValues > label**
+- Store: `fieldValues` (session, fallback), `exportMissingPolicy` (persist ใน localStorage)
+
+### Persistence (v0.2.9)
+
+- `DocumentSnapshot.variables?` / `DocumentTemplate.variables?` — ตัวแปร+ค่าติดไปกับ
+  บันทึก/Template (รวม cloud sync); restore ผ่าน `mergeRestoredVariables`
+  (ค่าใหม่เติมช่องว่าง ไม่ทับค่าที่ผู้ใช้พิมพ์ไว้)
+- `dataSet` persist ข้าม reload เมื่อ ≤200KB (`shouldPersistDataSet`)
+- Helpers: `src/lib/placeholders/variableStorage.ts`
 
 ---
 

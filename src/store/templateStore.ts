@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import type { PageSetup } from "@/types";
+import type { PageSetup, TemplateVariable } from "@/types";
+import {
+  compactVariables,
+  variablesUsedIn,
+} from "@/lib/placeholders/variableStorage";
 import {
   subscribeTemplates,
   saveTemplate as saveTemplateToFirestore,
@@ -34,6 +38,8 @@ export interface DocumentTemplate {
   createdAt: string;
   html: string;
   pageSetup: PageSetup;
+  /** Template variables captured at save time (optional — added v0.2.9). */
+  variables?: TemplateVariable[];
 }
 
 interface TemplateState {
@@ -43,7 +49,12 @@ interface TemplateState {
   error: string | null;
   openPanel: () => void;
   closePanel: () => void;
-  saveTemplate: (name: string, html: string, pageSetup: PageSetup) => Promise<void>;
+  saveTemplate: (
+    name: string,
+    html: string,
+    pageSetup: PageSetup,
+    variables?: TemplateVariable[]
+  ) => Promise<void>;
   renameTemplate: (id: string, name: string) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
   importTemplates: (items: DocumentTemplate[]) => Promise<number>;
@@ -176,7 +187,7 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
     stopTemplateSubscription();
   },
 
-  saveTemplate: async (name, html, pageSetup) => {
+  saveTemplate: async (name, html, pageSetup, variables) => {
     const state = get();
     if (state.templates.length >= MAX_TEMPLATES) {
       set({ error: `เก็บได้สูงสุด ${MAX_TEMPLATES} templates` });
@@ -186,12 +197,19 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
     // Gate before building the doc so a signed-out write never reaches Firestore.
     const uid = getUidForWrite();
 
+    // Keep only variables the template actually uses; compact so Firestore
+    // never sees `undefined` fields.
+    const usedVariables = variables
+      ? compactVariables(variablesUsedIn(html, variables))
+      : [];
+
     const template: DocumentTemplate = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name,
       createdAt: new Date().toISOString(),
       html: sanitizeHtml(html),
       pageSetup,
+      ...(usedVariables.length ? { variables: usedVariables } : {}),
     };
 
     await saveTemplateToFirestore(template, uid);
