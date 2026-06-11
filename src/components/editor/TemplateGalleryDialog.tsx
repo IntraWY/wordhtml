@@ -36,6 +36,9 @@ export function TemplateGalleryDialog() {
               <Dialog.Title className="text-base font-semibold">
                 แกลเลอรีเทมเพลต (Template gallery)
               </Dialog.Title>
+              <Dialog.Description className="sr-only">
+                เลือกเทมเพลตเอกสารเพื่อเริ่มเอกสารใหม่
+              </Dialog.Description>
             </div>
             <Dialog.Close
               aria-label="ปิด"

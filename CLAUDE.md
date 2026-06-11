@@ -254,9 +254,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.4)
+## Current state (v0.2.5)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **590 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **595 unit tests pass; lint + build clean.**
+
+**v0.2.5 — Real-form gallery templates.** Three templates modeled on the user's actual documents added to `templateGallery.ts` (gallery now has 9): `pea-temp-switch` (บันทึกขออนุมัติติดตั้งอุปกรณ์ตัดตอนชั่วคราว กฟภ. — **2 pages** via new `pages(...)` helper, memo + แบบฟอร์มแจ้งความประสงค์ with a 9-col table), `budget-certification` (ใบตัดงบ — 4 budget lines 53010060/53052040/53069020/เบ็ดเตล็ด × งบ/เบิกแล้ว/คงเหลือ/เบิกครั้งนี้), `material-return` (ฟอร์มส่งคืนพัสดุ — uses the user's own field names `{{ชื่องานคำอธิบาย}}`/`{{เลขWBS}}`). All use Thai merge-field names (regex supports Thai), `data-repeat="true"` rows for line items (mail-merge ready), `data-borders="none"` signature/letterhead zones (v0.2.4 feature), ☐ checklist chars, and `{date_th}` tokens. `TemplateGalleryDialog` needed no changes (renders from the array); gained an sr-only `Dialog.Description` (was a Radix a11y warning).
 
 **v0.2.4 — Form-authoring tools (รองรับฟอร์มราชการ/ฟอร์ม Excel).** Driven by the user's real PEA documents (บันทึกขออนุมัติติดตั้งอุปกรณ์ตัดตอน + ฟอร์มใบตัดงบ/เอกสารส่งคืน in Excel). Three additions: (1) **Table size picker** — `ribbon/TableSizePicker.tsx` replaces the fixed 3×3 insert button with a Word-style hover grid (up to 8×10); inserts with `withHeaderRow: false` (Thai forms use plain cells). (2) **Per-cell borders** — `src/lib/tiptap/tableCellBorder.ts` extends TableCell/TableHeader with `borders: "all"|"none"` attr rendering `data-borders="none"` + inline `border:none`; toggled from the editor context menu (ซ่อน/แสดงเส้นขอบเซลล์, works on CellSelection or caret cell via `setSelectedCellBorders`). Editor shows a faint dashed guide (`globals.css`, `!important` over the inline style); print + `wrap.ts` + `exportPdf.ts` CSS render truly borderless. Cleaners whitelist `data-borders` (PRESERVE_ATTRS + GLOBAL_PRESERVE_ATTRS) and `border` (removeInlineStyles KEEP). `wrap.ts` also gained default table CSS (exported HTML previously had NO table borders at all). Note: jsdom serializes `border:none` as `border: medium` — tests assert the attr, not the style string; `parseHTML` falls back to matching `border*: none|0` inline styles for imported HTML (e.g. future xlsx import). (3) **Symbol quick-insert** — ☐ ☑ ✓ ✗ ( ) buttons in RibbonTabInsert ("เครื่องหมาย" group) for form checklists.
 
@@ -356,7 +358,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.4**
+- **Current version**: **v0.2.5**
 
 ### Patch bump rule (deploy default)
 
