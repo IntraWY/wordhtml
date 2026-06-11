@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_Thai, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SkipLink } from "@/components/SkipLink";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { APP_VERSION, APP_VERSION_LABEL, BUILD_ID } from "@/lib/version";
 
 const ibmPlexSansThai = IBM_Plex_Sans_Thai({
@@ -99,6 +100,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SkipLink />
         <ThemeProvider>{children}</ThemeProvider>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

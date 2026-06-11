@@ -360,10 +360,20 @@ npm run version:bump
 ## Deploy
 
 ```bash
-npm run build              # produces ./out
+npm run build              # next build + scripts/build-sw.mjs → ./out (includes out/sw.js)
 npx serve out              # local static preview
 # Deploy ./out to any static host: Vercel, Netlify, CF Pages, S3+CloudFront, GitHub Pages, etc.
 ```
+
+**PWA / Offline:** the app is installable and works offline. `src/app/manifest.ts` emits
+`manifest.webmanifest` (`start_url: "/"`); `scripts/build-sw.mjs` runs after `next build` and
+generates `out/sw.js` from `scripts/sw.template.js` (precaches HTML pages + `_next/static` +
+icons/fonts; navigations are network-first with cached fallback; **non-GET and cross-origin
+requests are never intercepted** so Firebase sync is unaffected).
+`src/components/ServiceWorkerRegistration.tsx` (mounted in `layout.tsx`) registers the SW in
+production only and shows a "มีเวอร์ชันใหม่ (Update available)" banner → SKIP_WAITING → reload.
+Cache name rotates per build (BUILD_ID/version), so deploys invalidate old caches automatically.
+`next dev` never has a service worker.
 
 **Current deployment:**
 - **GitHub:** `IntraWY/wordhtml` (private repo)
