@@ -384,7 +384,12 @@ export function EditorShell() {
                         />
                       }
                     >
-                      <div className="relative" data-tour="editor">
+                      <div
+                        id="editor-main"
+                        tabIndex={-1}
+                        className="relative outline-none"
+                        data-tour="editor"
+                      >
                         <PageCanvas
                           ref={articleRef as React.RefObject<HTMLDivElement>}
                           id="editor-content"

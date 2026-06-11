@@ -118,7 +118,8 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
                       step={1}
                       value={draft.marginMm[side]}
                       onChange={(e) => {
-                        const v = Number.parseInt(e.target.value, 10) || 0;
+                        const raw = Number.parseInt(e.target.value, 10) || 0;
+                        const v = Math.min(100, Math.max(0, raw));
                         setDraft((d) => ({
                           ...d,
                           marginMm: { ...d.marginMm, [side]: v },
@@ -168,7 +169,8 @@ export function PageSetupDialog({ open, onClose }: PageSetupDialogProps) {
                         step={1}
                         value={fpm[side]}
                         onChange={(e) => {
-                          const v = Number.parseInt(e.target.value, 10) || 0;
+                          const raw = Number.parseInt(e.target.value, 10) || 0;
+                          const v = Math.min(150, Math.max(0, raw));
                           setDraft((d) => ({
                             ...d,
                             firstPageMarginMm: {

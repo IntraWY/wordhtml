@@ -2,6 +2,27 @@
 
 > ภาษาไทย (primary) พร้อม English technical terms ในวงเล็บ
 
+## สถานะ (อัปเดต 2026-06-11, v0.2.1)
+
+รายการส่วนใหญ่ในไฟล์นี้ **แก้ไขแล้ว** — เก็บเนื้อหาเดิมไว้เป็น reference:
+
+- ✅ C1 `lang="th"` — `layout.tsx`
+- ✅ C2 MobileBlock เป็นภาษาไทยแล้ว (dismissible banner)
+- ✅ C3 Ruler keyboard — `Ruler.tsx` มี `role="slider"` + arrow keys ครบ 6 handle
+- ✅ H1 muted-foreground contrast — `#57534e` ผ่าน WCAG AA
+- ✅ H2 SearchPanel labels — sr-only label + `aria-label` บน panel
+- ✅ H3 ExportDialog GAS input label
+- ✅ H4 SearchPanel focus return + focus trap
+- ✅ H5 editor `role="textbox"` + `aria-label` + `aria-multiline`
+- ✅ H6 SkipLink — mount ใน `layout.tsx` แล้ว, target `#editor-main` (`EditorShell.tsx`)
+- ✅ M1 TopBar badge aria-label
+- ✅ M4 copy-button live region (`ExportDialog.tsx` — `aria-live="polite"`)
+- ✅ M5 PageSetupDialog margin clamp (0–100 / 0–150 มม.)
+- ✅ M6 loading overlay `role="status" aria-live="polite"`
+- ✅ M7 drag overlay `aria-hidden`
+- ⏳ M8 image alt prompt — รอตัดสิน UX
+- ⏳ M10 SearchPanel match-count live region — ขึ้นกับ extension expose count
+
 ---
 
 ## Critical

@@ -262,6 +262,9 @@ export function ExportDialog() {
                 ตัวเลือกการส่งออกเอกสารและโค้ด
               </Dialog.Description>
             </div>
+            <span aria-live="polite" className="sr-only">
+              {copied || gasCopied ? "คัดลอกแล้ว (Copied to clipboard)" : ""}
+            </span>
             <Dialog.Close
               aria-label="ปิด"
               className="grid h-8 w-8 place-items-center rounded-md text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
