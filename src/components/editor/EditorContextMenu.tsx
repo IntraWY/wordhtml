@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { useUiStore } from "@/store/uiStore";
+import { useToastStore } from "@/store/toastStore";
 import {
   Trash2,
   Minus,
@@ -18,13 +19,15 @@ import {
   ArrowUp,
   ArrowDown,
   Square,
-  SquareDashed
+  SquareDashed,
+  Repeat
 } from "lucide-react";
 import { editorCan } from "@/lib/editorLive";
 import {
   setSelectedCellBorders,
   selectionHasCell,
 } from "@/lib/tiptap/tableCellBorder";
+import { isRepeatRow, toggleRepeatRow } from "@/lib/tiptap/repeatingRow";
 
 interface EditorContextMenuProps {
   editor: Editor | null;
@@ -262,6 +265,28 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
           setOpen(false);
         },
         disabled: !editor || !selectionHasCell(editor),
+      },
+      {
+        id: "toggle-repeat-row",
+        label: editor && isRepeatRow(editor)
+          ? "✓ แถวซ้ำตามรายการ (Repeat row)"
+          : "แถวซ้ำตามรายการ (Repeat row)",
+        icon: <Repeat className="size-4" />,
+        action: () => {
+          if (editor) {
+            const nowOn = !isRepeatRow(editor);
+            toggleRepeatRow(editor);
+            useToastStore
+              .getState()
+              .show(
+                nowOn
+                  ? "แถวนี้จะซ้ำตามตัวแปรชนิดรายการ (List) ตอนส่งออก"
+                  : "ยกเลิกแถวซ้ำแล้ว",
+                "success"
+              );
+          }
+          setOpen(false);
+        },
       },
       { id: "div-table-4", label: "", divider: true },
       {

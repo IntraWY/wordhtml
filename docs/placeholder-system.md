@@ -63,6 +63,27 @@ Legacy: `templateEngine.replaceVariables` และ `PageHeaderFooter.replaceVar
 - **Tiptap:** ข้อความ placeholder ผ่าน `editorEmptyPlaceholderText` (`src/lib/editorEmptyPlaceholder.ts`)
 - **EmptyHint:** ปุ่ม contextual (`เปิดไฟล์`, `Preview`, `แผงตัวแปร`) — `pointer-events-auto` เฉพาะปุ่ม
 
+### Variable Panel (แผงตัวแปร — v0.2.8)
+
+- ช่องค้นหา + ชิปกรอง **ทั้งหมด / ในเอกสาร / ยังไม่กรอก** — pure logic ใน
+  `src/lib/placeholders/panelFilter.ts`
+- ปุ่ม "ล้างตัวแปรที่ไม่ได้ใช้" (Eraser + จำนวน) เมื่อมีตัวแปรที่ไม่อยู่ในเอกสารแล้ว
+- ปุ่ม "ช่องว่างถัดไป" → `jumpToMergeField` ไปยังตัวแปรแรกที่ยังไม่กรอก
+- Badge "ไม่ได้ใช้" บนแถวตัวแปรที่หายจากเอกสาร
+
+### Click-to-fill (v0.2.8)
+
+- คลิก `{{ตัวแปร}}` ในเอกสาร (ทั้ง badge และ**ข้อความธรรมดา** — เทมเพลตจาก gallery
+  โหลดเป็นข้อความ) → `VisualEditor.handleClick` dispatch `wordhtml:fill-variable`
+  → `VariableFillPopover.tsx` กรอกค่า inline; Enter = บันทึก, "ถัดไป" = jump ช่องว่างถัดไป
+
+### Repeat row UI (v0.2.8)
+
+- คลิกขวาในตาราง → "แถวซ้ำตามรายการ (Repeat row)" toggle `data-repeat`
+  (`toggleRepeatRow`/`isRepeatRow` ใน `src/lib/tiptap/repeatingRow.ts`)
+- แถบสี accent ซ้ายของแถว (editor เท่านั้น — print/export ไม่มี)
+- ตอน export แถวซ้ำขยายตามตัวแปรชนิดรายการ (List) — `expandRepeatingRows`
+
 ### Placeholder Panel
 
 - เปิดจาก: Ribbon **มุมมอง → Placeholder** หรือ StatusBar badge เมื่อมี missing fields

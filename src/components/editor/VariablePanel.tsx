@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import type { Editor } from "@tiptap/react";
 import {
   Database,
   Table,
@@ -14,12 +15,22 @@ import {
   Plus,
   GripVertical,
   MousePointerClick,
+  Search,
+  Eraser,
+  ArrowDownToDot,
 } from "lucide-react";
 
 import { useEditorStore } from "@/store/editorStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { useToastStore } from "@/store/toastStore";
 import { extractVariables } from "@/lib/templateEngine";
+import { jumpToMergeField } from "@/lib/placeholders";
+import {
+  filterPanelVariables,
+  staleVariableNames,
+  nextEmptyVariableName,
+  type PanelFilterMode,
+} from "@/lib/placeholders/panelFilter";
 import { cn } from "@/lib/utils";
 import type { TemplateVariable } from "@/types";
 import { PasteDataDialog } from "./PasteDataDialog";
@@ -32,7 +43,13 @@ const DELIMITER_OPTIONS: { label: string; value: string }[] = [
   { label: "↵ (newline)", value: "\n" },
 ];
 
-export function VariablePanel() {
+const FILTER_CHIPS: { id: PanelFilterMode; label: string }[] = [
+  { id: "all", label: "ทั้งหมด" },
+  { id: "inDocument", label: "ในเอกสาร" },
+  { id: "unfilled", label: "ยังไม่กรอก" },
+];
+
+export function VariablePanel({ editor }: { editor?: Editor | null }) {
   const templateMode = useEditorStore((s) => s.templateMode);
   const documentHtml = useEditorStore((s) => s.documentHtml);
   const variables = useEditorStore((s) => s.variables);
@@ -50,6 +67,27 @@ export function VariablePanel() {
   const [isAdding, setIsAdding] = useState(false);
   const [newVarName, setNewVarName] = useState("");
   const [addError, setAddError] = useState("");
+  const [query, setQuery] = useState("");
+  const [filterMode, setFilterMode] = useState<PanelFilterMode>("all");
+
+  // Names actually present in the document — drives filter chips,
+  // the stale-cleanup button, and the next-empty jump.
+  const documentNames = useMemo(
+    () => new Set(extractVariables(documentHtml)),
+    [documentHtml]
+  );
+  const visibleVariables = useMemo(
+    () => filterPanelVariables(variables, documentNames, query, filterMode),
+    [variables, documentNames, query, filterMode]
+  );
+  const staleNames = useMemo(
+    () => staleVariableNames(variables, documentNames),
+    [variables, documentNames]
+  );
+  const nextEmpty = useMemo(
+    () => nextEmptyVariableName(variables, documentNames),
+    [variables, documentNames]
+  );
 
   // Auto-detect variables when documentHtml changes — additive only:
   // preserves manually-added variables even if not yet in document
@@ -97,6 +135,28 @@ export function VariablePanel() {
       }
     );
   }, [clearAllVariables]);
+
+  const handleClearStale = useCallback(() => {
+    const stale = staleVariableNames(
+      useEditorStore.getState().variables,
+      new Set(extractVariables(useEditorStore.getState().getDocumentHtml()))
+    );
+    if (stale.length === 0) return;
+    useDialogStore.getState().openConfirm(
+      "ล้างตัวแปรที่ไม่ได้ใช้ (Clear unused variables)",
+      `ลบตัวแปร ${stale.length} รายการที่ไม่อยู่ในเอกสารแล้ว (${stale.slice(0, 5).join(", ")}${stale.length > 5 ? ", …" : ""}) ออกจากรายการหรือไม่?`,
+      () => {
+        const staleSet = new Set(stale);
+        setVariables((prev) => prev.filter((v) => !staleSet.has(v.name)));
+        useToastStore.getState().show(`ลบตัวแปรที่ไม่ได้ใช้ ${stale.length} รายการแล้ว`, "success");
+      }
+    );
+  }, [setVariables]);
+
+  const handleJumpNextEmpty = useCallback(() => {
+    if (!nextEmpty || !editor) return;
+    jumpToMergeField(editor, nextEmpty);
+  }, [nextEmpty, editor]);
 
   const handleRemoveVariable = useCallback((name: string) => {
     useDialogStore.getState().openConfirm(
@@ -204,21 +264,82 @@ export function VariablePanel() {
               <section className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-muted-foreground)]">
-                    ตัวแปร ({variables.length})
+                    ตัวแปร ({visibleVariables.length}/{variables.length})
                   </p>
-                  {variables.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleClear}
-                      aria-label="ลบตัวแปรทั้งหมด"
-                      title="ลบตัวแปรทั้งหมดออกจากรายการ (Remove all variables)"
-                      className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[color:var(--color-muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                    >
-                      <Trash2 className="size-3" aria-hidden="true" />
-                      ล้าง
-                    </button>
-                  )}
+                  <div className="flex items-center gap-0.5">
+                    {staleNames.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearStale}
+                        aria-label="ล้างตัวแปรที่ไม่ได้ใช้"
+                        title={`ล้างตัวแปร ${staleNames.length} รายการที่ไม่อยู่ในเอกสาร (Clear unused)`}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+                      >
+                        <Eraser className="size-3" aria-hidden="true" />
+                        {staleNames.length}
+                      </button>
+                    )}
+                    {variables.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClear}
+                        aria-label="ลบตัวแปรทั้งหมด"
+                        title="ลบตัวแปรทั้งหมดออกจากรายการ (Remove all variables)"
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[color:var(--color-muted-foreground)] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                      >
+                        <Trash2 className="size-3" aria-hidden="true" />
+                        ล้าง
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Search + filter chips (only useful once the list grows) */}
+                {variables.length > 3 && (
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[color:var(--color-muted-foreground)]" />
+                      <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="ค้นหาตัวแปร (Search)"
+                        aria-label="ค้นหาตัวแปร (Search variables)"
+                        className="w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-background)] py-1 pl-6 pr-2 text-xs outline-none focus:border-[color:var(--color-foreground)]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1" role="group" aria-label="กรองตัวแปร (Filter variables)">
+                      {FILTER_CHIPS.map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => setFilterMode(chip.id)}
+                          aria-pressed={filterMode === chip.id}
+                          className={cn(
+                            "rounded-full border px-2 py-0.5 text-[10px] transition-colors",
+                            filterMode === chip.id
+                              ? "border-[color:var(--color-accent)] bg-[color:color-mix(in_srgb,var(--color-accent)_12%,transparent)] text-[color:var(--color-foreground)]"
+                              : "border-[color:var(--color-border)] text-[color:var(--color-muted-foreground)] hover:text-[color:var(--color-foreground)]"
+                          )}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                      {nextEmpty && editor && (
+                        <button
+                          type="button"
+                          onClick={handleJumpNextEmpty}
+                          title={`ไปยัง {{${nextEmpty}}} ที่ยังไม่กรอก (Jump to next empty)`}
+                          aria-label="ไปช่องว่างถัดไป (Jump to next empty)"
+                          className="ml-auto inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-border)] px-2 py-0.5 text-[10px] text-[color:var(--color-muted-foreground)] transition-colors hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-foreground)]"
+                        >
+                          <ArrowDownToDot className="size-3" />
+                          ช่องว่างถัดไป
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Add variable input */}
                 {isAdding ? (
@@ -280,12 +401,19 @@ export function VariablePanel() {
                       หรือคลิกเพิ่มด้านบน
                     </p>
                   </div>
+                ) : visibleVariables.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-[color:var(--color-border)] px-3 py-4 text-center">
+                    <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
+                      ไม่พบตัวแปรตามเงื่อนไขที่กรอง
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
-                    {variables.map((v) => (
+                    {visibleVariables.map((v) => (
                       <VariableRow
                         key={v.name}
                         variable={v}
+                        inDocument={documentNames.has(v.name)}
                         onUpdate={(patch) => handleUpdateVariable(v.name, patch)}
                         onInsert={() => handleInsertVariable(v.name)}
                         onRemove={() => handleRemoveVariable(v.name)}
@@ -351,13 +479,14 @@ export function VariablePanel() {
 
 interface VariableRowProps {
   variable: TemplateVariable;
+  inDocument?: boolean;
   onUpdate: (patch: Partial<TemplateVariable>) => void;
   onInsert?: () => void;
   onRemove?: () => void;
   onDragStart?: (e: React.DragEvent) => void;
 }
 
-function VariableRow({ variable, onUpdate, onInsert, onRemove, onDragStart }: VariableRowProps) {
+function VariableRow({ variable, inDocument = true, onUpdate, onInsert, onRemove, onDragStart }: VariableRowProps) {
   const { name, value, isList, delimiter } = variable;
 
   const activeDelimiter = delimiter || ",";
@@ -413,6 +542,14 @@ function VariableRow({ variable, onUpdate, onInsert, onRemove, onDragStart }: Va
           <span className="inline-flex items-center gap-0.5 rounded bg-[color:var(--color-muted)] px-1 py-0.5 text-[10px] text-[color:var(--color-muted-foreground)]">
             <List className="size-2.5" />
             รายการ
+          </span>
+        )}
+        {!inDocument && (
+          <span
+            title="ตัวแปรนี้ไม่อยู่ในเอกสาร (Not in document)"
+            className="inline-flex items-center rounded bg-[color:var(--color-muted)] px-1 py-0.5 text-[10px] text-[color:var(--color-muted-foreground)]"
+          >
+            ไม่ได้ใช้
           </span>
         )}
         <button

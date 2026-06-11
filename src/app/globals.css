@@ -548,6 +548,13 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
   font-weight: 600;
 }
+/* Repeat rows (data-repeat): editor-only accent stripe so users can see which
+   row duplicates per list item at export. Scoped to .prose-editor — never in
+   print or exported HTML. */
+.prose-editor tr[data-repeat="true"] > td:first-child,
+.prose-editor tr[data-repeat="true"] > th:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-accent);
+}
 /* Borderless form cells: the node renders inline `border:none`, but while
    editing we override it with a faint dashed guide so the table structure
    stays visible. Print/export drop the guide (see @media print + wrap.ts). */
@@ -759,6 +766,12 @@ html[data-theme="dark"] .paper {
   .paper td[data-borders="none"],
   .paper th[data-borders="none"] {
     border: none !important;
+  }
+
+  /* Repeat-row stripe is an editing aid only */
+  .prose-editor tr[data-repeat="true"] > td:first-child,
+  .prose-editor tr[data-repeat="true"] > th:first-child {
+    box-shadow: none !important;
   }
 
   /* Hide UI chrome */

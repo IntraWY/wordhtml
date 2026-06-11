@@ -14,6 +14,7 @@ export const EVENT_NAMES = {
   openToc: "wordhtml:open-toc",
   openHeaderFooter: "wordhtml:open-header-footer",
   insertVariable: "wordhtml:insert-variable",
+  fillVariable: "wordhtml:fill-variable",
   pageNext: "wordhtml:page-next",
   pagePrev: "wordhtml:page-prev",
   insertPageBreak: "wordhtml:insert-page-break",
@@ -79,6 +80,18 @@ export function dispatchInsertVariable(name: string): void {
     window.dispatchEvent(
       new CustomEvent(EVENT_NAMES.insertVariable, { detail: name })
     );
+  }
+}
+
+export interface FillVariableDetail {
+  name: string;
+  /** Viewport rect of the clicked badge — anchors the fill popover. */
+  rect: { left: number; top: number; bottom: number; width: number };
+}
+
+export function dispatchFillVariable(detail: FillVariableDetail): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(EVENT_NAMES.fillVariable, { detail }));
   }
 }
 

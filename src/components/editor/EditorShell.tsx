@@ -14,6 +14,7 @@ import { VisualEditor } from "./VisualEditor";
 import { PageCanvas } from "./PageCanvas";
 import { PreviewToggle } from "./PreviewToggle";
 import { VariablePanel } from "./VariablePanel";
+import { VariableFillPopover } from "./VariableFillPopover";
 import { IndentRuler } from "./IndentRuler";
 import { EditorRulerBar, EditorPaperScrollBody } from "./EditorPaperLayout";
 import { TemplatePreview } from "./TemplatePreview";
@@ -421,7 +422,8 @@ export function EditorShell() {
             </div>
             {sourceOpen && <SourcePane />}
           </div>
-          {templateMode && <VariablePanel />}
+          {templateMode && <VariablePanel editor={editor} />}
+          {templateMode && <VariableFillPopover editor={editor} />}
           {placeholderPanelOpen && <PlaceholderPanel editor={editor} />}
         </main>
 

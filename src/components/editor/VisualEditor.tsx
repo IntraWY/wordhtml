@@ -54,7 +54,7 @@ import {
   editorEmptyPlaceholderText,
   setEditorEmptyPlaceholderText,
 } from "@/lib/editorEmptyPlaceholder";
-import { dispatchOpenFile } from "@/lib/events";
+import { dispatchOpenFile, dispatchFillVariable } from "@/lib/events";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { Upload, FileText, Keyboard, Braces, Eye } from "lucide-react";
@@ -351,6 +351,55 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
           }, 200);
         }
 
+        return false;
+      },
+      handleClick(view: EditorView, pos: number, event: MouseEvent) {
+        // Click on a {{variable}} → open the inline fill popover. Two forms:
+        // badge spans (inserted via panel/suggestion) and plain {{name}} text
+        // (gallery templates load as plain text).
+        const badge = (event.target as HTMLElement | null)?.closest?.(
+          ".variable-badge"
+        ) as HTMLElement | null;
+        if (badge) {
+          const name = badge.getAttribute("data-variable");
+          if (!name) return false;
+          const r = badge.getBoundingClientRect();
+          dispatchFillVariable({
+            name,
+            rect: { left: r.left, top: r.top, bottom: r.bottom, width: r.width },
+          });
+          return false; // let ProseMirror place the caret as usual
+        }
+
+        try {
+          const $pos = view.state.doc.resolve(pos);
+          const parent = $pos.parent;
+          if (!parent.isTextblock) return false;
+          const text = parent.textBetween(0, parent.content.size, " ");
+          const offset = $pos.parentOffset;
+          const re =
+            /\{\{([A-Za-z_฀-๿][\w฀-๿_]*)(\|[\w฀-๿]+)?\}\}/g;
+          let m: RegExpExecArray | null;
+          while ((m = re.exec(text)) !== null) {
+            if (offset < m.index || offset > m.index + m[0].length) continue;
+            const from = $pos.start() + m.index;
+            const to = from + m[0].length;
+            const a = view.coordsAtPos(from);
+            const b = view.coordsAtPos(to);
+            dispatchFillVariable({
+              name: m[1],
+              rect: {
+                left: a.left,
+                top: a.top,
+                bottom: a.bottom,
+                width: Math.max(b.right - a.left, 40),
+              },
+            });
+            break;
+          }
+        } catch {
+          // resolve/coords can throw at doc boundaries — ignore, normal click
+        }
         return false;
       },
       handleDrop(view: EditorView, event: DragEvent) {
