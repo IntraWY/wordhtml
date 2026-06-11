@@ -111,6 +111,8 @@ src/
 ├── lib/
 │   ├── conversion/
 │   │   ├── docxToHtml.ts         # mammoth wrapper; warnings: MammothMessage[]
+│   │   ├── xlsxToHtml.ts         # exceljs (dynamic import) → HTML table; merges/widths/
+│   │   │                         #   bold/align; no-border cells → data-borders="none"
 │   │   ├── loadHtmlFile.ts       # .html file reader + cleanup
 │   │   └── pasteCleanup.ts       # strip Word/Office mso-* artifacts
 │   ├── cleaning/
@@ -254,9 +256,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.5)
+## Current state (v0.2.6)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **595 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **604 unit tests pass; lint + build clean.**
+
+**v0.2.6 — .xlsx import.** `src/lib/conversion/xlsxToHtml.ts` converts Excel-as-layout print forms to an editable HTML table via **exceljs** (dynamically imported — heavy dep; chosen over SheetJS CE because it reads cell styles). Preserves merged cells (`worksheet.model.merges` → colspan/rowspan), column widths (`data-colwidth` on first-row cells, Excel chars ×7px), bold, horizontal alignment, and the bordered/borderless distinction: cells with **no** Excel border get `data-borders="none"` (v0.2.4 tableCellBorder model), so form letterhead/signature zones import borderless while grid zones keep borders. Used-range detection counts text **or any border side** (empty bordered fill-in boxes are meaningful) and trims Excel's stray trailing dimension. Formulas → cached results; rich text/hyperlinks flattened; sheet with most rows wins (warning lists skipped sheets); embedded images/OLE not imported (warning). Wired into `editorStore.loadFile` (20MB cap) + `UploadButton` accept + drag-drop overlay text. Tests build real workbooks with exceljs in-memory (`xlsxToHtml.test.ts`). Verified live with the user's actual `ฟอร์มใบตัดงบ.xlsx` (16×10, all 39 merges) and `เอกสารส่งคืน.xlsx` (46 rows, `{{ชื่องานคำอธิบาย}}`/`{{เลขWBS}}` survive as template fields).
 
 **v0.2.5 — Real-form gallery templates.** Three templates modeled on the user's actual documents added to `templateGallery.ts` (gallery now has 9): `pea-temp-switch` (บันทึกขออนุมัติติดตั้งอุปกรณ์ตัดตอนชั่วคราว กฟภ. — **2 pages** via new `pages(...)` helper, memo + แบบฟอร์มแจ้งความประสงค์ with a 9-col table), `budget-certification` (ใบตัดงบ — 4 budget lines 53010060/53052040/53069020/เบ็ดเตล็ด × งบ/เบิกแล้ว/คงเหลือ/เบิกครั้งนี้), `material-return` (ฟอร์มส่งคืนพัสดุ — uses the user's own field names `{{ชื่องานคำอธิบาย}}`/`{{เลขWBS}}`). All use Thai merge-field names (regex supports Thai), `data-repeat="true"` rows for line items (mail-merge ready), `data-borders="none"` signature/letterhead zones (v0.2.4 feature), ☐ checklist chars, and `{date_th}` tokens. `TemplateGalleryDialog` needed no changes (renders from the array); gained an sr-only `Dialog.Description` (was a Radix a11y warning).
 
@@ -358,7 +362,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.5**
+- **Current version**: **v0.2.6**
 
 ### Patch bump rule (deploy default)
 

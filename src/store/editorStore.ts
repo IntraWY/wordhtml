@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { docxToHtml, type MammothMessage } from "@/lib/conversion/docxToHtml";
+import { xlsxToHtml } from "@/lib/conversion/xlsxToHtml";
 import { loadHtmlFile } from "@/lib/conversion/loadHtmlFile";
 import { markdownToHtml } from "@/lib/importMarkdown";
 import { normalizeIncomingHtml } from "@/lib/pagination/normalizeIncomingHtml";
@@ -400,6 +401,13 @@ export const useEditorStore = create<EditorState>()(
               );
             }
             html = await loadHtmlFile(file);
+          } else if (lower.endsWith(".xlsx")) {
+            if (file.size > 20 * 1024 * 1024) {
+              throw new Error("ไฟล์ .xlsx ใหญ่เกิน 20MB");
+            }
+            const result = await xlsxToHtml(file);
+            html = result.html;
+            warnings = result.warnings;
           } else if (lower.endsWith(".md")) {
             html = await markdownToHtml(file);
           } else if (lower.endsWith(".json")) {
@@ -426,7 +434,7 @@ export const useEditorStore = create<EditorState>()(
             return;
           } else {
             throw new Error(
-              "ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .html, .md หรือ .json"
+              "ไม่รองรับประเภทไฟล์นี้ กรุณาใช้ .docx, .xlsx, .html, .md หรือ .json"
             );
           }
           clearRecoveryDraft();

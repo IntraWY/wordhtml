@@ -443,7 +443,7 @@ export function EditorShell() {
                 วางไฟล์ที่นี่เพื่ออัปโหลด
               </p>
               <p className="text-xs text-[color:var(--color-muted-foreground)]">
-                รองรับ .docx, .html, .md และรูปภาพ
+                รองรับ .docx, .xlsx, .html, .md และรูปภาพ
               </p>
             </div>
           </div>
