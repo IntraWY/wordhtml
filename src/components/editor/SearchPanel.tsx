@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, ChevronUp, ChevronDown } from "lucide-react";
-import type { Editor } from "@tiptap/react";
+import { type Editor, useEditorState } from "@tiptap/react";
 
 import { Button } from "@/components/ui/Button";
 import { isLiveEditor } from "@/lib/editorLive";
+import { goToSearchResult, getSearchResultInfo } from "@/lib/searchNavigation";
 
 interface SearchPanelProps {
   editor: Editor | null;
@@ -13,11 +14,7 @@ interface SearchPanelProps {
   onClose: () => void;
 }
 
-type SearchCommandKey =
-  | "nextMatch"
-  | "previousMatch"
-  | "replace"
-  | "replaceAll";
+type SearchCommandKey = "replace" | "replaceAll";
 
 export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,6 +22,16 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const prevFocusRef = useRef<HTMLElement | null>(null);
+
+  // Match counter derived reactively from the search extension's storage —
+  // useEditorState re-runs the selector on every transaction (incl. the ones
+  // setSearchTerm / nextSearchResult dispatch) and deep-compares the result,
+  // so it updates without a setState-in-effect (react-hooks/set-state-in-effect).
+  const matchInfo =
+    useEditorState({
+      editor,
+      selector: ({ editor }) => getSearchResultInfo(editor),
+    }) ?? { index: 0, total: 0 };
 
   // Push search term into the editor's search-and-replace extension if available.
   useEffect(() => {
@@ -102,6 +109,10 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
     cmds[name]?.();
   };
 
+  const navigate = (direction: "next" | "previous") => {
+    goToSearchResult(editor, direction);
+  };
+
   return (
     <div
       ref={panelRef}
@@ -145,25 +156,35 @@ export function SearchPanel({ editor, open, onClose }: SearchPanelProps) {
         onChange={(e) => setReplaceTerm(e.target.value)}
         className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-2 py-1.5 text-sm outline-none focus:border-[color:var(--color-accent)]"
       />
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => callCmd("previousMatch")}
-          disabled={!searchTerm}
-          aria-label="ก่อนหน้า"
+          onClick={() => navigate("previous")}
+          disabled={!searchTerm || matchInfo.total === 0}
+          aria-label="ก่อนหน้า (Previous match)"
         >
           <ChevronUp />
         </Button>
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => callCmd("nextMatch")}
-          disabled={!searchTerm}
-          aria-label="ถัดไป"
+          onClick={() => navigate("next")}
+          disabled={!searchTerm || matchInfo.total === 0}
+          aria-label="ถัดไป (Next match)"
         >
           <ChevronDown />
         </Button>
+        <span
+          className="px-1 text-xs tabular-nums text-[color:var(--color-muted-foreground)]"
+          aria-live="polite"
+        >
+          {searchTerm
+            ? matchInfo.total === 0
+              ? "ไม่พบ"
+              : `${matchInfo.index}/${matchInfo.total}`
+            : ""}
+        </span>
         <div className="flex-1" />
         <Button
           size="sm"

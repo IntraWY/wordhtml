@@ -5,9 +5,11 @@ import {
   Braces,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   FileText,
   AlertTriangle,
   MousePointerClick,
+  HelpCircle,
 } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
@@ -19,7 +21,9 @@ import {
   countMissingFields,
   listPageTokensIn,
   jumpToMergeField,
+  PAGE_TOKEN_HELP,
 } from "@/lib/placeholders";
+import { useToastStore } from "@/store/toastStore";
 import { resolveHeaderFooter } from "./PageHeaderFooter";
 import { dispatchOpenHeaderFooter } from "@/lib/events";
 import { replacePageTokens } from "@/lib/placeholders";
@@ -42,6 +46,7 @@ export function PlaceholderPanel({ editor }: { editor: Editor | null }) {
 
   const [tab, setTab] = useState<PanelTab>("fields");
   const [collapsed, setCollapsed] = useState(false);
+  const [tokenHelpOpen, setTokenHelpOpen] = useState(false);
 
   const fieldStatuses = useMemo(
     () => {
@@ -95,7 +100,12 @@ export function PlaceholderPanel({ editor }: { editor: Editor | null }) {
 
   const jumpToField = (name: string) => {
     if (!isLiveEditor(editor)) return;
-    jumpToMergeField(editor, name);
+    const found = jumpToMergeField(editor, name);
+    if (!found) {
+      useToastStore
+        .getState()
+        .show("ไม่พบตำแหน่งตัวแปรในเอกสาร (Field not found)", "warning");
+    }
   };
 
   if (!open) return null;
@@ -234,6 +244,42 @@ export function PlaceholderPanel({ editor }: { editor: Editor | null }) {
                 <p className="text-xs text-[color:var(--color-muted-foreground)]">
                   Token หัว/ท้าย: {"{page}"}, {"{total}"}, {"{date}"}
                 </p>
+                <div className="rounded-md border border-[color:var(--color-border)]">
+                  <button
+                    type="button"
+                    onClick={() => setTokenHelpOpen((v) => !v)}
+                    aria-expanded={tokenHelpOpen}
+                    className="flex w-full items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-[color:var(--color-muted-foreground)] hover:bg-[color:var(--color-muted)]"
+                  >
+                    <HelpCircle className="size-3.5 shrink-0" />
+                    <span className="flex-1 text-left">
+                      Token ที่รองรับทั้งหมด (All tokens)
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-3.5 shrink-0 transition-transform",
+                        tokenHelpOpen && "rotate-180"
+                      )}
+                    />
+                  </button>
+                  {tokenHelpOpen && (
+                    <ul className="space-y-1 border-t border-[color:var(--color-border)] px-2 py-1.5">
+                      {PAGE_TOKEN_HELP.map((entry) => (
+                        <li
+                          key={entry.token}
+                          className="flex items-baseline gap-2 text-[10px]"
+                        >
+                          <code className="shrink-0 rounded bg-[color:var(--color-muted)] px-1 py-0.5 font-mono">
+                            {entry.token}
+                          </code>
+                          <span className="text-[color:var(--color-muted-foreground)]">
+                            {entry.description}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
                 {pageTokens.length > 0 && (
                   <ul className="flex flex-wrap gap-1">
                     {pageTokens.map((t) => (

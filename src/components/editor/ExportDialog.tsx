@@ -2,18 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import {
-  X,
-  FileCode2,
-  FileArchive,
-  FileText,
-  FileType2,
-  FileDown,
-  Loader2,
-  Copy,
-  Check,
-  Save,
-} from "lucide-react";
+import { X, Copy, Check, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useEditorStore } from "@/store/editorStore";
@@ -31,9 +20,18 @@ import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { resolveHtmlPlaceholders } from "@/lib/placeholders";
 import { checkExportHealth } from "@/lib/export/exportHealthCheck";
-import { inlinePlaceholderFields } from "@/lib/export/inlinePlaceholderFields";
+import {
+  inlinePlaceholderFields,
+  listPlaceholderFields,
+} from "@/lib/export/inlinePlaceholderFields";
 import { buildProjectBlob, projectFileName } from "@/lib/project";
 import { downloadMailMergeZip } from "@/lib/export/exportMailMerge";
+import { downloadMailMergeDistributionZip } from "@/lib/export/exportMailMergeDistribution";
+import { parseRecipientList } from "@/lib/export/distributionList";
+import { ExportHealthList } from "./exportDialog/ExportHealthList";
+import { FillInFields } from "./exportDialog/FillInFields";
+import { MailMergeSections } from "./exportDialog/MailMergeSections";
+import { ExportFormatButtons } from "./exportDialog/ExportFormatButtons";
 
 type ExportKind = ExportFormat;
 
@@ -58,6 +56,9 @@ export function ExportDialog() {
   const exportMissingPolicy = useEditorStore((s) => s.exportMissingPolicy);
   const setExportMissingPolicy = useEditorStore((s) => s.setExportMissingPolicy);
   const fieldValues = useEditorStore((s) => s.fieldValues);
+  const setFieldValue = useEditorStore((s) => s.setFieldValue);
+  const exportStrictMode = useEditorStore((s) => s.exportStrictMode);
+  const setExportStrictMode = useEditorStore((s) => s.setExportStrictMode);
 
   const [busy, setBusy] = useState<ExportKind | null>(null);
   const [copied, setCopied] = useState(false);
@@ -83,6 +84,7 @@ export function ExportDialog() {
         variables,
         dataRow,
         missingPolicy: exportMissingPolicy,
+        fileName,
       });
     }
     return html;
@@ -95,18 +97,37 @@ export function ExportDialog() {
     variables,
     dataSet,
     exportMissingPolicy,
+    fileName,
   ]);
 
   const exportHealthIssues = useMemo(() => {
     if (!open) return [];
-    return checkExportHealth({
-      documentHtml,
-      variables,
-      dataRow: dataSet?.rows[dataSet.currentRowIndex] ?? {},
-      templateMode,
-      previewMode,
-    });
-  }, [open, documentHtml, variables, dataSet, templateMode, previewMode]);
+    return checkExportHealth(
+      {
+        documentHtml,
+        variables,
+        dataRow: dataSet?.rows[dataSet.currentRowIndex] ?? {},
+        templateMode,
+        previewMode,
+      },
+      { strict: exportStrictMode }
+    );
+  }, [open, documentHtml, variables, dataSet, templateMode, previewMode, exportStrictMode]);
+
+  // Fill-in fields (GAP 02): form inputs for placeholderField nodes in the doc.
+  // Only fields with an id can be bound to fieldValues / setFieldValue.
+  const placeholderFields = useMemo(() => {
+    if (!open) return [];
+    return listPlaceholderFields(documentHtml).filter((f) => f.fieldId);
+  }, [open, documentHtml]);
+
+  const missingRequiredFields = useMemo(
+    () =>
+      placeholderFields.filter(
+        (f) => f.required && !(fieldValues[f.fieldId] ?? f.value).trim()
+      ),
+    [placeholderFields, fieldValues]
+  );
 
   useEffect(() => {
     if (!copied) return;
@@ -158,6 +179,15 @@ export function ExportDialog() {
 
   const handleDownload = async (kind: ExportKind) => {
     if (busy) return;
+    if (missingRequiredFields.length > 0) {
+      useToastStore
+        .getState()
+        .show(
+          `กรอกข้อมูลที่จำเป็นก่อนส่งออก (${missingRequiredFields.length} ช่อง)`,
+          "error"
+        );
+      return;
+    }
     const blocking = exportHealthIssues.find((i) => i.severity === "error");
     if (blocking) {
       useToastStore.getState().show(blocking.message, "error");
@@ -239,6 +269,35 @@ export function ExportDialog() {
         .show(`ส่งออก mail-merge ${rowCount} ฉบับแล้ว (ZIP)`);
     } catch {
       useToastStore.getState().show("ส่งออก mail-merge ไม่สำเร็จ", "error");
+    }
+  };
+
+  // Mail-merge × Distribution combo (GAP 09): one document per row × recipient.
+  const [comboRecipientsRaw, setComboRecipientsRaw] = useState("");
+  const comboRecipients = useMemo(
+    () => parseRecipientList(comboRecipientsRaw),
+    [comboRecipientsRaw]
+  );
+  const comboFileCount = rowCount * comboRecipients.length;
+  const handleMailMergeDistributionExport = async () => {
+    if (!dataSet || rowCount === 0 || comboRecipients.length === 0) return;
+    try {
+      await downloadMailMergeDistributionZip({
+        html: documentHtml,
+        variables,
+        dataSet,
+        recipients: comboRecipients,
+        pageSetup,
+        title: fileName ?? "document",
+        zipName: "mail-merge-distribution.zip",
+      });
+      useToastStore
+        .getState()
+        .show(`ส่งออก mail-merge × สำเนาเรียน ${comboFileCount} ฉบับแล้ว (ZIP)`);
+    } catch {
+      useToastStore
+        .getState()
+        .show("ส่งออก mail-merge × สำเนาเรียน ไม่สำเร็จ", "error");
     }
   };
 
@@ -375,22 +434,30 @@ export function ExportDialog() {
               </div>
 
               <footer className="flex flex-col gap-4 border-t border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-6 py-4">
-                {exportHealthIssues.length > 0 && (
-                  <ul className="space-y-1 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] px-3 py-2 text-xs">
-                    {exportHealthIssues.map((issue) => (
-                      <li
-                        key={issue.code}
-                        className={cn(
-                          issue.severity === "error" && "text-[color:var(--color-danger)]",
-                          issue.severity === "warning" && "text-[color:var(--color-warning-foreground)]",
-                          issue.severity === "info" && "text-[color:var(--color-muted-foreground)]"
-                        )}
-                      >
-                        {issue.message}
-                      </li>
-                    ))}
-                  </ul>
+                <ExportHealthList issues={exportHealthIssues} />
+                {templateMode && (
+                  <label className="flex items-start gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={exportStrictMode}
+                      onChange={(e) => setExportStrictMode(e.target.checked)}
+                      className="mt-0.5 rounded border-[color:var(--color-border-strong)]"
+                    />
+                    <span>
+                      <span className="font-medium text-[color:var(--color-foreground)]">
+                        โหมดเข้มงวด (Strict mode)
+                      </span>
+                      <span className="block text-[color:var(--color-muted-foreground)]">
+                        นับตัวแปรที่ยังไม่มีค่าเริ่มต้นเป็นข้อผิดพลาด และบล็อกการส่งออกจนกว่าจะกำหนดค่า
+                      </span>
+                    </span>
+                  </label>
                 )}
+                <FillInFields
+                  fields={placeholderFields}
+                  fieldValues={fieldValues}
+                  setFieldValue={setFieldValue}
+                />
                 {templateMode && (
                   <label className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-muted-foreground)]">
                     <span>ตัวแปรที่ไม่มีค่า (Missing fields):</span>
@@ -424,110 +491,27 @@ export function ExportDialog() {
                   </Button>
                 </div>
 
-                {canMailMerge && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-muted)] px-3 py-2">
-                    <p className="text-xs text-[color:var(--color-muted-foreground)]">
-                      Mail-merge — สร้างเอกสารแยกฉบับจากข้อมูลทุกแถว ({rowCount} แถว)
-                      แล้วดาวน์โหลดเป็น ZIP
-                    </p>
-                    <Button
-                      variant="secondary"
-                      onClick={() => void handleMailMergeExport()}
-                    >
-                      <FileArchive />
-                      ส่งออก mail-merge ({rowCount})
-                    </Button>
-                  </div>
-                )}
+                <MailMergeSections
+                  canMailMerge={canMailMerge}
+                  rowCount={rowCount}
+                  comboRecipientsRaw={comboRecipientsRaw}
+                  setComboRecipientsRaw={setComboRecipientsRaw}
+                  comboRecipients={comboRecipients}
+                  comboFileCount={comboFileCount}
+                  onMailMergeExport={handleMailMergeExport}
+                  onMailMergeDistributionExport={handleMailMergeDistributionExport}
+                />
 
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Button
-                    variant={selectedFormat === "docx" ? "primary" : "secondary"}
-                    onClick={() => {
-                      setPendingExportFormat("docx");
-                      handleDownload("docx");
-                    }}
-                    disabled={busy !== null}
-                    aria-busy={busy === "docx"}
-                    aria-label={busy === "docx" ? "กำลังดาวน์โหลด .docx" : "ดาวน์โหลด .docx"}
-                  >
-                    {busy === "docx" ? (
-                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .docx" />
-                    ) : (
-                      <FileText />
-                    )}
-                    ดาวน์โหลด .docx
-                  </Button>
-                  <Button
-                    variant={selectedFormat === "zip" ? "primary" : "secondary"}
-                    onClick={() => {
-                      setPendingExportFormat("zip");
-                      handleDownload("zip");
-                    }}
-                    disabled={busy !== null}
-                    aria-busy={busy === "zip"}
-                    aria-label={busy === "zip" ? "กำลังดาวน์โหลด .zip" : "ดาวน์โหลด .zip"}
-                  >
-                    {busy === "zip" ? (
-                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .zip" />
-                    ) : (
-                      <FileArchive />
-                    )}
-                    ดาวน์โหลด .zip
-                  </Button>
-                  <Button
-                    ref={primaryBtnRef}
-                    variant={selectedFormat === "html" ? "primary" : "secondary"}
-                    onClick={() => {
-                      setPendingExportFormat("html");
-                      handleDownload("html");
-                    }}
-                    disabled={busy !== null}
-                    aria-busy={busy === "html"}
-                    aria-label={busy === "html" ? "กำลังดาวน์โหลด .html" : "ดาวน์โหลด .html"}
-                  >
-                    {busy === "html" ? (
-                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .html" />
-                    ) : (
-                      <FileCode2 />
-                    )}
-                    ดาวน์โหลด .html
-                  </Button>
-                  <Button
-                    variant={selectedFormat === "md" ? "primary" : "secondary"}
-                    onClick={() => {
-                      setPendingExportFormat("md");
-                      handleDownload("md");
-                    }}
-                    disabled={busy !== null}
-                    aria-busy={busy === "md"}
-                    aria-label={busy === "md" ? "กำลังดาวน์โหลด .md" : "ดาวน์โหลด .md"}
-                  >
-                    {busy === "md" ? (
-                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .md" />
-                    ) : (
-                      <FileType2 />
-                    )}
-                    ดาวน์โหลด .md
-                  </Button>
-                  <Button
-                    variant={selectedFormat === "pdf" ? "primary" : "secondary"}
-                    onClick={() => {
-                      setPendingExportFormat("pdf");
-                      handleDownload("pdf");
-                    }}
-                    disabled={busy !== null}
-                    aria-busy={busy === "pdf"}
-                    aria-label={busy === "pdf" ? "กำลังดาวน์โหลด .pdf" : "ดาวน์โหลด .pdf"}
-                  >
-                    {busy === "pdf" ? (
-                      <Loader2 className="animate-spin" role="progressbar" aria-valuetext="กำลังดาวน์โหลด .pdf" />
-                    ) : (
-                      <FileDown />
-                    )}
-                    ดาวน์โหลด .pdf
-                  </Button>
-                </div>
+                <ExportFormatButtons
+                  selectedFormat={selectedFormat}
+                  busy={busy}
+                  disabled={busy !== null || missingRequiredFields.length > 0}
+                  primaryBtnRef={primaryBtnRef}
+                  onExport={(kind) => {
+                    setPendingExportFormat(kind);
+                    handleDownload(kind);
+                  }}
+                />
               </footer>
             </>
           ) : null}

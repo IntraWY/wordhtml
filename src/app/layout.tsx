@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Thai, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerManager } from "@/components/ServiceWorkerManager";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { APP_VERSION, APP_VERSION_LABEL, BUILD_ID } from "@/lib/version";
 
@@ -97,6 +98,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>{children}</ThemeProvider>
+        <ServiceWorkerManager />
       </body>
     </html>
   );

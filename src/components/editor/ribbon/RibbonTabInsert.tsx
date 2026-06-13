@@ -9,7 +9,7 @@ import {
   Minus,
   WrapText,
   Code2,
-  BookOpen,
+  ListTree,
   Split,
   FilePlus,
   Globe,
@@ -44,7 +44,14 @@ import { useDialogStore } from "@/store/dialogStore";
 import { useEditorStore } from "@/store/editorStore";
 import { useUiStore } from "@/store/uiStore";
 import { compressImageIfEnabled, readFileAsDataURL } from "@/lib/imageCompression";
-import { assignHeadingIds, buildTocHtml, generateToc } from "@/lib/toc";
+import {
+  assignHeadingIds,
+  buildTocBlockHtml,
+  buildTocHtml,
+  findTocListRange,
+  generateToc,
+  TOC_DEFAULT_MAX_LEVEL,
+} from "@/lib/toc";
 import { editorCan, isLiveEditor } from "@/lib/editorLive";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -152,14 +159,27 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
   const handleCodeBlock = useCallback(() => editor?.chain().focus().toggleCodeBlock().run(), [editor]);
 
   const handleToc = useCallback(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
+    // Make sure every heading carries a stable id before extracting entries.
     assignHeadingIds(editor);
+    // Extract over ALL levels so slug de-duplication matches assignHeadingIds,
+    // then let the builders apply the H1–H3 depth limit.
     const tocItems = generateToc(editor.getHTML());
-    if (tocItems.length === 0) {
+    if (tocItems.filter((i) => i.level <= TOC_DEFAULT_MAX_LEVEL).length === 0) {
       useDialogStore.getState().openAlert("สารบัญ (TOC)", "ไม่พบหัวข้อในเอกสาร");
       return;
     }
-    editor.chain().focus().insertContent(buildTocHtml(tocItems)).run();
+    const existing = findTocListRange(editor);
+    if (existing) {
+      // อัปเดตสารบัญ: refresh the existing list in place instead of inserting a second one.
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(existing, buildTocHtml(tocItems, TOC_DEFAULT_MAX_LEVEL))
+        .run();
+    } else {
+      editor.chain().focus().insertContent(buildTocBlockHtml(tocItems)).run();
+    }
   }, [editor]);
 
   const handlePageBreak = useCallback(() => editor?.chain().focus().insertPageBreak().run(), [editor]);
@@ -310,8 +330,8 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
       </RibbonGroup>
 
       <RibbonGroup label="เอกสาร">
-        <RibbonButton label="สารบัญ" onClick={handleToc} disabled={!hasEditor}>
-          <BookOpen className="size-3.5" />
+        <RibbonButton label="สารบัญ (Table of Contents)" onClick={handleToc} disabled={!hasEditor}>
+          <ListTree className="size-3.5" />
         </RibbonButton>
         <RibbonButton label="แทรกตัวแบ่งหน้า" onClick={handlePageBreak} disabled={!hasEditor || !editorCan(editor, (c) => c.insertPageBreak())}>
           <Split className="size-3.5" />

@@ -2,6 +2,8 @@ import {
   countMissingFields,
   extractMergeFieldNames,
   getMergeFieldStatuses,
+  stripControlBlocksForHealth,
+  validateMergeFilters,
 } from "@/lib/placeholders";
 import type { TemplateVariable } from "@/types";
 
@@ -30,11 +32,21 @@ export interface ExportHealthInput {
   previewMode: "edit" | "preview";
 }
 
+export interface ExportHealthOptions {
+  /** Strict mode: escalate "unset variable" info findings to severity "error". */
+  strict?: boolean;
+}
+
 /**
- * Client-side checks before export (missing merge fields, heavy inline images, empty doc).
+ * Client-side checks before export (missing merge fields, filter type
+ * mismatches, heavy inline images, empty doc).
  */
-export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[] {
+export function checkExportHealth(
+  input: ExportHealthInput,
+  options?: ExportHealthOptions
+): ExportHealthIssue[] {
   const { documentHtml, variables, dataRow, templateMode, previewMode } = input;
+  const strict = options?.strict ?? false;
   const issues: ExportHealthIssue[] = [];
   const trimmed = documentHtml.trim();
 
@@ -47,8 +59,15 @@ export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[]
     return issues;
   }
 
+  // For merge-field checks, strip conditional/loop control blocks first so that
+  // variables hidden inside a FALSE branch (or loop-local {{this}} tokens) are
+  // not counted as unset/missing. TRUE-branch vars survive and stay checked.
+  const mergeFieldHtml = templateMode
+    ? stripControlBlocksForHealth(documentHtml, variables, dataRow)
+    : documentHtml;
+
   if (templateMode && previewMode === "preview") {
-    const statuses = getMergeFieldStatuses(documentHtml, variables, dataRow, "preview");
+    const statuses = getMergeFieldStatuses(mergeFieldHtml, variables, dataRow, "preview");
     const missing = countMissingFields(statuses);
     if (missing > 0) {
       issues.push({
@@ -58,7 +77,7 @@ export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[]
       });
     }
   } else if (templateMode) {
-    const names = extractMergeFieldNames(documentHtml);
+    const names = extractMergeFieldNames(mergeFieldHtml);
     const unset = names.filter((n) => {
       const v = variables.find((x) => x.name === n);
       if (!v) return true;
@@ -67,9 +86,21 @@ export function checkExportHealth(input: ExportHealthInput): ExportHealthIssue[]
     });
     if (unset.length > 0) {
       issues.push({
-        severity: "info",
+        severity: strict ? "error" : "info",
         code: "unset-variable-defaults",
         message: `ตัวแปร ${unset.length} รายการยังไม่มีค่าเริ่มต้นในแผงตัวแปร`,
+      });
+    }
+  }
+
+  if (templateMode) {
+    const mismatches = validateMergeFilters(mergeFieldHtml, variables, dataRow);
+    if (mismatches.length > 0) {
+      const first = mismatches[0];
+      issues.push({
+        severity: "warning",
+        code: "filter-type-mismatch",
+        message: `ตัวกรองได้รับค่าที่ไม่ตรงชนิด ${mismatches.length} จุด (filter type mismatch) — เช่น {{${first.field}|${first.filter}}} ได้ค่า "${first.value}" — จะแสดงค่าดิบแทน`,
       });
     }
   }

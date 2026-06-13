@@ -68,7 +68,7 @@ export function wrapAsDocument(
     blockquote {
       border-left: 3px solid #d4d4d8;
       padding: 0.25em 0 0.25em 1em;
-      color: #71717a;
+      color: #52525b;
       font-style: italic;
       margin: 1em 0;
     }

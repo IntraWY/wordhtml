@@ -2,6 +2,8 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import type { PageSetup } from "@/types";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import { watermarkRenderAttrs } from "@/lib/watermark";
+import { PageHeaderNode } from "./pageHeader";
+import { PageFooterNode } from "./pageFooter";
 
 export interface PageNodeAttributes {
   pageNumber: number;
@@ -34,11 +36,19 @@ export const PageNode = Node.create<PageNodeOptions>({
 
   group: "page",
 
-  content: "pageBody",
+  content: "pageHeader? pageBody pageFooter?",
 
   defining: true,
 
   isolating: true,
+
+  // Bundle the header/footer child nodes so the `pageHeader? pageBody
+  // pageFooter?` content expression always resolves — any editor (or test
+  // harness) that registers PageNode automatically gets these node types,
+  // without each call site having to remember to add them.
+  addExtensions() {
+    return [PageHeaderNode, PageFooterNode];
+  },
 
   addAttributes() {
     return {

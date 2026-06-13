@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "wordhtml",
     description:
       "Convert Word documents to clean, semantic HTML — and back. 100% in your browser, no uploads.",
-    start_url: "/app",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#faf8f5",

@@ -24,10 +24,24 @@ function collectPageNodes(doc: PMNode): PageNodeRef[] {
   return pages;
 }
 
+/**
+ * The `pageBody` child of a page node, plus its offset within the page node's
+ * content. A page may legitimately start with a `pageHeader` and/or end with a
+ * `pageFooter` (`pageHeader? pageBody pageFooter?`), so we must SCAN for the
+ * body rather than assume it is `firstChild`.
+ */
+function findPageBody(node: PMNode): { body: PMNode; offset: number } | null {
+  let result: { body: PMNode; offset: number } | null = null;
+  node.forEach((child, offset) => {
+    if (!result && child.type.name === "pageBody") {
+      result = { body: child, offset };
+    }
+  });
+  return result;
+}
+
 function getPageBody(node: PMNode): PMNode | null {
-  const body = node.firstChild;
-  if (!body || body.type.name !== "pageBody") return null;
-  return body;
+  return findPageBody(node)?.body ?? null;
 }
 
 function renumberPageNodes(tr: Transaction): void {
@@ -54,21 +68,22 @@ function mergePageIntoTarget(
   sourcePage: PageNodeRef,
   schema: EditorState["schema"]
 ): void {
-  const targetBody = getPageBody(targetPage.node);
-  const sourceBody = getPageBody(sourcePage.node);
-  if (!targetBody || !sourceBody) return;
+  // Scan for the body (it may be preceded by a pageHeader / followed by a
+  // pageFooter) rather than assuming it is the page's first child.
+  const targetInfo = findPageBody(targetPage.node);
+  const sourceInfo = findPageBody(sourcePage.node);
+  if (!targetInfo || !sourceInfo) return;
 
-  const targetBodyInfo = targetPage.node.childAfter(0);
-  const sourceBodyInfo = sourcePage.node.childAfter(0);
-  if (!targetBodyInfo.node || !sourceBodyInfo.node) return;
+  const targetBody = targetInfo.body;
+  const sourceBody = sourceInfo.body;
 
   const mergedContent = targetBody.content.append(sourceBody.content);
-  const targetBodyPos = tr.mapping.map(targetPage.pos + 1 + targetBodyInfo.offset);
+  const targetBodyPos = tr.mapping.map(targetPage.pos + 1 + targetInfo.offset);
 
   tr.replaceWith(
     targetBodyPos,
-    targetBodyPos + targetBodyInfo.node.nodeSize,
-    schema.nodes.pageBody.create(targetBodyInfo.node.attrs, mergedContent)
+    targetBodyPos + targetBody.nodeSize,
+    schema.nodes.pageBody.create(targetBody.attrs, mergedContent)
   );
 
   const deletePos = tr.mapping.map(sourcePage.pos);

@@ -15,8 +15,7 @@ import { PagedDocument } from "@/lib/tiptap/pagedDocument";
 import { PageNode } from "@/lib/tiptap/pageNode";
 import { PageBodyNode } from "@/lib/tiptap/pageBody";
 import { PageBodyTrailingParagraph } from "@/lib/tiptap/pageBodyTrailingParagraph";
-import { PageHeaderNode } from "@/lib/tiptap/pageHeader";
-import { PageFooterNode } from "@/lib/tiptap/pageFooter";
+import { PageHeaderFooter } from "@/lib/tiptap/pageHeaderFooter";
 import { PageCommands } from "@/lib/tiptap/pageCommands";
 import { PlaceholderField } from "@/lib/tiptap/placeholderField";
 import { ImageSlot, TableSlot } from "@/lib/tiptap/contentSlots";
@@ -90,12 +89,59 @@ function defaultPageSetup() {
   };
 }
 
+/**
+ * Split stored single-page HTML into its (optional) editable header, the body
+ * block content, and its (optional) editable footer. `unwrapPageNode` emits the
+ * header/footer as leading/trailing `div[data-page-header]` / `[data-page-footer]`
+ * siblings; this pulls them back out so `wrapInPageNode` can re-nest them as
+ * proper `pageHeader? pageBody pageFooter?` children. Without this the header
+ * would parse inside `.page-body` (invalid) or be dropped on reload.
+ */
+function splitStoredHeaderFooter(html: string): {
+  headerHtml: string;
+  bodyHtml: string;
+  footerHtml: string;
+} {
+  if (
+    typeof DOMParser === "undefined" ||
+    (!html.includes("data-page-header") && !html.includes("data-page-footer"))
+  ) {
+    return { headerHtml: "", bodyHtml: html, footerHtml: "" };
+  }
+
+  const doc = new DOMParser().parseFromString(
+    `<div id="__wrap_root">${html}</div>`,
+    "text/html"
+  );
+  const root = doc.getElementById("__wrap_root");
+  if (!root) return { headerHtml: "", bodyHtml: html, footerHtml: "" };
+
+  let headerHtml = "";
+  let footerHtml = "";
+
+  const first = root.firstElementChild;
+  if (first && first.matches(".page-header[data-page-header]")) {
+    headerHtml = first.outerHTML;
+    first.remove();
+  }
+  const last = root.lastElementChild;
+  if (last && last.matches(".page-footer[data-page-footer]")) {
+    footerHtml = last.outerHTML;
+    last.remove();
+  }
+
+  return { headerHtml, bodyHtml: root.innerHTML, footerHtml };
+}
+
 function wrapInPageNode(html: string): string {
   if (html.includes('class="page-node"')) return html;
+  const open = `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'>`;
   if (html.trim() === "") {
-    return `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'><div class="page-body" data-page-body="true"><p></p></div></div>`;
+    return `${open}<div class="page-body" data-page-body="true"><p></p></div></div>`;
   }
-  return `<div class="page-node" data-page-number="1" data-page-setup='${JSON.stringify(defaultPageSetup())}'><div class="page-body" data-page-body="true">${html}</div></div>`;
+  const { headerHtml, bodyHtml, footerHtml } = splitStoredHeaderFooter(html);
+  const body = `<div class="page-body" data-page-body="true">${bodyHtml.trim() === "" ? "<p></p>" : bodyHtml}</div>`;
+  return `${open}${headerHtml}${body}${footerHtml}</div>`;
 }
 
 export function VisualEditor({ onEditorReady }: VisualEditorProps) {
@@ -185,8 +231,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       PageNode,
       PageBodyNode,
       PageBodyTrailingParagraph,
-      PageHeaderNode,
-      PageFooterNode,
+      PageHeaderFooter,
       PageCommands,
       PlaceholderField,
       ImageSlot,

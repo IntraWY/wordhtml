@@ -29,10 +29,10 @@ export function buildExportHtmlDocument(
   html: string,
   options: DownloadHtmlOptions = {}
 ): string {
-  const { title = "Document", pageSetup } = options;
+  const { title = "Document", pageSetup, sourceName } = options;
   const cleanHtml = sanitizeHtml(stripPaginationWrappers(html));
   const totalPages = countPageBreaksInHtml(cleanHtml);
-  const hf = buildHeaderFooterExportBlocks(pageSetup, totalPages);
+  const hf = buildHeaderFooterExportBlocks(pageSetup, totalPages, sourceName);
   const body = hf.bodyPrefix ? `${hf.bodyPrefix}\n${cleanHtml}` : cleanHtml;
   const wmCss = watermarkPrintCss(pageSetup?.watermark);
   return wrapAsDocument(body, {

@@ -44,6 +44,29 @@ describe("mergeFields", () => {
     const result = replaceMergeFields(html, [], {}, { mode: "edit" });
     expect(result).toBe("<p>{{x}}</p>");
   });
+
+  it("does not throw on prototype-chain field names (treats them as unset)", () => {
+    const html =
+      "<p>{{constructor}}{{__proto__}}{{toString}}{{valueOf}}{{hasOwnProperty}}</p>";
+    expect(() =>
+      replaceMergeFields(html, [], {}, { mode: "export", missingPolicy: "bracket" })
+    ).not.toThrow();
+    const result = replaceMergeFields(
+      html,
+      [],
+      {},
+      { mode: "export", missingPolicy: "bracket" }
+    );
+    expect(result).toContain("[constructor]");
+    expect(result).toContain("[toString]");
+  });
+
+  it("does not throw extracting a prototype-chain field name", () => {
+    const html = "<p>{{toString}} {{constructor|upper}}</p>";
+    expect(() => extractMergeFieldNames(html)).not.toThrow();
+    expect(extractMergeFieldNames(html)).toContain("toString");
+    expect(extractMergeFieldNames(html)).toContain("constructor");
+  });
 });
 
 describe("pageTokens", () => {

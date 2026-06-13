@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import type { Editor } from "@tiptap/react";
+import { useEditorState } from "@tiptap/react";
 import {
   FileText,
   RotateCcw,
@@ -9,6 +10,8 @@ import {
   Minimize,
   MoveHorizontal,
   Ruler,
+  PanelTop,
+  PanelBottom,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -17,11 +20,42 @@ import { RibbonSelect } from "./RibbonSelect";
 import { useEditorStore } from "@/store/editorStore";
 import { dispatchOpenPageSetup, dispatchOpenHeaderFooter } from "@/lib/events";
 import { isLiveEditor } from "@/lib/editorLive";
+import { pageHasHeader, pageHasFooter } from "@/lib/tiptap/pageHeaderFooter";
 import type { PageSetup } from "@/types";
 
 export function RibbonTabLayout({ editor }: { editor: Editor | null }) {
   const pageSetup = useEditorStore((s) => s.pageSetup);
   const setPageSetup = useEditorStore((s) => s.setPageSetup);
+
+  // Reactive header/footer presence for the current page. Direct
+  // editor.isActive()/pageHasHeader() calls in JSX are NOT reactive (per
+  // CLAUDE.md "Editor reactivity for ribbon buttons") — consolidate into one
+  // useEditorState selector that re-runs on every editor transaction.
+  const hf = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      hasHeader: e ? pageHasHeader(e.state) : false,
+      hasFooter: e ? pageHasFooter(e.state) : false,
+    }),
+  }) ?? { hasHeader: false, hasFooter: false };
+
+  const toggleHeader = useCallback(() => {
+    if (!isLiveEditor(editor)) return;
+    if (pageHasHeader(editor.state)) {
+      editor.chain().focus().removePageHeader().run();
+    } else {
+      editor.chain().focus().insertPageHeader().run();
+    }
+  }, [editor]);
+
+  const toggleFooter = useCallback(() => {
+    if (!isLiveEditor(editor)) return;
+    if (pageHasFooter(editor.state)) {
+      editor.chain().focus().removePageFooter().run();
+    } else {
+      editor.chain().focus().insertPageFooter().run();
+    }
+  }, [editor]);
 
   const handleColumnsChange = useCallback(
     (value: string) => {
@@ -85,6 +119,33 @@ export function RibbonTabLayout({ editor }: { editor: Editor | null }) {
         </RibbonButton>
         <RibbonButton label="หัวกระดาษ/ท้ายกระดาษ…" onClick={dispatchOpenHeaderFooter}>
           <FileText className="size-3.5" />
+        </RibbonButton>
+      </RibbonGroup>
+
+      <RibbonGroup label="หัว/ท้ายกระดาษ">
+        <RibbonButton
+          label={
+            hf.hasHeader
+              ? "ลบหัวกระดาษ (Remove header)"
+              : "เพิ่มหัวกระดาษ (Add header)"
+          }
+          onClick={toggleHeader}
+          active={hf.hasHeader}
+          disabled={!isLiveEditor(editor)}
+        >
+          <PanelTop className="size-3.5" />
+        </RibbonButton>
+        <RibbonButton
+          label={
+            hf.hasFooter
+              ? "ลบท้ายกระดาษ (Remove footer)"
+              : "เพิ่มท้ายกระดาษ (Add footer)"
+          }
+          onClick={toggleFooter}
+          active={hf.hasFooter}
+          disabled={!isLiveEditor(editor)}
+        >
+          <PanelBottom className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>
 

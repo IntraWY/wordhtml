@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import type { PageSetup } from "@/types";
 
 function defaultPageSetup(): PageSetup {
@@ -21,6 +22,23 @@ function mergePageSetup(current: PageSetup, partial: Partial<PageSetup>): PageSe
       ? { ...current.headerFooter, ...partial.headerFooter }
       : current.headerFooter,
   };
+}
+
+/**
+ * Locate the `pageBody` child of a page node. Pages may now carry an optional
+ * `pageHeader` before and `pageFooter` after the body
+ * (`pageHeader? pageBody pageFooter?`), so the body is NOT always child 0.
+ */
+function findPageBodyChild(
+  page: PMNode
+): { node: PMNode; offset: number } | null {
+  let offset = 0;
+  for (let i = 0; i < page.childCount; i++) {
+    const child = page.child(i);
+    if (child.type.name === "pageBody") return { node: child, offset };
+    offset += child.nodeSize;
+  }
+  return null;
 }
 
 declare module "@tiptap/core" {
@@ -122,6 +140,21 @@ export const PageCommands = Extension.create({
 
           // Insert new pageNode with contentAfter after current pageNode.
           // Must map position because replaceWith changed document size.
+          // Carry the current page's header/footer over so the regions don't
+          // silently disappear on the continuation page.
+          const newPageChildren: PMNode[] = [];
+          const headerChild = pageNode.firstChild;
+          if (headerChild && headerChild.type.name === "pageHeader") {
+            newPageChildren.push(headerChild.copy(headerChild.content));
+          }
+          newPageChildren.push(
+            state.schema.nodes.pageBody.create(null, contentAfter)
+          );
+          const footerChild = pageNode.lastChild;
+          if (footerChild && footerChild.type.name === "pageFooter") {
+            newPageChildren.push(footerChild.copy(footerChild.content));
+          }
+
           const insertPos = tr.mapping.map(pageNodePos + pageNode.nodeSize);
           tr.insert(
             insertPos,
@@ -130,9 +163,7 @@ export const PageCommands = Extension.create({
                 pageNumber: currentPageNumber + 1,
                 pageSetup: { ...currentPageSetup },
               },
-              [
-                state.schema.nodes.pageBody.create(null, contentAfter),
-              ]
+              newPageChildren
             )
           );
 
@@ -202,13 +233,8 @@ export const PageCommands = Extension.create({
 
           if (previousPagePos < 0) return false;
 
-          const previousPageBody = previousPageNode.childAfter(0);
-          if (
-            !previousPageBody.node ||
-            previousPageBody.node.type.name !== "pageBody"
-          ) {
-            return false;
-          }
+          const previousPageBody = findPageBodyChild(previousPageNode);
+          if (!previousPageBody) return false;
 
           const mergedContent = previousPageBody.node.content.append(
             currentPageBody.content
@@ -286,18 +312,11 @@ export const PageCommands = Extension.create({
 
           if (nextPagePos < 0 || !nextPageNode) return false;
 
-          // Find pageBody nodes within both pages
-          const currentPageBody = currentPageNode.childAfter(0);
-          const nextPageBody = nextPageNode.childAfter(0);
+          // Find pageBody nodes within both pages (body may follow a pageHeader)
+          const currentPageBody = findPageBodyChild(currentPageNode);
+          const nextPageBody = findPageBodyChild(nextPageNode);
 
-          if (
-            !currentPageBody.node ||
-            currentPageBody.node.type.name !== "pageBody" ||
-            !nextPageBody.node ||
-            nextPageBody.node.type.name !== "pageBody"
-          ) {
-            return false;
-          }
+          if (!currentPageBody || !nextPageBody) return false;
 
           // Merge content: current body + next body
           const mergedContent = currentPageBody.node.content.append(

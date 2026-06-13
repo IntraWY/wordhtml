@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wordhtml — รายงานตรวจสอบโปรเจค & Roadmap (มิ.ย. 2026)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --fg: #1c1917;
+    --muted: #57534e;
+    --faint: #a8a29e;
+    --canvas: #e8e2d9;
+    --line: #e2dcd2;
+    --paper: #ffffff;
+    --accent: #3b82f6;
+    --accent-deep: #1d4ed8;
+    --accent-soft: #eff6ff;
+    --green: #16a34a;
+    --green-soft: #f0fdf4;
+    --amber: #d97706;
+    --amber-soft: #fffbeb;
+    --red: #dc2626;
+    --red-soft: #fef2f2;
+    --ink-band: #1c1917;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --sans: "IBM Plex Sans Thai", sans-serif;
+    --display: "Plus Jakarta Sans", "IBM Plex Sans Thai", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: #fff; }
+
+  /* ---------- texture backdrop ---------- */
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .35;
+    background-image: radial-gradient(var(--line) 1px, transparent 1px);
+    background-size: 26px 26px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 40%);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 40%);
+  }
+
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 28px; position: relative; z-index: 1; }
+
+  /* ---------- masthead ---------- */
+  header.masthead { padding: 64px 0 0; }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent-deep);
+    border: 1px solid var(--accent); border-radius: 999px;
+    padding: 5px 14px; background: var(--accent-soft);
+  }
+  .kicker::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2.4s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+  h1.title {
+    font-family: var(--display);
+    font-size: clamp(38px, 6vw, 64px);
+    line-height: 1.12; letter-spacing: -.02em;
+    margin: 26px 0 8px; font-weight: 800;
+  }
+  h1.title .thin { color: var(--faint); font-weight: 600; }
+  .subtitle { font-size: 19px; color: var(--muted); max-width: 720px; margin-bottom: 36px; }
+  .subtitle code { font-family: var(--mono); font-size: .85em; background: var(--canvas); padding: 2px 7px; border-radius: 6px; }
+
+  .meta-band {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    border-top: 2px solid var(--fg); border-bottom: 1px solid var(--line);
+    margin-bottom: 0;
+  }
+  .meta-band .cell { padding: 18px 18px 18px 0; border-right: 1px solid var(--line); }
+  .meta-band .cell:last-child { border-right: none; }
+  .meta-band .num { font-family: var(--display); font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+  .meta-band .num em { font-style: normal; color: var(--accent); }
+  .meta-band .lbl { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  /* ---------- TOC ---------- */
+  nav.toc {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 22px 0; border-bottom: 1px solid var(--line); margin-bottom: 70px;
+  }
+  nav.toc a {
+    font-size: 13.5px; text-decoration: none; color: var(--muted);
+    border: 1px solid var(--line); background: var(--paper);
+    padding: 7px 15px; border-radius: 999px; transition: all .18s;
+  }
+  nav.toc a b { color: var(--accent-deep); font-family: var(--mono); font-weight: 500; margin-right: 6px; }
+  nav.toc a:hover { border-color: var(--accent); color: var(--fg); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(59,130,246,.12); }
+
+  /* ---------- sections ---------- */
+  section { margin-bottom: 96px; }
+  .sec-head { display: flex; align-items: baseline; gap: 20px; margin-bottom: 10px; }
+  .sec-no {
+    font-family: var(--display); font-weight: 800;
+    font-size: 60px; line-height: 1; color: transparent;
+    -webkit-text-stroke: 1.5px var(--accent); letter-spacing: -.03em;
+    flex-shrink: 0;
+  }
+  h2 { font-family: var(--display); font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.02em; line-height: 1.2; }
+  .sec-desc { color: var(--muted); max-width: 760px; margin: 6px 0 34px; }
+  h3 {
+    font-family: var(--display); font-size: 20px; margin: 44px 0 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h3::before { content: ""; width: 22px; height: 3px; background: var(--accent); border-radius: 2px; }
+
+  /* ---------- tables ---------- */
+  .tbl-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); box-shadow: 0 1px 3px rgba(28,25,23,.05); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 640px; }
+  thead th {
+    text-align: left; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    font-weight: 600; color: var(--bg); background: var(--ink-band);
+    padding: 11px 16px; white-space: nowrap;
+  }
+  tbody td { padding: 12px 16px; border-top: 1px solid var(--line); vertical-align: top; }
+  tbody tr:hover { background: #fdfcfa; }
+  td.c, th.c { text-align: center; }
+  code, .file {
+    font-family: var(--mono); font-size: .86em;
+    background: var(--canvas); color: #44403c;
+    padding: 1.5px 7px; border-radius: 5px; white-space: nowrap;
+  }
+  .file { color: var(--accent-deep); background: var(--accent-soft); }
+
+  /* badges */
+  .b { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2.5px 10px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
+  .b-green { background: var(--green-soft); color: var(--green); border: 1px solid #bbf7d0; }
+  .b-amber { background: var(--amber-soft); color: var(--amber); border: 1px solid #fde68a; }
+  .b-red   { background: var(--red-soft); color: var(--red); border: 1px solid #fecaca; }
+  .b-blue  { background: var(--accent-soft); color: var(--accent-deep); border: 1px solid #bfdbfe; }
+  .b-gray  { background: var(--canvas); color: var(--muted); border: 1px solid var(--line); }
+  .stars { color: var(--amber); font-size: 13px; letter-spacing: 2px; white-space: nowrap; }
+
+  /* progress bar in maturity table */
+  .bar { position: relative; background: var(--canvas); border-radius: 99px; height: 8px; width: 110px; overflow: hidden; }
+  .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--accent); }
+  .bar.low i { background: var(--red); } .bar.mid i { background: var(--amber); } .bar.high i { background: var(--green); }
+  .bar-wrap { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- cards ---------- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr } }
+  .card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 26px; box-shadow: 0 1px 3px rgba(28,25,23,.05);
+  }
+  .card h4 { font-family: var(--display); font-size: 16px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+  .card ul { list-style: none; }
+  .card li { padding: 7px 0 7px 24px; position: relative; font-size: 14.5px; border-top: 1px dashed var(--line); }
+  .card li:first-child { border-top: none; }
+  .card li::before { position: absolute; left: 2px; font-weight: 700; }
+  .card.good li::before { content: "✓"; color: var(--green); }
+  .card.risk li::before { content: "!"; color: var(--red); }
+
+  /* ---------- flow diagram ---------- */
+  .flow { display: grid; gap: 0; margin: 22px 0; }
+  .flow-step {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; position: relative;
+  }
+  .flow-step + .flow-step { margin-top: 34px; }
+  .flow-step + .flow-step::before {
+    content: "▼"; position: absolute; top: -27px; left: 50%; transform: translateX(-50%);
+    color: var(--accent); font-size: 13px;
+  }
+  .flow-step .tag {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent-deep); display: block; margin-bottom: 6px;
+  }
+  .flow-step b.tt { font-family: var(--display); font-size: 16px; }
+  .flow-step p { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+  /* ---------- gap items ---------- */
+  .gap {
+    background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 0 12px 12px 0; padding: 20px 24px; margin: 14px 0;
+  }
+  .gap.hi { border-left-color: var(--red); }
+  .gap.md { border-left-color: var(--amber); }
+  .gap .gap-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .gap .gap-no { font-family: var(--display); font-weight: 800; color: var(--faint); font-size: 14px; }
+  .gap b.t { font-family: var(--display); font-size: 16.5px; }
+  .gap p { font-size: 14.5px; color: var(--muted); }
+  .gap p + p { margin-top: 6px; }
+  .gap .fix { margin-top: 10px; font-size: 14px; padding: 9px 14px; background: var(--accent-soft); border-radius: 8px; color: var(--fg); }
+  .gap .fix::before { content: "แนวทางแก้ → "; font-weight: 700; color: var(--accent-deep); }
+
+  /* ---------- phase blocks ---------- */
+  .phase {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 18px;
+    margin: 30px 0; overflow: hidden; box-shadow: 0 1px 4px rgba(28,25,23,.06);
+  }
+  .phase-bar { height: 5px; background: linear-gradient(90deg, var(--accent), #93c5fd); }
+  .phase.p1 .phase-bar { background: linear-gradient(90deg, #dc2626, #f87171); }
+  .phase.p2 .phase-bar { background: linear-gradient(90deg, #d97706, #fbbf24); }
+  .phase.p3 .phase-bar { background: linear-gradient(90deg, #3b82f6, #93c5fd); }
+  .phase.p4 .phase-bar { background: linear-gradient(90deg, #16a34a, #4ade80); }
+  .phase.p5 .phase-bar { background: linear-gradient(90deg, #78716c, #d6d3d1); }
+  .phase-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 24px 28px 6px; }
+  .phase-no {
+    font-family: var(--display); font-weight: 800; font-size: 13px; letter-spacing: .1em;
+    color: var(--accent-deep); background: var(--accent-soft); border: 1px solid #bfdbfe;
+    padding: 4px 12px; border-radius: 999px; text-transform: uppercase;
+  }
+  .phase h3.ph { margin: 0; font-size: 22px; }
+  .phase h3.ph::before { display: none; }
+  .phase .dur { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--muted); background: var(--canvas); padding: 4px 12px; border-radius: 999px; }
+  .phase .goal { padding: 4px 28px 18px; color: var(--muted); font-size: 15px; max-width: 860px; }
+  .phase .tbl-scroll { border-left: none; border-right: none; border-radius: 0; box-shadow: none; border-bottom: none; }
+  .phase table { min-width: 760px; }
+  .phase tfoot td { padding: 13px 16px; font-size: 13.5px; color: var(--muted); background: #fdfcfa; border-top: 1px solid var(--line); }
+
+  /* priority matrix */
+  .prio { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
+  .prio .p-card { border-radius: 14px; padding: 20px 22px; border: 1px solid var(--line); background: var(--paper); }
+  .prio .p-card .rank { font-family: var(--display); font-size: 38px; font-weight: 800; line-height: 1; color: transparent; -webkit-text-stroke: 1.3px var(--fg); }
+  .prio .p-card b { display: block; font-family: var(--display); margin: 10px 0 4px; font-size: 15.5px; }
+  .prio .p-card p { font-size: 13.5px; color: var(--muted); }
+
+  /* footnote */
+  footer { border-top: 2px solid var(--fg); padding: 28px 0 64px; margin-top: 30px; font-size: 13.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; }
+  footer .mono { font-family: var(--mono); font-size: 12px; }
+
+  /* reveal animation */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(14px); animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+    .reveal.d1 { animation-delay: .08s } .reveal.d2 { animation-delay: .16s } .reveal.d3 { animation-delay: .24s } .reveal.d4 { animation-delay: .32s }
+    @keyframes rise { to { opacity: 1; transform: none } }
+  }
+
+  /* print */
+  @media print {
+    .grain, nav.toc { display: none; }
+    body { background: #fff; font-size: 12.5px; }
+    section { margin-bottom: 40px; page-break-inside: avoid; }
+    .phase, .card, .gap, .tbl-scroll { box-shadow: none; }
+    .reveal { opacity: 1 !important; transform: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+
+<!-- ═══════════════════════ MASTHEAD ═══════════════════════ -->
+<header class="masthead">
+  <span class="kicker reveal">Project Audit Report · 12 มิถุนายน 2026</span>
+  <h1 class="title reveal d1">wordhtml<br><span class="thin">รายงานตรวจสอบระบบ &amp; Roadmap</span></h1>
+  <p class="subtitle reveal d2">
+    ผลตรวจสอบโค้ดเบสทั้งหมดของ <code>wordhtml v0.1.38</code> — สถานะระบบย่อยแต่ละตัว,
+    การวิเคราะห์เชิงลึกระบบ Placeholder, และแผนพัฒนา 5 เฟสที่อ้างอิงไฟล์จริงทุกข้อ
+  </p>
+
+  <div class="meta-band reveal d3">
+    <div class="cell"><div class="num">v0.1.<em>38</em></div><div class="lbl">เวอร์ชันปัจจุบัน</div></div>
+    <div class="cell"><div class="num">560</div><div class="lbl">Unit tests ผ่านทั้งหมด</div></div>
+    <div class="cell"><div class="num">16</div><div class="lbl">E2E specs (Playwright)</div></div>
+    <div class="cell"><div class="num">17<span style="color:var(--faint)">/17</span></div><div class="lbl">Features จาก proposal เดิม shipped</div></div>
+    <div class="cell"><div class="num"><em>10</em></div><div class="lbl">ช่องว่างระบบ Placeholder ที่พบ</div></div>
+  </div>
+
+  <nav class="toc reveal d4">
+    <a href="#sec1"><b>01</b>สรุปผู้บริหาร (Executive Summary)</a>
+    <a href="#sec2"><b>02</b>เจาะลึกระบบ Placeholder</a>
+    <a href="#sec3"><b>03</b>Roadmap 5 เฟส</a>
+    <a href="#sec4"><b>04</b>Test Coverage &amp; ลำดับความสำคัญ</a>
+  </nav>
+</header>
+
+<!-- ═══════════════════════ SECTION 1 ═══════════════════════ -->
+<section id="sec1">
+  <div class="sec-head"><span class="sec-no">01</span><h2>สรุปผู้บริหาร (Executive Summary)</h2></div>
+  <p class="sec-desc">
+    wordhtml เป็นแอป client-side ที่<b>โครงสร้างแข็งแรงและ feature ครบตามแผนเดิมแล้ว</b> —
+    ทั้ง 17 ข้อจาก feature proposal ถูก ship ครบ จุดที่ต้องลงทุนต่อคือ <b>ความเสถียร</b> (test coverage ของ
+    pagination/components ยังต่ำ), <b>งานครึ่งทาง</b> (header/footer, table split ที่มีโค้ดอยู่แล้วแต่ยังไม่ wire),
+    และ <b>การ harden ระบบ placeholder</b> ให้ปลอดภัยต่อการใช้งานจริงระดับเอกสารราชการ
+  </p>
+
+  <h3>ความสมบูรณ์ของระบบย่อย (Subsystem Maturity)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <thead><tr>
+      <th>ระบบย่อย</th><th>โค้ดหลัก</th><th>Test Coverage</th><th class="c">สถานะ</th><th>ความเสี่ยง / หมายเหตุ</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Placeholders</b></td><td><span class="file">src/lib/placeholders/</span></td>
+        <td><div class="bar-wrap"><div class="bar high"><i style="width:95%"></i></div>95%</div></td>
+        <td class="c"><span class="b b-green">Production</span></td>
+        <td>แข็งแรงที่สุดในระบบ — แต่ยังมี gap ด้าน validation (ดูส่วนที่ 02)</td>
+      </tr>
+      <tr>
+        <td><b>Thai Features</b></td><td><span class="file">src/lib/thai/</span> · <span class="file">officialLetter/</span></td>
+        <td><div class="bar-wrap"><div class="bar high"><i style="width:100%"></i></div>100%</div></td>
+        <td class="c"><span class="b b-green">Production</span></td>
+        <td>bahtText / thaiFormat / buildLetterHtml ครบและมี test ทุกโมดูล</td>
+      </tr>
+      <tr>
+        <td><b>Export Pipeline</b></td><td><span class="file">src/lib/export/</span></td>
+        <td><div class="bar-wrap"><div class="bar high"><i style="width:80%"></i></div>80%</div></td>
+        <td class="c"><span class="b b-green">Stable</span></td>
+        <td>HTML/DOCX/MD เสถียร — คุณภาพ PDF ยังไม่ถูก verify ด้วย E2E</td>
+      </tr>
+      <tr>
+        <td><b>Store / State</b></td><td><span class="file">src/store/editorStore.ts</span></td>
+        <td><div class="bar-wrap"><div class="bar high"><i style="width:75%"></i></div>75%</div></td>
+        <td class="c"><span class="b b-green">Production</span></td>
+        <td>snapshot history ไม่มี rollback อัตโนมัติ (โหลดคืนด้วยมือเท่านั้น)</td>
+      </tr>
+      <tr>
+        <td><b>Draft Recovery</b></td><td><span class="file">src/lib/draftRecovery.ts</span></td>
+        <td><div class="bar-wrap"><div class="bar high"><i style="width:100%"></i></div>100%</div></td>
+        <td class="c"><span class="b b-green">Stable</span></td>
+        <td>Autosave local 8 วินาที + IndexedDB fallback สำหรับเอกสาร &gt;200KB</td>
+      </tr>
+      <tr>
+        <td><b>Cloud Sync</b></td><td><span class="file">useCloudHistorySync.ts</span> · <span class="file">historyFirestore.ts</span></td>
+        <td><div class="bar-wrap"><div class="bar mid"><i style="width:70%"></i></div>70%</div></td>
+        <td class="c"><span class="b b-amber">รอ verify</span></td>
+        <td>บั๊ก save-loss แก้แล้ว + มี unit test — แต่ยังไม่ได้ทดสอบกับ Firestore จริง (ต้อง Google login)</td>
+      </tr>
+      <tr>
+        <td><b>Tiptap Extensions</b></td><td><span class="file">src/lib/tiptap/</span> (~45 ไฟล์)</td>
+        <td><div class="bar-wrap"><div class="bar mid"><i style="width:55%"></i></div>55%</div></td>
+        <td class="c"><span class="b b-amber">Mixed</span></td>
+        <td>โครงหน้ากระดาษเสถียร — แต่ <code>pageHeader/pageFooter</code> nodes มีอยู่โดยยังไม่ wire เข้า schema</td>
+      </tr>
+      <tr>
+        <td><b>Pagination</b></td><td><span class="file">src/lib/pagination/</span></td>
+        <td><div class="bar-wrap"><div class="bar low"><i style="width:45%"></i></div>45%</div></td>
+        <td class="c"><span class="b b-amber">เพิ่ง refactor</span></td>
+        <td>soft-split เพิ่งเพิ่ม (v0.1.25+) — ขาด E2E regression specs 3 เคสที่เคย reproduce ได้</td>
+      </tr>
+      <tr>
+        <td><b>Conversion / Paste</b></td><td><span class="file">src/lib/conversion/</span></td>
+        <td><div class="bar-wrap"><div class="bar mid"><i style="width:75%"></i></div>75%</div></td>
+        <td class="c"><span class="b b-amber">มีบั๊กค้าง</span></td>
+        <td>บั๊ก Paste + Enter ยังไม่ถูกแก้ (ระบุใน roadmap Phase 1.1 ของ design doc)</td>
+      </tr>
+      <tr>
+        <td><b>Components (Editor)</b></td><td><span class="file">src/components/editor/</span> (~85 ไฟล์)</td>
+        <td><div class="bar-wrap"><div class="bar low"><i style="width:20%"></i></div>20%</div></td>
+        <td class="c"><span class="b b-red">Monolith</span></td>
+        <td><code>ExportDialog.tsx</code> 677 บรรทัด, <code>EditorShell.tsx</code> 474 บรรทัด — ใหญ่เกินและแทบไม่มี test</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>จุดแข็ง vs ความเสี่ยง</h3>
+  <div class="grid2">
+    <div class="card good">
+      <h4>✅ จุดแข็ง (Strengths)</h4>
+      <ul>
+        <li>Export ครบ 5 รูปแบบ (HTML / DOCX / MD / PDF / ZIP) + Mail-merge + Distribution list</li>
+        <li>ฟีเจอร์เอกสารราชการไทยครบ: หนังสือภายนอก, บันทึกข้อความ, บล็อกลงนาม, เลขไทย, บาทเท็กซ์</li>
+        <li>ระบบ Placeholder/Variable มี test coverage สูงสุดในโปรเจค (95%)</li>
+        <li>Cloud history sync + Draft recovery สองชั้น (local 8s + snapshot 2 นาที)</li>
+        <li>Pagination แบบ holistic reflow พร้อม soft-split ข้ามหน้า (repaginate.ts)</li>
+        <li>สถาปัตยกรรม client-side ล้วน — privacy story ชัดเจน ไม่มี server</li>
+      </ul>
+    </div>
+    <div class="card risk">
+      <h4>⚠️ ความเสี่ยงหลัก (Key Risks)</h4>
+      <ul>
+        <li>Pagination เพิ่ง refactor ใหญ่แต่ test แค่ 45% — เคยมี defect reproduce ได้ 3 เคส ยังไม่มี E2E คุ้มกัน</li>
+        <li>มี pagination engine 2 ตัว (editor vs preview) — ผลแบ่งหน้าอาจไม่ตรงกันในเอกสารยาว</li>
+        <li>Filter ของ placeholder fail เงียบ ๆ เมื่อ type ไม่ตรง — เสี่ยงข้อมูลหายตอน export จริง</li>
+        <li>Component ใหญ่ (ExportDialog 677 บรรทัด) ไม่มี unit test — แก้แล้วพังยากจะรู้ตัว</li>
+        <li>a11y มีปัญหา critical: <code>&lt;html lang="en"&gt;</code> ทั้งที่เนื้อหาไทย, contrast ไม่ผ่าน WCAG AA, ruler ใช้คีย์บอร์ดไม่ได้</li>
+        <li>Dead code: <code>indentExtension.ts</code> (119 บรรทัด) ไม่ถูก register ที่ไหนเลย</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SECTION 2 ═══════════════════════ -->
+<section id="sec2">
+  <div class="sec-head"><span class="sec-no">02</span><h2>เจาะลึกระบบ Placeholder</h2></div>
+  <p class="sec-desc">
+    ระบบ placeholder คือหัวใจของโหมด template / mail-merge — ครอบคลุม merge fields
+    <code>{{name}}</code>, filters <code>{{x|baht}}</code>, page tokens <code>{page_th}</code>,
+    fill-in fields, panel สถานะ และ export health check
+    โดยรวม<b>เป็นระบบที่แข็งแรงที่สุดในโปรเจค</b> แต่การตรวจเชิงลึกพบช่องว่าง 10 ข้อที่ควรปิดก่อนใช้งานจริงเข้มข้น
+  </p>
+
+  <h3>เส้นทางข้อมูล (Data Flow)</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <span class="tag">1 · Edit Mode</span>
+      <b class="tt">เอกสารในแก้ไข — variable badge &amp; plain tokens</b>
+      <p>ผู้ใช้พิมพ์ <code>{{</code> → autocomplete (<span class="file">variableSuggestion.ts</span>) → แสดงเป็น badge ผ่าน <span class="file">variableMark.ts</span> พร้อม guard กันพิมพ์ทับ (<span class="file">variableTypingGuard.ts</span>)</p>
+    </div>
+    <div class="flow-step">
+      <span class="tag">2 · Placeholder Panel (View ribbon)</span>
+      <b class="tt">ตรวจสถานะ + จัดการตัวแปร</b>
+      <p><span class="file">PlaceholderPanel.tsx</span> มี 3 แท็บ: ตัวแปร (สถานะจาก <code>getMergeFieldStatuses()</code>), หัว/ท้ายกระดาษ (<code>listPageTokensIn()</code>), คำเตือน (<code>countMissingFields()</code>) + ปุ่ม jump ไปยังตัวแปรในเอกสาร</p>
+    </div>
+    <div class="flow-step">
+      <span class="tag">3 · Preview Mode</span>
+      <b class="tt">แทนค่าด้วย data row + แสดงตัวที่ขาดเป็นสีแดง</b>
+      <p><code>replaceMergeFields(html, vars, dataRow, {mode:"preview"})</code> — ตัวแปรที่ไม่มีค่าจะแสดงเป็น <code>.placeholder-missing</code> ส่วน header/footer overlay ทำผ่าน <span class="file">PageChromeLayer.tsx</span> + <code>resolveHeaderFooter()</code> (first/odd/even)</p>
+    </div>
+    <div class="flow-step">
+      <span class="tag">4 · Export Dialog</span>
+      <b class="tt">inline fields → cleaners → resolve → health check</b>
+      <p>ลำดับใน <span class="file">ExportDialog.tsx</span>: <code>inlinePlaceholderFields()</code> → <code>applyCleaners()</code> → <code>resolveHtmlPlaceholders({mode:"export", missingPolicy})</code> → <code>checkExportHealth()</code> (error = เอกสารว่าง, warning = ตัวแปรขาดใน preview)</p>
+    </div>
+    <div class="flow-step">
+      <span class="tag">5 · Format-Specific Export</span>
+      <b class="tt">HTML / DOCX / Mail-merge ZIP / Distribution ZIP</b>
+      <p>Mail-merge: <code>buildMergedDocuments()</code> resolve ใหม่ทีละ data row → JSZip · Distribution: <code>buildDistributionDocuments()</code> แทน <code>{{เรียน}}</code> ทีละผู้รับ — <b>สองท่อนี้แยกกัน รวมกันไม่ได้</b> (gap #9)</p>
+    </div>
+  </div>
+
+  <h3>ความสามารถ vs ความเป็นจริง (Capability Matrix)</h3>
+  <div class="tbl-scroll">
+  <table>
+    <thead><tr><th>ความสามารถ</th><th class="c">สมบูรณ์</th><th>หลักฐาน</th><th>สิ่งที่ขาด</th></tr></thead>
+    <tbody>
+      <tr><td>Merge fields พื้นฐาน <code>{{name}}</code></td><td class="c"><span class="b b-green">95%</span></td><td><span class="file">mergeFields.ts</span></td><td>ไม่มี type validation</td></tr>
+      <tr><td>Filtered fields <code>{{price|baht}}</code></td><td class="c"><span class="b b-amber">80%</span></td><td><span class="file">constants.ts</span> — มีแค่ baht/thai/date</td><td>fail เงียบเมื่อ type ผิด, ไม่มี currency/case/percent</td></tr>
+      <tr><td>Page tokens <code>{page} {total} {date}</code></td><td class="c"><span class="b b-amber">85%</span></td><td><span class="file">pageTokens.ts</span></td><td>token ที่ไม่รู้จัก → กลายเป็นค่าว่างเงียบ ๆ</td></tr>
+      <tr><td>Token ภาษาไทย <code>{page_th} {date_th}</code></td><td class="c"><span class="b b-green">90%</span></td><td><span class="file">thaiFormat.ts</span></td><td>ไม่มี token เวลา ({time})</td></tr>
+      <tr><td>Placeholder Panel</td><td class="c"><span class="b b-green">90%</span></td><td><span class="file">PlaceholderPanel.tsx</span></td><td>ไม่มีแท็บสำหรับ fill-in fields, ไม่มี help text รายการ token</td></tr>
+      <tr><td>Export health checks</td><td class="c"><span class="b b-amber">60%</span></td><td><span class="file">exportHealthCheck.ts</span></td><td>ไม่ตรวจ filter type mismatch, ตัวแปรว่างเป็นแค่ "info"</td></tr>
+      <tr><td>Mail-merge (1 ไฟล์/แถว)</td><td class="c"><span class="b b-green">85%</span></td><td><span class="file">exportMailMerge.ts</span> (มี test)</td><td>ไม่มี conditional blocks</td></tr>
+      <tr><td>Distribution list (1 ไฟล์/ผู้รับ)</td><td class="c"><span class="b b-amber">80%</span></td><td><span class="file">distributionList.ts</span> (มี test)</td><td>รวมกับ mail-merge ไม่ได้</td></tr>
+      <tr><td>Fill-in fields (content controls)</td><td class="c"><span class="b b-red">30%</span></td><td><span class="file">placeholderField.ts</span></td><td><b>ไม่มี UI กรอกค่าก่อน export เลย</b></td></tr>
+      <tr><td>Header/footer overlay</td><td class="c"><span class="b b-green">85%</span></td><td><span class="file">PageChromeLayer.tsx</span></td><td>แก้ไขบน canvas ตรง ๆ ไม่ได้ (ต้องผ่าน dialog)</td></tr>
+      <tr><td>Jump to field</td><td class="c"><span class="b b-red">50%</span></td><td><span class="file">jumpToMergeField.ts</span></td><td>ไม่มี test, fail เงียบถ้า search extension หาย</td></tr>
+      <tr><td>Empty-state hints</td><td class="c"><span class="b b-amber">70%</span></td><td><span class="file">emptyState.ts</span></td><td>test ครอบคลุมแค่ template variant</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>ช่องว่าง 10 ข้อ พร้อมหลักฐานในโค้ด</h3>
+
+  <div class="gap hi">
+    <div class="gap-head"><span class="gap-no">GAP 01</span><b class="t">Filter ไม่ validate type — fail เงียบ</b><span class="b b-red">HIGH</span></div>
+    <p>ใน <span class="file">src/lib/placeholders/mergeFields.ts</span> ฟังก์ชัน <code>applyMergeFilter()</code> ไม่ตรวจว่าค่าตรงกับ filter หรือไม่ —
+    <code>{{username|baht}}</code> กับค่าที่ไม่ใช่ตัวเลขจะได้ <b>string ว่าง</b> โดยไม่มีคำเตือนใด ๆ
+    (เพราะ <code>bahtText()</code> เช็ค <code>Number.isFinite()</code> แล้วคืนค่าว่าง) เช่นเดียวกับ <code>|date</code> ที่ parse ไม่ได้</p>
+    <p class="fix">เพิ่ม pre-validation ใน <code>applyMergeFilter</code> และรายงานเป็น issue ใหม่ใน <code>checkExportHealth()</code> (severity: warning) — Phase 2</p>
+  </div>
+
+  <div class="gap hi">
+    <div class="gap-head"><span class="gap-no">GAP 02</span><b class="t">Fill-in fields ไม่มี UI กรอกค่าก่อน export</b><span class="b b-red">HIGH</span></div>
+    <p><span class="file">src/lib/tiptap/placeholderField.ts</span> มี node + คำสั่ง insert ครบ และ store มี <code>fieldValues</code> + <code>setFieldValue()</code> แล้ว
+    แต่<b>ไม่มี component ไหนให้ผู้ใช้กรอก/ตรวจค่าระหว่าง insert จนถึง export</b> — <code>inlinePlaceholderFields()</code> จะแปลง field เป็น label หรือค่าว่างทันที</p>
+    <p class="fix">เพิ่มฟอร์มกรอกค่า fields ใน <span class="file">ExportDialog.tsx</span> + enforce required fields ก่อนปล่อยดาวน์โหลด — Phase 2</p>
+  </div>
+
+  <div class="gap md">
+    <div class="gap-head"><span class="gap-no">GAP 03</span><b class="t">Filter มีแค่ 3 ตัว ทั้งที่ type ระบบรองรับมากกว่า</b><span class="b b-amber">MEDIUM</span></div>
+    <p><span class="file">src/lib/placeholders/constants.ts</span> ประกาศ <code>MERGE_FIELD_FILTERS = ["baht","thai","date"]</code>
+    ขณะที่ <span class="file">src/types/template.ts</span> มี <code>VariableType = "text"|"number"|"currency"|"date"|"percent"</code> —
+    currency / percent ไม่เคยถูกใช้ และ field <code>format</code>, <code>isComputed</code>, <code>expression</code> ใน <code>TemplateVariable</code> เป็น dead schema</p>
+    <p class="fix">เพิ่ม filters: <code>|currency</code> <code>|percent</code> <code>|comma</code> <code>|upper</code> <code>|lower</code> — Phase 2</p>
+  </div>
+
+  <div class="gap md">
+    <div class="gap-head"><span class="gap-no">GAP 04</span><b class="t">ตัวแปรว่างไม่ block export (เป็นแค่ severity "info")</b><span class="b b-amber">MEDIUM</span></div>
+    <p>ใน <span class="file">src/lib/export/exportHealthCheck.ts</span> เมื่ออยู่ template mode และมีตัวแปรไม่มีค่า ระบบ push issue ด้วย
+    <code>severity: "info"</code> เท่านั้น — export เดินหน้าต่อได้ ผลคือไฟล์ที่มี <code>[ชื่อตัวแปร]</code> หรือช่องว่างหลุดออกไปโดยไม่รู้ตัว
+    อันตรายเป็นพิเศษกับ mail-merge หลายสิบไฟล์</p>
+    <p class="fix">เพิ่มตัวเลือก "Strict mode" ใน export dialog — ถ้าเปิด ให้ unset variables เป็น severity "error" และ block การ export — Phase 2</p>
+  </div>
+
+  <div class="gap md">
+    <div class="gap-head"><span class="gap-no">GAP 05</span><b class="t">Page token ที่ไม่รู้จักกลายเป็นค่าว่างเงียบ ๆ + ไม่มี help text</b><span class="b b-amber">MEDIUM</span></div>
+    <p><span class="file">src/lib/placeholders/pageTokens.ts</span> — <code>replacePageTokens()</code> คืน <code>""</code> สำหรับ token นอกรายการ
+    และ Panel ไม่มีที่แสดงรายการ token ที่รองรับทั้งหมด ผู้ใช้ต้องเดาเอง token ที่ขาด: <code>{time}</code>, <code>{filename}</code>, <code>{section}</code></p>
+    <p class="fix">เพิ่ม help text รายการ token ในแท็บ "หัว/ท้าย" ของ PlaceholderPanel + เพิ่ม token {time}, {filename} — Phase 2</p>
+  </div>
+
+  <div class="gap md">
+    <div class="gap-head"><span class="gap-no">GAP 06</span><b class="t">Jump-to-field fail เงียบ และไม่มี test</b><span class="b b-amber">MEDIUM</span></div>
+    <p><span class="file">src/lib/placeholders/jumpToMergeField.ts</span> พึ่ง search-and-replace extension —
+    ถ้า extension หายหรือพัง ฟังก์ชันคืน <code>false</code> โดยผู้ใช้คลิกแล้วไม่เกิดอะไรขึ้น ไม่มี toast แจ้ง และโมดูลนี้<b>ไม่มี unit test เลย</b></p>
+    <p class="fix">เพิ่ม toast แจ้งเมื่อ jump ล้มเหลว + เขียน unit test — Phase 2</p>
+  </div>
+
+  <div class="gap">
+    <div class="gap-head"><span class="gap-no">GAP 07</span><b class="t">ไม่มี field-level validation / custom format / computed fields</b><span class="b b-gray">LOW</span></div>
+    <p><code>TemplateVariable.type</code> ไม่ถูก enforce ตอน <code>replaceMergeFields()</code>, ไม่มี
+    <code>{{date|format:dd/mm/yyyy}}</code>, และ <code>expression</code> ไม่เคยถูก evaluate — นักออกแบบ template กำหนดข้อบังคับ format ไม่ได้</p>
+    <p class="fix">Backlog — ทำหลัง strict mode + filter validation เสถียรแล้ว (Phase 4–5)</p>
+  </div>
+
+  <div class="gap">
+    <div class="gap-head"><span class="gap-no">GAP 08</span><b class="t">ไม่มี conditional blocks / loops</b><span class="b b-gray">LOW</span></div>
+    <p>ไม่รองรับ <code>{{#if name}}...{{else}}...{{/if}}</code> หรือ loop สำหรับ list variables —
+    template ปรับเนื้อหาตามการมี/ไม่มีข้อมูลไม่ได้ (เช่น ซ่อนย่อหน้า "สิ่งที่ส่งมาด้วย" เมื่อไม่มีไฟล์แนบ)</p>
+    <p class="fix">เพิ่ม mini template syntax ใน resolve pipeline — Phase 4</p>
+  </div>
+
+  <div class="gap md">
+    <div class="gap-head"><span class="gap-no">GAP 09</span><b class="t">Mail-merge × Distribution รวมกันไม่ได้</b><span class="b b-amber">MEDIUM</span></div>
+    <p><span class="file">src/lib/export/distributionList.ts</span> hardcode แทนที่ field เดียว (<code>{{เรียน}}</code>) จาก templateHtml ดิบ —
+    ไม่เชื่อมกับ <code>dataSet</code> ของ mail-merge เลย จึง<b>สร้างจดหมาย personalized ถึงผู้รับหลายคนจากชุดข้อมูลเดียวไม่ได้</b> (1 ไฟล์ต่อคู่ row×recipient)</p>
+    <p class="fix">รวมท่อ: resolve ตัวแปรจาก data row ก่อน แล้วค่อย distribute ต่อผู้รับ — Phase 2</p>
+  </div>
+
+  <div class="gap hi">
+    <div class="gap-head"><span class="gap-no">GAP 10</span><b class="t">โมดูลใน critical path ที่ไม่มี test เลย 4 ตัว</b><span class="b b-red">HIGH</span></div>
+    <p>โมดูลที่อยู่ในเส้นทาง export/UI แต่ coverage = 0%:
+    <span class="file">jumpToMergeField.ts</span> · <span class="file">inlinePlaceholderFields.ts</span> (อยู่ในท่อ export — ถ้า selector พัง ข้อมูลหายเงียบ) ·
+    <span class="file">placeholderField.ts</span> · <span class="file">exportHeaderFooter.ts</span> (generate CSS ซับซ้อนโดยไม่มีการ verify)</p>
+    <p class="fix">เขียน unit tests ครบ 4 โมดูล — Phase 2 (ทำก่อนแตะ logic ใด ๆ ในนั้น)</p>
+  </div>
+
+  <h3>สรุประดับความรุนแรงสำหรับผู้ใช้</h3>
+  <div class="tbl-scroll">
+  <table>
+    <thead><tr><th class="c">ระดับ</th><th>ปัญหา</th><th>พฤติกรรมปัจจุบัน</th><th>ที่ควรเป็น</th></tr></thead>
+    <tbody>
+      <tr><td class="c"><span class="b b-red">HIGH</span></td><td>Fill-in fields แก้ค่าใน export dialog ไม่ได้</td><td>export เป็น label/ค่าว่าง</td><td>ฟอร์มกรอกค่าก่อนดาวน์โหลด</td></tr>
+      <tr><td class="c"><span class="b b-red">HIGH</span></td><td>Filter type mismatch ไม่เตือน</td><td><code>{{username|baht}}</code> → ค่าว่างเงียบ ๆ</td><td>validation + แจ้งใน export health</td></tr>
+      <tr><td class="c"><span class="b b-amber">MED</span></td><td>ตัวแปรว่างไม่ block export</td><td>ได้ไฟล์ที่มี <code>[varname]</code></td><td>ตัวเลือก strict mode</td></tr>
+      <tr><td class="c"><span class="b b-amber">MED</span></td><td>Jump ล้มเหลวแบบเงียบ</td><td>คลิกแล้วเฉย ๆ</td><td>toast แจ้งเตือน</td></tr>
+      <tr><td class="c"><span class="b b-amber">MED</span></td><td>token ที่ไม่รู้จัก → ค่าว่าง</td><td>หายเงียบ</td><td>help text + คงข้อความเดิมไว้</td></tr>
+      <tr><td class="c"><span class="b b-gray">LOW</span></td><td>ไม่มี currency/case filters</td><td>ใช้ไม่ได้</td><td>เพิ่มเป็นส่วนขยาย</td></tr>
+      <tr><td class="c"><span class="b b-gray">LOW</span></td><td>ไม่มี computed variables</td><td>field เป็นข้อมูลดิบเท่านั้น</td><td>formula evaluation (อนาคต)</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SECTION 3 ═══════════════════════ -->
+<section id="sec3">
+  <div class="sec-head"><span class="sec-no">03</span><h2>Roadmap การพัฒนา 5 เฟส</h2></div>
+  <p class="sec-desc">
+    เรียงตามหลัก <b>เสถียรภาพก่อน → harden ระบบหลัก → ปิดงานครึ่งทาง → ระบบใหม่ → วิสัยทัศน์ระยะยาว</b>
+    ทุกรายการระบุไฟล์ที่เกี่ยวข้องจริงและระดับ effort (★ = ง่าย, ★★★ = ซับซ้อน/เสี่ยง)
+  </p>
+
+  <!-- PHASE 1 -->
+  <div class="phase p1">
+    <div class="phase-bar"></div>
+    <div class="phase-head">
+      <span class="phase-no" style="color:#dc2626;background:var(--red-soft);border-color:#fecaca">Phase 1</span>
+      <h3 class="ph">Quick Wins &amp; เสถียรภาพ</h3>
+      <span class="dur">~1 สัปดาห์</span>
+    </div>
+    <p class="goal">เก็บงานเสี่ยงต่ำ-ผลตอบแทนสูงทั้งหมด: บั๊กค้าง, a11y critical, regression tests, dead code และปิดงาน C.2 ที่ค้างใน CLAUDE.md</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>งาน</th><th>ไฟล์ที่เกี่ยวข้อง</th><th class="c">Effort</th><th>เหตุผล</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>แก้ a11y critical 3 จุด</b>: <code>&lt;html lang="th"&gt;</code>, contrast <code>#71717a</code>→<code>#52525b</code>, ruler keyboard support (<code>role="slider"</code> + arrow keys)</td>
+          <td><span class="file">src/app/layout.tsx</span> · <span class="file">globals.css</span> · <span class="file">Ruler.tsx</span> / <span class="file">IndentRuler.tsx</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td>ระบุใน <span class="file">docs/audits/a11y-audit.md</span> — screen reader อ่านไทยผิดเพราะ lang="en"</td>
+        </tr>
+        <tr>
+          <td><b>แก้บั๊ก Paste + Enter</b></td>
+          <td><span class="file">src/lib/conversion/pasteCleanup.ts</span> · <span class="file">VisualEditor.tsx</span> (transformPastedHTML)</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>บั๊กค้างที่ระบุเป็น critical ใน production roadmap design doc</td>
+        </tr>
+        <tr>
+          <td><b>แก้บั๊กพิมพ์ต่อท้าย variable badge</b> + การ clear/remove ตัวแปรใน panel</td>
+          <td><span class="file">variableAdjacentInput.ts</span> · <span class="file">removeMergeField.ts</span></td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>มี branch ค้างอยู่ — ปิดให้จบก่อนเริ่มงานใหม่</td>
+        </tr>
+        <tr>
+          <td><b>E2E regression specs 3 เคส pagination</b>: ย่อหน้าเดียว 8,956 ตัวอักษร / 40 ย่อหน้า / paste page-node ghost page</td>
+          <td><span class="file">tests/e2e/</span> (spec ใหม่)</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>fix มีอยู่แล้วใน <span class="file">repaginate.ts</span> + <span class="file">normalizeIncomingHtml.ts</span> แต่ไม่มี E2E กันถดถอย</td>
+        </tr>
+        <tr>
+          <td><b>ลบ dead code</b> <code>indentExtension.ts</code> (119 บรรทัด) + TODO เก่าใน <code>gasGenerator.ts</code></td>
+          <td><span class="file">src/lib/tiptap/indentExtension.ts</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td>ไม่ถูก register ใน VisualEditor — สร้างความสับสนว่า indent อยู่ที่ไหน (คำตอบ: paragraphFormat.ts)</td>
+        </tr>
+        <tr>
+          <td><b>ปิดงาน C.2</b>: verify cloud history sync กับ Firestore จริง (login Google → save → hard refresh → ตรวจ <code>users/{uid}/snapshots</code>)</td>
+          <td><span class="file">useCloudHistorySync.ts</span> · <span class="file">historyFirestore.ts</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td>โค้ด+test เสร็จแล้ว เหลือยืนยัน end-to-end อย่างเดียว (ระบุเป็น Known Pending ใน CLAUDE.md)</td>
+        </tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">🎯 ผลลัพธ์เฟสนี้: ไม่มีบั๊กค้าง, a11y ผ่านเกณฑ์ critical, pagination มีตาข่ายกันถดถอย — ฐานมั่นคงพอจะต่อยอด</td></tr></tfoot>
+    </table>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase p2">
+    <div class="phase-bar"></div>
+    <div class="phase-head">
+      <span class="phase-no" style="color:#d97706;background:var(--amber-soft);border-color:#fde68a">Phase 2</span>
+      <h3 class="ph">Placeholder System Hardening</h3>
+      <span class="dur">~1–2 สัปดาห์</span>
+    </div>
+    <p class="goal">ปิด gap ทั้ง 10 ข้อจากส่วนที่ 02 — ทำให้ระบบ placeholder ปลอดภัยพอสำหรับเอกสารราชการที่ผิดพลาดไม่ได้ และ mail-merge ระดับหลายสิบไฟล์</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>งาน</th><th>ไฟล์ที่เกี่ยวข้อง</th><th class="c">Effort</th><th>ปิด Gap</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>เติม unit tests 4 โมดูลที่ไม่มี test</b> (ทำข้อนี้ก่อน — ห้ามแตะ logic ก่อนมี test)</td>
+          <td><span class="file">jumpToMergeField.ts</span> · <span class="file">inlinePlaceholderFields.ts</span> · <span class="file">placeholderField.ts</span> · <span class="file">exportHeaderFooter.ts</span></td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td><span class="b b-red">GAP 10</span></td>
+        </tr>
+        <tr>
+          <td><b>Filter type validation</b>: ตรวจค่าก่อน apply filter + รายงาน mismatch ใน export health (severity: warning)</td>
+          <td><span class="file">mergeFields.ts</span> (<code>applyMergeFilter</code>) · <span class="file">exportHealthCheck.ts</span></td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td><span class="b b-red">GAP 01</span></td>
+        </tr>
+        <tr>
+          <td><b>ฟอร์มกรอกค่า fill-in fields ใน Export dialog</b> + enforce required fields</td>
+          <td><span class="file">ExportDialog.tsx</span> · <span class="file">editorStore.ts</span> (<code>fieldValues</code> มีอยู่แล้ว)</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td><span class="b b-red">GAP 02</span></td>
+        </tr>
+        <tr>
+          <td><b>Strict export mode</b>: toggle ใน export dialog — block export เมื่อมีตัวแปรว่าง (escalate "info" → "error")</td>
+          <td><span class="file">exportHealthCheck.ts</span> · <span class="file">ExportDialog.tsx</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td><span class="b b-amber">GAP 04</span></td>
+        </tr>
+        <tr>
+          <td><b>เพิ่ม filters ใหม่</b>: <code>|currency</code> <code>|percent</code> <code>|comma</code> <code>|upper</code> <code>|lower</code></td>
+          <td><span class="file">constants.ts</span> · <span class="file">mergeFields.ts</span> + tests ใน <span class="file">filters.test.ts</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td><span class="b b-amber">GAP 03</span></td>
+        </tr>
+        <tr>
+          <td><b>เพิ่ม page tokens</b> <code>{time}</code> <code>{filename}</code> + help text รายการ token ทั้งหมดใน panel + token ไม่รู้จักให้คงข้อความเดิม</td>
+          <td><span class="file">pageTokens.ts</span> · <span class="file">PlaceholderPanel.tsx</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td><span class="b b-amber">GAP 05</span></td>
+        </tr>
+        <tr>
+          <td><b>Toast แจ้งเมื่อ jump-to-field ล้มเหลว</b></td>
+          <td><span class="file">jumpToMergeField.ts</span> · <span class="file">PlaceholderPanel.tsx</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td><span class="b b-amber">GAP 06</span></td>
+        </tr>
+        <tr>
+          <td><b>Mail-merge × Distribution combo</b>: resolve data row ก่อน → distribute ต่อผู้รับ → 1 ไฟล์ต่อคู่ (row × recipient)</td>
+          <td><span class="file">distributionList.ts</span> · <span class="file">exportMailMerge.ts</span></td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td><span class="b b-amber">GAP 09</span></td>
+        </tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">🎯 ผลลัพธ์เฟสนี้: placeholder ไม่มีทาง fail เงียบอีกต่อไป — ทุกความผิดพลาดถูกดักก่อนไฟล์ออกจากเครื่อง</td></tr></tfoot>
+    </table>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase p3">
+    <div class="phase-bar"></div>
+    <div class="phase-head">
+      <span class="phase-no">Phase 3</span>
+      <h3 class="ph">ปิดงานครึ่งทาง — Word Parity</h3>
+      <span class="dur">~2–3 สัปดาห์</span>
+    </div>
+    <p class="goal">ทุกข้อในเฟสนี้<b>มีโค้ดรากฐานอยู่แล้ว</b>แต่ยังไม่ wire เข้า UI/schema — เป็นการเก็บเกี่ยวของที่ลงทุนไปแล้วครึ่งหนึ่ง</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>งาน</th><th>สิ่งที่มีอยู่แล้ว</th><th class="c">Effort</th><th>สิ่งที่ต้องทำเพิ่ม</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>A1: Header/Footer แก้ไขแบบ rich-text บน canvas</b></td>
+          <td><span class="file">pageHeader.ts</span> / <span class="file">pageFooter.ts</span> (nodes 39 บรรทัด/ตัว มีครบ)</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>wire เข้า <code>pageNode</code> schema + ปุ่มใน <span class="file">RibbonTabLayout.tsx</span> + double-click เพื่อแก้ไข</td>
+        </tr>
+        <tr>
+          <td><b>A2: Different first page / odd-even มีผลจริง</b></td>
+          <td>config ใน <code>PageSetup.headerFooter</code> + <span class="file">headerFooterResolve.ts</span> (resolve logic มี test แล้ว)</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>apply ตอน render (<span class="file">PageChromeLayer.tsx</span>) และ export (<span class="file">exportHeaderFooter.ts</span>) — ปัจจุบัน export ทุกหน้าเหมือนกันหมด</td>
+        </tr>
+        <tr>
+          <td><b>A3: ตาราง split อัตโนมัติตอน repaginate</b></td>
+          <td><code>findTableRowSplitPosition()</code> ใน <span class="file">pagination/tableSplit.ts</span> หา boundary ได้แล้วแต่ไม่ถูก apply</td>
+          <td class="c"><span class="stars">★★★</span></td>
+          <td>ผูกผลลัพธ์เข้า <span class="file">repaginate.ts</span> ให้ตารางแบ่งกลาง row boundary อัตโนมัติ (ปัจจุบันเป็นคำสั่ง manual เท่านั้น)</td>
+        </tr>
+        <tr>
+          <td><b>สารบัญอัตโนมัติ (TOC)</b></td>
+          <td>logic สกัดหัวข้อใน <span class="file">src/lib/toc.ts</span> (100 บรรทัด) + <span class="file">headingWithId.ts</span></td>
+          <td class="c"><span class="stars">★</span></td>
+          <td>เพิ่มปุ่ม Insert → "สารบัญ (Table of Contents)" — งานถูกสุดในเฟสนี้</td>
+        </tr>
+        <tr>
+          <td><b>Custom ruler tab stops</b> (click-to-set)</td>
+          <td>ระบบ ruler + drag (<span class="file">useRulerDrag.ts</span> มี test) + tab grid 1.27cm ใน globals.css</td>
+          <td class="c"><span class="stars">★★★</span></td>
+          <td>marker UI บน ruler (left/center/right/decimal) + เก็บ tab stops ราย paragraph ใน <span class="file">paragraphFormat.ts</span></td>
+        </tr>
+        <tr>
+          <td><b>รวม pagination engine ให้เหลือตัวเดียว</b></td>
+          <td><code>computePageBreaks</code> เป็น pure function ที่แชร์ได้อยู่แล้ว</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>ให้ <span class="file">paginationEngine.ts</span> (ฝั่ง preview) delegate มาที่ core เดียวกับ editor — กันผลแบ่งหน้าไม่ตรงกัน</td>
+        </tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">🎯 ผลลัพธ์เฟสนี้: ครบ Word parity ที่ผู้ใช้เอกสารราชการต้องการจริง — header/footer แก้บนกระดาษ, ตารางไหลข้ามหน้า, มีสารบัญ</td></tr></tfoot>
+    </table>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase p4">
+    <div class="phase-bar"></div>
+    <div class="phase-head">
+      <span class="phase-no" style="color:#16a34a;background:var(--green-soft);border-color:#bbf7d0">Phase 4</span>
+      <h3 class="ph">ระบบใหม่ที่ควรเพิ่ม</h3>
+      <span class="dur">~2–3 สัปดาห์</span>
+    </div>
+    <p class="goal">ระบบใหม่ที่มีหลักฐานรองรับในโค้ดว่า "เตรียมพื้นที่ไว้แล้ว" — ไม่ใช่ข้อเสนอลอย ๆ ทุกข้อมี hook/state รอใช้งานอยู่</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>ระบบใหม่</th><th>หลักฐานว่าพื้นที่พร้อมแล้ว</th><th class="c">Effort</th><th>คุณค่า</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Autosave-to-cloud ต่อเนื่อง</b> (debounce N วินาที → snapshot อัตโนมัติขึ้น Firestore)</td>
+          <td>draft recovery local 8s + auto-snapshot 2 นาที + ท่อ cloud sync ทำงานแล้ว — ขาดแค่ตัวเชื่อม</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>ลดความกลัวงานหาย — ความเสี่ยงอันดับ 1 ของผู้ใช้เอกสารยาว</td>
+        </tr>
+        <tr>
+          <td><b>PWA / Offline mode</b> (service worker + cache-first + install prompt)</td>
+          <td><span class="file">manifest.ts</span> มีแล้ว · <span class="file">useOnlineStatus.ts</span> ตรวจ offline แล้ว · IndexedDB ใช้งานแล้ว</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>ใช้งานบนเครือข่ายราชการที่ไม่เสถียรได้ — เข้ากับ privacy story (ทุกอย่าง client-side อยู่แล้ว)</td>
+        </tr>
+        <tr>
+          <td><b>Performance เอกสารยาว 100+ หน้า</b></td>
+          <td><span class="file">useVirtualScroll.ts</span> มีอยู่แต่ยังไม่ integrate · roadmap เสนอ <code>content-visibility: auto</code></td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>เอกสารจัดซื้อจัดจ้าง/ราชการมักยาว — ป้องกันอาการหน่วงก่อนผู้ใช้เจอ</td>
+        </tr>
+        <tr>
+          <td><b>Conditional placeholders + loops</b> <code>{{#if}}...{{/if}}</code></td>
+          <td>resolve pipeline เป็น pure function แก้ขยายได้ · <code>isList</code> + <code>listValues</code> มีใน TemplateVariable แล้ว</td>
+          <td class="c"><span class="stars">★★★</span></td>
+          <td>template ฉลาดขึ้น: ซ่อน/แสดงย่อหน้าตามข้อมูล, วนรายการแนบท้าย (ปิด GAP 08)</td>
+        </tr>
+        <tr>
+          <td><b>Refactor component ใหญ่</b>: แตก <code>EditorShell.tsx</code> (474→&lt;350 บรรทัด) และ <code>ExportDialog.tsx</code> (677 บรรทัด → แยกราย format)</td>
+          <td>IndentRuler / TemplatePreview / SourcePane เคยถูกแยกออกมาแล้วเป็นแบบอย่าง</td>
+          <td class="c"><span class="stars">★★</span></td>
+          <td>ปลดล็อกการเขียน component test (ปัจจุบัน 20%) — จ่ายหนี้เทคนิคก้อนใหญ่สุด</td>
+        </tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">🎯 ผลลัพธ์เฟสนี้: จากเครื่องมือแปลงไฟล์ → แพลตฟอร์มทำเอกสารที่ไว้ใจได้ทั้ง offline และเอกสารขนาดใหญ่</td></tr></tfoot>
+    </table>
+    </div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase p5">
+    <div class="phase-bar"></div>
+    <div class="phase-head">
+      <span class="phase-no" style="color:#57534e;background:var(--canvas);border-color:var(--line)">Phase 5</span>
+      <h3 class="ph">ระยะยาว (Backlog — ประเมินก่อนลงมือ)</h3>
+      <span class="dur">ไม่กำหนด</span>
+    </div>
+    <p class="goal">รายการที่มีคุณค่าแต่ effort สูงหรือ<b>ขัดกับหลักการของโปรเจค</b> — ควรตัดสินใจเชิงกลยุทธ์ก่อนเริ่ม</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>รายการ</th><th class="c">Effort</th><th>ข้อควรระวัง</th></tr></thead>
+      <tbody>
+        <tr><td><b>Real-time collaboration</b> (CRDT เช่น Yjs + Tiptap collab)</td><td class="c"><span class="stars">★★★★</span></td><td>ต้องมี sync server — ขัด "no server code" ใน CLAUDE.md โดยตรง ต้องทบทวนสถาปัตยกรรมก่อน</td></tr>
+        <tr><td><b>OOXML round-trip</b> (Word content controls ↔ placeholderField ไม่หาย metadata)</td><td class="c"><span class="stars">★★★</span></td><td>html-docx-js ใช้ altchunks — ต้องเขียน OOXML layer ใหม่บางส่วน (อยู่ใน roadmap ของ docs/placeholder-system.md แล้ว)</td></tr>
+        <tr><td><b>Thai spellcheck / grammar</b> (LanguageTool)</td><td class="c"><span class="stars">★★</span>+backend</td><td>ต้องเรียก API ภายนอก — ขัด privacy story; ทางเลือก: dictionary ฝั่ง client ล้วน</td></tr>
+        <tr><td><b>i18n framework</b> (i18next)</td><td class="c"><span class="stars">★★</span></td><td>ตอนนี้ Thai+English hardcode เพียงพอ — คุ้มเมื่อจะขยายผู้ใช้นอกไทยเท่านั้น (หมายเหตุ: <code>MobileBlock.tsx</code> เป็นอังกฤษล้วน ผิด convention — แก้ได้เลยใน Phase 1)</td></tr>
+        <tr><td><b>Export PNG/JPEG ต่อหน้า</b></td><td class="c"><span class="stars">★★</span></td><td>use case เฉพาะทาง — รอ demand จริง</td></tr>
+        <tr><td><b>Computed variables / formula</b> (<code>expression</code> ใน TemplateVariable)</td><td class="c"><span class="stars">★★★</span></td><td>schema รอไว้แล้วแต่ต้องออกแบบ sandbox การ evaluate ให้ปลอดภัย</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ SECTION 4 ═══════════════════════ -->
+<section id="sec4">
+  <div class="sec-head"><span class="sec-no">04</span><h2>Test Coverage &amp; ลำดับความสำคัญ</h2></div>
+  <p class="sec-desc">สรุปช่องว่างการทดสอบทั้งโปรเจค และคำแนะนำว่าควรเริ่มจากตรงไหนถ้าทำได้ทีละอย่าง</p>
+
+  <h3>ช่องว่าง Test Coverage</h3>
+  <div class="tbl-scroll">
+  <table>
+    <thead><tr><th>พื้นที่</th><th>สถานะ</th><th>สิ่งที่ขาดชัดเจน</th></tr></thead>
+    <tbody>
+      <tr><td><b>Pagination</b> (5/11 โมดูล)</td><td><div class="bar-wrap"><div class="bar low"><i style="width:45%"></i></div>45%</div></td><td>E2E regression 3 เคสที่เคย reproduce (single long para / 40 paras / paste ghost) — fix มีแล้วแต่ไม่มี spec คุ้ม</td></tr>
+      <tr><td><b>Tiptap extensions</b> (~25/45)</td><td><div class="bar-wrap"><div class="bar mid"><i style="width:55%"></i></div>55%</div></td><td><code>placeholderField</code>, <code>columnBlock</code>, <code>contentSlots</code>, <code>insertVariableBadge</code> ไม่มี test</td></tr>
+      <tr><td><b>Hooks</b> (8/14)</td><td><div class="bar-wrap"><div class="bar mid"><i style="width:57%"></i></div>57%</div></td><td>hooks ย่อยหลายตัวยังไม่มี test</td></tr>
+      <tr><td><b>Components</b> (~85 ไฟล์)</td><td><div class="bar-wrap"><div class="bar low"><i style="width:20%"></i></div>20%</div></td><td><code>EditorShell</code>, <code>ExportDialog</code>, <code>HistoryPanel</code>, <code>HeaderFooterDialog</code> — monolith ไม่มี unit test เลย</td></tr>
+      <tr><td><b>Export pipeline</b></td><td><div class="bar-wrap"><div class="bar high"><i style="width:80%"></i></div>80%</div></td><td><code>inlinePlaceholderFields</code>, <code>exportHeaderFooter</code> = 0% · คุณภาพ PDF ไม่มี E2E verify</td></tr>
+      <tr><td><b>Edge cases เฉพาะทาง</b></td><td><span class="b b-gray">กระจาย</span></td><td>filter syntax ผิดรูป, เลขจำนวนใหญ่มากใน bahtText, ปีอธิกสุรทินใน formatThaiDate, เปิด differentFirstPage + differentOddEven พร้อมกัน</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>ถ้าทำได้ทีละอย่าง — เริ่มตามลำดับนี้</h3>
+  <div class="prio">
+    <div class="p-card">
+      <div class="rank">1</div>
+      <b>E2E regression pagination 3 เคส</b>
+      <p>fix มีอยู่แล้ว — แค่ล็อกไว้ไม่ให้ถดถอย ลงทุนน้อยที่สุด ป้องกันความเสี่ยงสูงสุด</p>
+    </div>
+    <div class="p-card">
+      <div class="rank">2</div>
+      <b>Placeholder hardening (Phase 2)</b>
+      <p>silent failure ในเอกสารราชการ = ความเสียหายจริง — strict mode + filter validation ต้องมาก่อนฟีเจอร์ใหม่ทุกตัว</p>
+    </div>
+    <div class="p-card">
+      <div class="rank">3</div>
+      <b>a11y critical 3 จุด</b>
+      <p>แก้ <code>lang</code>, contrast, ruler keyboard — งานครึ่งวันแต่เปลี่ยนคุณภาพการเข้าถึงทั้งแอป</p>
+    </div>
+    <div class="p-card">
+      <div class="rank">4</div>
+      <b>A1 Header/Footer บน canvas</b>
+      <p>ฟีเจอร์ที่ผู้ใช้ Word คาดหวังที่สุด และโค้ดรากฐาน (nodes) เสร็จไปแล้วครึ่งทาง</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>
+    <b>wordhtml — Project Audit Report</b><br>
+    จัดทำ 12 มิถุนายน 2026 · ตรวจสอบจาก codebase v0.1.38 จริงทั้งหมด (30+ โมดูล, 12 test suites, docs ทุกฉบับ)
+  </div>
+  <div class="mono">
+    branch: fix/cloud-history-save-on-refresh<br>
+    sources: src/lib/placeholders · src/lib/pagination · src/lib/export · docs/audits/a11y-audit.md · docs/placeholder-system.md
+  </div>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,10 +1,15 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 
 /**
- * PageHeaderNode – placeholder header area inside a page node.
+ * PageHeaderNode – editable rich-text header area inside a page node.
  *
- * Phase 1: This is a structural placeholder. Rich-text header/footer
- * editing will be implemented in Phase 2.
+ * Sits before `pageBody` in the `pageNode` content expression
+ * (`pageHeader? pageBody pageFooter?`). Rendered absolutely inside the top
+ * margin band (see globals.css `.page-node > .page-header`), so it never
+ * affects `.page-body` height or pagination overflow math.
+ *
+ * `isolating: true` keeps Backspace/Delete at the body start from joining
+ * body paragraphs into the header (and vice versa).
  */
 export const PageHeaderNode = Node.create({
   name: "pageHeader",
@@ -15,7 +20,7 @@ export const PageHeaderNode = Node.create({
 
   defining: true,
 
-  isolating: false,
+  isolating: true,
 
   parseHTML() {
     return [
@@ -31,7 +36,7 @@ export const PageHeaderNode = Node.create({
       mergeAttributes(HTMLAttributes, {
         class: "page-header",
         "data-page-header": "true",
-        contenteditable: "true",
+        "data-placeholder": "หัวกระดาษ (Header)",
       }),
       0,
     ];

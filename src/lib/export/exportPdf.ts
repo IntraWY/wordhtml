@@ -1,8 +1,9 @@
-import type { PageSetup } from "./wrap";
+import type { PageSetup } from "@/types";
 import { deriveFileName } from "./wrap";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
 import { A4, LETTER, mmToPx } from "@/lib/page";
+import { resolvePageChromeHtml } from "./exportHeaderFooter";
 
 interface ExportPdfOptions {
   /** Original source filename (if any) — used to derive the export filename */
@@ -64,7 +65,7 @@ export async function exportPdf(
     .prose-editor ul, .paper ul { list-style: disc; padding-left: 1.5em; margin: 0.75em 0; }
     .prose-editor ol, .paper ol { list-style: decimal; padding-left: 1.5em; margin: 0.75em 0; }
     .prose-editor li, .paper li { margin: 0.25em 0; }
-    .prose-editor blockquote, .paper blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
+    .prose-editor blockquote, .paper blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }
     .prose-editor a, .paper a { color: #2563eb; text-decoration: underline; }
     .prose-editor strong, .paper strong { font-weight: 700; }
     .prose-editor em, .paper em { font-style: italic; }
@@ -93,7 +94,7 @@ export async function exportPdf(
     table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
     td, th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
     th { background: #f4f4f5; font-weight: 600; }
-    blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
+    blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }
     code { background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.92em; }
     pre { background: #f4f4f5; padding: 1em; border-radius: 6px; overflow-x: auto; margin: 1em 0; }
     pre code { background: transparent; padding: 0; }
@@ -133,7 +134,11 @@ export async function exportPdf(
     const format = ps.size === "Letter" ? "letter" : "a4";
     const orientation = ps.orientation;
 
-    await html2pdf()
+    // Keep a handle on the worker: html2pdf's `.then()` resolves to a plain
+    // Promise (not the chainable worker), so the header/footer stamp must
+    // happen between `get("pdf")` and `save()` on the worker itself rather
+    // than chained off `.then()`.
+    const worker = html2pdf()
       .set({
         margin,
         filename: fileName,
@@ -151,9 +156,157 @@ export async function exportPdf(
         },
       })
       .from(container)
-      .save();
+      .toPdf();
+
+    const pdf = (await worker.get("pdf")) as JsPdfLike;
+    await stampHeaderFooterOnPdf(pdf, ps, sourceName, container.style.fontFamily);
+    await worker.save();
   } finally {
     document.body.removeChild(container);
+  }
+}
+
+/** Minimal jsPDF surface used for header/footer stamping. */
+interface JsPdfLike {
+  internal: {
+    getNumberOfPages(): number;
+    pageSize: { getWidth(): number; getHeight(): number };
+  };
+  setPage(n: number): void;
+  addImage(
+    data: string,
+    type: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ): void;
+}
+
+/**
+ * Header strip Y position (mm): bottom of the strip sits 3mm above the
+ * content area, clamped so it never leaves the page (min 2mm from top).
+ * Pure — unit-tested.
+ */
+export function headerStripYmm(marginTopMm: number, stripHeightMm: number): number {
+  return Math.max(2, marginTopMm - 3 - stripHeightMm);
+}
+
+/**
+ * Footer strip Y position (mm): top of the strip sits 3mm below the content
+ * area, clamped so the strip never overflows the page (min 2mm from bottom).
+ * Pure — unit-tested.
+ */
+export function footerStripYmm(
+  pageHeightMm: number,
+  marginBottomMm: number,
+  stripHeightMm: number
+): number {
+  return Math.min(
+    pageHeightMm - 2 - stripHeightMm,
+    pageHeightMm - marginBottomMm + 3
+  );
+}
+
+/**
+ * Stamp resolved header/footer chrome onto every PDF page.
+ *
+ * Uses the same `resolvePageChromeHtml` as the live canvas and the HTML
+ * export, so first-page / odd-even variants and page tokens behave
+ * identically. Each unique resolved HTML string is rasterized once
+ * (html2canvas) and cached, then drawn into the page margins via jsPDF.
+ */
+async function stampHeaderFooterOnPdf(
+  pdf: JsPdfLike,
+  pageSetup: PageSetup,
+  fileName: string | null,
+  fontFamily: string
+): Promise<void> {
+  const hf = pageSetup.headerFooter;
+  if (!hf?.enabled) return;
+
+  const totalPages = pdf.internal.getNumberOfPages();
+  const pageWmm = pdf.internal.pageSize.getWidth();
+  const pageHmm = pdf.internal.pageSize.getHeight();
+  const m = pageSetup.marginMm;
+  const contentWmm = Math.max(10, pageWmm - m.left - m.right);
+  const stripWidthPx = Math.max(50, Math.round(mmToPx(contentWmm)));
+
+  const html2canvas = (await import("html2canvas")).default;
+  const cache = new Map<string, { data: string; heightMm: number } | null>();
+
+  const renderStrip = async (
+    html: string
+  ): Promise<{ data: string; heightMm: number } | null> => {
+    if (!html.trim()) return null;
+    const cached = cache.get(html);
+    if (cached !== undefined) return cached;
+
+    const strip = document.createElement("div");
+    strip.style.cssText =
+      "position:fixed;top:-9999px;left:-9999px;" +
+      `width:${stripWidthPx}px;background:#ffffff;color:#52525b;` +
+      "font-size:13px;line-height:1.5;text-align:center;";
+    strip.style.fontFamily = fontFamily;
+    // Already sanitized by resolvePageChromeHtml.
+    strip.innerHTML = html;
+    document.body.appendChild(strip);
+    let result: { data: string; heightMm: number } | null = null;
+    try {
+      const canvas = await html2canvas(strip, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+      if (canvas.width > 0 && canvas.height > 0) {
+        result = {
+          data: canvas.toDataURL("image/png"),
+          heightMm: (canvas.height / canvas.width) * contentWmm,
+        };
+      }
+    } catch {
+      // Header/footer stamping must never break the PDF export itself.
+      result = null;
+    } finally {
+      document.body.removeChild(strip);
+    }
+    cache.set(html, result);
+    return result;
+  };
+
+  for (let p = 1; p <= totalPages; p++) {
+    const { headerHtml, footerHtml } = resolvePageChromeHtml(
+      hf,
+      p,
+      totalPages,
+      fileName
+    );
+    const header = await renderStrip(headerHtml);
+    const footer = await renderStrip(footerHtml);
+    if (!header && !footer) continue;
+
+    pdf.setPage(p);
+    if (header) {
+      pdf.addImage(
+        header.data,
+        "PNG",
+        m.left,
+        headerStripYmm(m.top, header.heightMm),
+        contentWmm,
+        header.heightMm
+      );
+    }
+    if (footer) {
+      pdf.addImage(
+        footer.data,
+        "PNG",
+        m.left,
+        footerStripYmm(pageHmm, m.bottom, footer.heightMm),
+        contentWmm,
+        footer.heightMm
+      );
+    }
   }
 }
 

@@ -2,10 +2,9 @@
 
 import { useLayoutEffect, useState, useCallback, useRef, type RefObject } from "react";
 import { measureHeaderFooterReservePx } from "@/lib/pageChromeReserve";
-import { resolveHeaderFooter } from "./PageHeaderFooter";
-import { replacePageTokens } from "@/lib/placeholders";
+import { resolvePageChromeHtml } from "@/lib/export/exportHeaderFooter";
 import type { HeaderFooterConfig, PageSetup } from "@/types";
-import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { useEditorStore } from "@/store/editorStore";
 
 interface PageChromeLayerProps {
   /** Element that contains `.page-node` elements (usually PageCanvas). */
@@ -29,26 +28,26 @@ interface PageChromeBox {
   showPlaceholderFooter: boolean;
 }
 
-function resolveForPage(
-  pageNumber: number,
-  totalPages: number,
-  hf: HeaderFooterConfig
-): { header: string; footer: string } {
-  const resolved = resolveHeaderFooter(
-    pageNumber,
-    hf.headerHtml ?? "",
-    hf.footerHtml ?? "",
-    hf.differentFirstPage ?? false,
-    hf.differentOddEven ?? false,
-    hf.firstPageHeaderHtml,
-    hf.firstPageFooterHtml,
-    hf.evenHeaderHtml,
-    hf.evenFooterHtml
-  );
-  return {
-    header: replacePageTokens(resolved.header, { pageNumber, totalPages }),
-    footer: replacePageTokens(resolved.footer, { pageNumber, totalPages }),
-  };
+/**
+ * Reserve height (px) that page bodies must inset so live content does not
+ * overlap header/footer chrome. Considers every variant that can appear on
+ * some page (base, first-page, even) and takes the tallest.
+ */
+export function measureChromeReserveForConfig(hf: HeaderFooterConfig): number {
+  let reserve = measureHeaderFooterReservePx(hf.headerHtml, hf.footerHtml);
+  if (hf.differentFirstPage) {
+    reserve = Math.max(
+      reserve,
+      measureHeaderFooterReservePx(hf.firstPageHeaderHtml, hf.firstPageFooterHtml)
+    );
+  }
+  if (hf.differentOddEven) {
+    reserve = Math.max(
+      reserve,
+      measureHeaderFooterReservePx(hf.evenHeaderHtml, hf.evenFooterHtml)
+    );
+  }
+  return reserve;
 }
 
 export function PageChromeLayer({
@@ -60,6 +59,7 @@ export function PageChromeLayer({
 }: PageChromeLayerProps) {
   const [boxes, setBoxes] = useState<PageChromeBox[]>([]);
   const lastReserveRef = useRef(0);
+  const fileName = useEditorStore((s) => s.fileName);
   const hf = pageSetup.headerFooter;
   const enabled = Boolean(hf?.enabled);
 
@@ -79,31 +79,33 @@ export function PageChromeLayer({
     pages.forEach((pageEl, index) => {
       const rect = pageEl.getBoundingClientRect();
       const pageNumber = index + 1;
-      const { header, footer } = resolveForPage(pageNumber, pageCount, hf);
+      const { headerHtml, footerHtml } = resolvePageChromeHtml(
+        hf,
+        pageNumber,
+        pageCount,
+        fileName
+      );
       next.push({
         pageNumber,
         top: rect.top - anchorRect.top,
         left: rect.left - anchorRect.left,
         width: rect.width,
         height: rect.height,
-        headerHtml: header,
-        footerHtml: footer,
-        showPlaceholderHeader: !header.trim(),
-        showPlaceholderFooter: !footer.trim(),
+        headerHtml,
+        footerHtml,
+        showPlaceholderHeader: !headerHtml.trim(),
+        showPlaceholderFooter: !footerHtml.trim(),
       });
     });
 
     setBoxes(next);
 
-    const reserve = measureHeaderFooterReservePx(
-      hf.headerHtml,
-      hf.footerHtml
-    );
+    const reserve = measureChromeReserveForConfig(hf);
     if (reserve !== lastReserveRef.current) {
       lastReserveRef.current = reserve;
       onReserveHeightChange?.(reserve);
     }
-  }, [pagesRootRef, scrollContainerRef, enabled, hf, pageCount, onReserveHeightChange]);
+  }, [pagesRootRef, scrollContainerRef, enabled, hf, pageCount, fileName, onReserveHeightChange]);
 
   useLayoutEffect(() => {
     measure();
@@ -158,7 +160,7 @@ export function PageChromeLayer({
             ) : (
               <div
                 className="w-full text-center"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(box.headerHtml) }}
+                dangerouslySetInnerHTML={{ __html: box.headerHtml }}
               />
             )}
           </div>
@@ -170,7 +172,7 @@ export function PageChromeLayer({
             ) : (
               <div
                 className="w-full text-center"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(box.footerHtml) }}
+                dangerouslySetInnerHTML={{ __html: box.footerHtml }}
               />
             )}
           </div>

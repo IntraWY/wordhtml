@@ -69,4 +69,20 @@ describe("buildMergedDocuments", () => {
       buildMergedDocuments({ html, variables, dataSet: empty, pageSetup })
     ).toEqual([]);
   });
+
+  it("sanitizes the merged document output (defense-in-depth)", () => {
+    const evilHtml =
+      `<div class="page-node"><div class="page-body">` +
+      `<p>เรียน {{ผู้รับ}}</p><script>alert(1)</script>` +
+      `<img src=x onerror="alert(2)">` +
+      `</div></div>`;
+    const docs = buildMergedDocuments({
+      html: evilHtml,
+      variables,
+      dataSet,
+      pageSetup,
+    });
+    expect(docs[0].html).not.toContain("<script>");
+    expect(docs[0].html).not.toContain("onerror");
+  });
 });

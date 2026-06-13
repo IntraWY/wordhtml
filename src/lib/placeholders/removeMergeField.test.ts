@@ -53,6 +53,23 @@ describe("removeMergeFieldFromHtml", () => {
     expect(removeMergeFieldFromHtml(html, "missing")).toBe(html);
   });
 
+  it("removes filtered tokens {{name|baht}} / {{name|thai}} / {{name|date}}", () => {
+    const html =
+      "<p>{{amount|baht}} and {{amount|thai}} and {{amount|date}} and {{amount}}</p>";
+    const result = removeMergeFieldFromHtml(html, "amount");
+    expect(result).toBe("<p> and  and  and </p>");
+  });
+
+  it("keeps filtered tokens of other variable names", () => {
+    const html = "<p>{{keep|baht}} {{remove|baht}} {{remove}}</p>";
+    expect(removeMergeFieldFromHtml(html, "remove")).toBe("<p>{{keep|baht}}  </p>");
+  });
+
+  it("removes Thai-named filtered tokens", () => {
+    const html = "<p>{{จำนวนเงิน|baht}}</p>";
+    expect(removeMergeFieldFromHtml(html, "จำนวนเงิน")).toBe("<p></p>");
+  });
+
   it("removes badge even when inner text does not match data-variable", () => {
     const html =
       '<p><span class="variable-badge" data-variable="a">{{wrong}}</span></p>';

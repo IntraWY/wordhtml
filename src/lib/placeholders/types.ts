@@ -15,6 +15,8 @@ export interface PlaceholderContext {
   headerFooter?: HeaderFooterConfig;
   locale?: string;
   missingPolicy?: ExportMissingPolicy;
+  /** Document/export filename for the {filename} page token. */
+  fileName?: string | null;
 }
 
 export interface EmptyStateHintAction {

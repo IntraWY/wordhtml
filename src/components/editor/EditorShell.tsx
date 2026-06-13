@@ -19,7 +19,6 @@ import { EditorRulerBar, EditorPaperScrollBody } from "./EditorPaperLayout";
 import { TemplatePreview } from "./TemplatePreview";
 import { SourcePane } from "./SourcePane";
 import { useEditorStore } from "@/store/editorStore";
-import { useTemplateStore } from "@/store/templateStore";
 import { useUiStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 import {
@@ -33,18 +32,16 @@ import { useDragAndDrop } from "@/hooks/useDragAndDrop";
 import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { useEditorResize } from "@/hooks/useEditorResize";
 import { usePagination } from "@/hooks/usePagination";
+import { useEditorEventBridge } from "@/hooks/useEditorEventBridge";
+import { useCrossTabSync } from "@/hooks/useCrossTabSync";
+import { useSyncPageSetup } from "@/hooks/useSyncPageSetup";
 import { DialogManager } from "./DialogManager";
 import { MobileBlock } from "@/components/MobileBlock";
-import { addEventListener, removeEventListener, EVENT_NAMES } from "@/lib/events";
-import { unwrapPageNode } from "@/lib/unwrapPageNode";
-import { normalizeImagePercentWidths } from "@/lib/imageScale";
-import { measurePageBodyWidthFromDom } from "@/lib/pageContentWidth";
-import { isLiveEditor } from "@/lib/editorLive";
-import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
 import { PaginationManager } from "./PaginationManager";
 import { PageChromeLayer } from "./PageChromeLayer";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useCloudHistorySync } from "@/hooks/useCloudHistorySync";
+import { useAutosaveCloud } from "@/hooks/useAutosaveCloud";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CloudConflictBanner } from "./CloudConflictBanner";
 
@@ -73,6 +70,7 @@ export function EditorShell() {
   useFirebaseAuth();
   useOnlineStatus();
   useCloudHistorySync();
+  useAutosaveCloud();
   const editorRef = useRef<Editor | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -99,11 +97,6 @@ export function EditorShell() {
     previewMode === "preview" && templateMode ? null : editor;
 
   const isFullscreen = useUiStore((s) => s.fullscreen);
-  const openSearch = useUiStore((s) => s.openSearch);
-  const openPageSetup = useUiStore((s) => s.openPageSetup);
-  const openShortcuts = useUiStore((s) => s.openShortcuts);
-  const openToc = useUiStore((s) => s.openToc);
-  const openHeaderFooter = useUiStore((s) => s.openHeaderFooter);
   const paragraphOpen = useUiStore((s) => s.paragraphOpen);
   const closeParagraph = useUiStore((s) => s.closeParagraph);
   const [mathOpen, setMathOpen] = useState(false);
@@ -127,88 +120,14 @@ export function EditorShell() {
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
   const { onDragOver, onDragLeave, onDrop } = useDragAndDrop(editor, setIsDragging);
 
-  /* Sync global pageSetup (ruler, ribbon, dialogs) into every page-node in the editor */
-  useEffect(() => {
-    if (!isLiveEditor(editor)) return;
-    editor.commands.setDocumentPageSetup({
-      size: pageSetup.size,
-      orientation: pageSetup.orientation,
-      marginMm: pageSetup.marginMm,
-      // Always forward watermark (even undefined) so clearing it propagates.
-      watermark: pageSetup.watermark,
-      firstPageMarginMm: pageSetup.firstPageMarginMm,
-      ...(pageSetup.headerFooter ? { headerFooter: pageSetup.headerFooter } : {}),
-    });
-  }, [editor, pageSetup]);
+  /* Sync global pageSetup (ruler, ribbon, dialogs) into every page-node */
+  useSyncPageSetup(editor, pageSetup);
 
   /* custom-event bridge between menu components and shell */
-  useEffect(() => {
-    const onSearch = () => openSearch();
-    const onPageSetup = () => openPageSetup();
-    const onShortcuts = () => openShortcuts();
-    const onToc = () => openToc();
-    const onHeaderFooter = () => openHeaderFooter();
-    const onTemplates = () => useTemplateStore.getState().openPanel();
-    const onInsertVariable = (e: CustomEvent) => {
-      const name = e.detail as string;
-      const ed = editorRef.current;
-      if (!isLiveEditor(ed) || !name) return;
-      ed.chain().focus().run();
-      insertVariableBadge(ed, ed.state.selection.from, name);
-    };
-    const onOpenMath = () => setMathOpen(true);
-    const onPageNext = () => goToPage(currentPageRef.current + 1);
-    const onPagePrev = () => goToPage(currentPageRef.current - 1);
-    const onEnterPreview = () => {
-      const ed = editorRef.current;
-      if (isLiveEditor(ed)) {
-        const pageSetup = useEditorStore.getState().pageSetup;
-        const html = normalizeImagePercentWidths(
-          unwrapPageNode(ed.getHTML()),
-          pageSetup,
-          measurePageBodyWidthFromDom()
-        );
-        useEditorStore.getState().setHtml(html);
-      } else {
-        useEditorStore.getState().flushDocumentHtml();
-      }
-    };
-    addEventListener(EVENT_NAMES.enterPreview, onEnterPreview);
-    addEventListener("wordhtml:open-search", onSearch);
-    addEventListener("wordhtml:open-page-setup", onPageSetup);
-    addEventListener("wordhtml:open-shortcuts", onShortcuts);
-    addEventListener("wordhtml:open-toc", onToc);
-    addEventListener("wordhtml:open-header-footer", onHeaderFooter);
-    addEventListener("wordhtml:open-templates", onTemplates);
-    addEventListener("wordhtml:insert-variable", onInsertVariable);
-    addEventListener("wordhtml:page-next", onPageNext);
-    addEventListener("wordhtml:page-prev", onPagePrev);
-    window.addEventListener("wordhtml:open-math-dialog", onOpenMath);
-    return () => {
-      removeEventListener(EVENT_NAMES.enterPreview, onEnterPreview);
-      removeEventListener("wordhtml:open-search", onSearch);
-      removeEventListener("wordhtml:open-page-setup", onPageSetup);
-      removeEventListener("wordhtml:open-shortcuts", onShortcuts);
-      removeEventListener("wordhtml:open-toc", onToc);
-      removeEventListener("wordhtml:open-header-footer", onHeaderFooter);
-      removeEventListener("wordhtml:open-templates", onTemplates);
-      removeEventListener("wordhtml:insert-variable", onInsertVariable);
-      removeEventListener("wordhtml:page-next", onPageNext);
-      removeEventListener("wordhtml:page-prev", onPagePrev);
-      window.removeEventListener("wordhtml:open-math-dialog", onOpenMath);
-    };
-  }, [openSearch, openPageSetup, openShortcuts, openToc, openHeaderFooter, goToPage]);
+  useEditorEventBridge({ editorRef, currentPageRef, goToPage, setMathOpen });
 
   /* cross-tab sync: rehydrate stores when localStorage changes in another tab */
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "wordhtml-editor") {
-        useEditorStore.persist.rehydrate();
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  useCrossTabSync();
 
   const handleMarginChange = useCallback(
     (leftMm: number, rightMm: number) => {

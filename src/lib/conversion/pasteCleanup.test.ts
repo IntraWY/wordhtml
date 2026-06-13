@@ -214,3 +214,145 @@ describe("cleanPastedHtml", () => {
     expect(out).toContain("B");
   });
 });
+
+/**
+ * Paste + Enter bug (roadmap Phase 1.1): cleaned output must be a flat,
+ * splittable paragraph structure — no block content trapped inside inline
+ * wrappers, no loose inline content at the top level. Otherwise Tiptap maps
+ * the paste to nodes that Enter/splitBlock cannot split cleanly.
+ */
+
+const BLOCK_LEVEL = new Set([
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "table",
+  "blockquote",
+  "pre",
+  "figure",
+  "hr",
+  "img",
+]);
+
+function assertSplittableStructure(html: string) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  // 1. Every top-level node must be a block element (no loose text/inline).
+  for (const node of Array.from(doc.body.childNodes)) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      expect((node.textContent ?? "").trim()).toBe("");
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tag = (node as Element).tagName.toLowerCase();
+      expect(BLOCK_LEVEL.has(tag), `top-level <${tag}> is not block-level`).toBe(
+        true
+      );
+    }
+  }
+
+  // 2. No inline element may contain block-level content.
+  const inlineTags =
+    "span,b,strong,i,em,u,s,strike,font,mark,sub,sup,big,small";
+  for (const el of Array.from(doc.body.querySelectorAll(inlineTags))) {
+    expect(
+      el.querySelector("p,div,h1,h2,h3,h4,h5,h6,ul,ol,table,blockquote"),
+      `<${el.tagName.toLowerCase()}> traps block content`
+    ).toBeNull();
+  }
+}
+
+describe("cleanPastedHtml — splittable paragraph structure (Paste+Enter)", () => {
+  it("unwraps the Google Docs <b id=docs-internal-guid> wrapper around paragraphs", () => {
+    const input = `<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-1a2b3c"><p dir="ltr" style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;"><span style="font-size:11pt;font-family:Arial;">Line A</span></p><p dir="ltr"><span style="font-size:11pt;">Line B</span></p></b>`;
+    const result = cleanPastedHtml(input);
+    expect(result).not.toContain("docs-internal-guid");
+    expect(result).not.toMatch(/<b[\s>]/i);
+    expect(result).toContain("Line A");
+    expect(result).toContain("Line B");
+    assertSplittableStructure(result);
+  });
+
+  it("unwraps a <span> that wraps block-level children", () => {
+    const input = `<span style="color:red"><p>One</p><p>Two</p></span>`;
+    const result = cleanPastedHtml(input);
+    expect(result).toContain("<p>One</p>");
+    expect(result).toContain("<p>Two</p>");
+    assertSplittableStructure(result);
+  });
+
+  it("keeps inline formatting tags that contain only inline content", () => {
+    const input = `<p><b>bold</b> and <span style="color:red">red</span></p>`;
+    const result = cleanPastedHtml(input);
+    expect(result).toContain("<b>bold</b>");
+    expect(result).toContain(`<span style="color:red">red</span>`);
+  });
+
+  it("strips unquoted Word class attributes (class=MsoNormal)", () => {
+    const input = `<p class=MsoNormal>text</p>`;
+    const result = cleanPastedHtml(input);
+    expect(result).not.toContain("MsoNormal");
+    expect(result).toContain("text");
+  });
+
+  it("does not mangle single-quoted style attrs containing double-quoted font names (Thai Word paste)", () => {
+    const input = `<p class=MsoNormal><span lang=TH style='font-size:16.0pt;font-family:"TH SarabunPSK",sans-serif;mso-fareast-font-family:"Times New Roman"'>ข้อความ<o:p></o:p></span></p>`;
+    const result = cleanPastedHtml(input);
+    // The old quote-naive regex produced garbage attributes like th="" sarabunpsk",sans-serif'=""
+    expect(result).not.toContain(`th=""`);
+    expect(result).not.toContain(`sarabunpsk`);
+    expect(result).not.toContain("mso-fareast-font-family");
+    expect(result).toContain("TH SarabunPSK");
+    expect(result).toContain("font-size:16.0pt");
+    expect(result).toContain("ข้อความ");
+    assertSplittableStructure(result);
+  });
+
+  it("wraps loose br-separated inline content at the top level into paragraphs", () => {
+    const input = `Line 1<br>Line 2<br>Line 3`;
+    const result = cleanPastedHtml(input);
+    expect(result).toContain("<p>Line 1</p>");
+    expect(result).toContain("<p>Line 2</p>");
+    expect(result).toContain("<p>Line 3</p>");
+    assertSplittableStructure(result);
+  });
+
+  it("wraps loose text exposed by unwrapping mixed divs into paragraphs", () => {
+    const input = `<div>loose text<p>para</p>more loose</div>`;
+    const result = cleanPastedHtml(input);
+    expect(result).toContain("<p>loose text</p>");
+    expect(result).toContain("<p>para</p>");
+    expect(result).toContain("<p>more loose</p>");
+    assertSplittableStructure(result);
+  });
+
+  it("produces splittable structure from a realistic full Word clipboard payload", () => {
+    const input = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+<style><!-- p.MsoNormal { mso-style-parent:""; font-size:16.0pt; } --></style>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Normal</w:View></w:WordDocument></xml><![endif]-->
+</head>
+<body lang=TH style='tab-interval:36.0pt'>
+<div class=WordSection1>
+<p class=MsoNormal><span lang=TH style='font-size:16.0pt;font-family:"TH SarabunPSK",sans-serif'>ย่อหน้าแรก<o:p></o:p></span></p>
+<p class=MsoNormal><b><span lang=TH style='font-size:16.0pt'>ย่อหน้าสอง</span></b><o:p></o:p></p>
+<div><span lang=TH>บรรทัดหนึ่ง</span><br><span lang=TH>บรรทัดสอง</span></div>
+</div>
+</body>
+</html>`;
+    const result = cleanPastedHtml(input);
+    expect(result).not.toContain("WordSection1");
+    expect(result).not.toContain("MsoNormal");
+    expect(result).not.toContain("mso-");
+    expect(result).not.toContain("<o:p>");
+    expect(result).toContain("ย่อหน้าแรก");
+    expect(result).toContain("ย่อหน้าสอง");
+    expect(result).toContain("บรรทัดหนึ่ง");
+    expect(result).toContain("บรรทัดสอง");
+    assertSplittableStructure(result);
+  });
+});

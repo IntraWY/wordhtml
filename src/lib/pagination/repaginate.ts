@@ -1,11 +1,12 @@
 "use client";
 
 import type { Editor } from "@tiptap/react";
-import type { Node as PMNode } from "@tiptap/pm/model";
+import type { Node as PMNode, NodeType } from "@tiptap/pm/model";
 import { Fragment } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import { TextSelection } from "@tiptap/pm/state";
 import { computePageBreaks } from "./computePageBreaks";
+import { splitTableAtRowBoundaries } from "./tableReflow";
 
 /**
  * Holistic re-pagination.
@@ -153,7 +154,7 @@ function findParagraphSegments(el: Element, limitPx: number): Segment[] {
 
 /* ---- measurement ---- */
 
-interface DomMeasurement {
+export interface DomMeasurement {
   heights: number[];
   atomic: Set<number>;
   els: Element[];
@@ -179,11 +180,19 @@ function measureDomBlocks(): DomMeasurement | null {
 
 /* ---- flow snapshot ---- */
 
-interface FlowSnapshot {
+export interface FlowSnapshot {
   blocks: PMNode[];
   pageBlockCounts: number[];
   pageSetup: unknown;
   blockStarts: number[];
+  /**
+   * Per source page, its editable `pageHeader` / `pageFooter` nodes (or null).
+   * Captured so the holistic rebuild can preserve them — without this, every
+   * reflow silently dropped on-canvas headers/footers (A1 data-loss bug).
+   * Parallel to `pageBlockCounts`.
+   */
+  pageHeaders: (PMNode | null)[];
+  pageFooters: (PMNode | null)[];
 }
 
 function readFlow(editor: Editor): FlowSnapshot | null {
@@ -191,6 +200,8 @@ function readFlow(editor: Editor): FlowSnapshot | null {
   const blocks: PMNode[] = [];
   const blockStarts: number[] = [];
   const pageBlockCounts: number[] = [];
+  const pageHeaders: (PMNode | null)[] = [];
+  const pageFooters: (PMNode | null)[] = [];
   let pageSetup: unknown = null;
   let sawPageNode = false;
 
@@ -199,8 +210,18 @@ function readFlow(editor: Editor): FlowSnapshot | null {
     sawPageNode = true;
     if (pageSetup === null) pageSetup = pageNode.attrs.pageSetup;
 
+    let header: PMNode | null = null;
+    let footer: PMNode | null = null;
     let countOnPage = 0;
     pageNode.forEach((child, childOffset) => {
+      if (child.type.name === "pageHeader") {
+        header = child;
+        return;
+      }
+      if (child.type.name === "pageFooter") {
+        footer = child;
+        return;
+      }
       if (child.type.name !== "pageBody") return;
       const pageBodyStart = pageOffset + 1 + childOffset;
       let inner = pageBodyStart + 1;
@@ -212,10 +233,19 @@ function readFlow(editor: Editor): FlowSnapshot | null {
       });
     });
     pageBlockCounts.push(countOnPage);
+    pageHeaders.push(header);
+    pageFooters.push(footer);
   });
 
   if (!sawPageNode || blocks.length === 0) return null;
-  return { blocks, blockStarts, pageBlockCounts, pageSetup };
+  return {
+    blocks,
+    blockStarts,
+    pageBlockCounts,
+    pageSetup,
+    pageHeaders,
+    pageFooters,
+  };
 }
 
 function segmentize<T>(items: T[], breaks: number[]): T[][] {
@@ -265,6 +295,37 @@ function expandTallBlocks(
     // cycle drifts offsets, multiplies pieces, and can drop content. Pieces are
     // re-joined on export; in-editor they stay as fitting paragraphs.
     const alreadyPiece = block.attrs.softSplit === true;
+
+    // A3 (auto): an over-tall TABLE splits at row boundaries, mirroring the
+    // paragraph path. `splitTableAtRowBoundaries` repeats the header on each
+    // continuation piece (marked via `data-repeat-source`) and re-joins on
+    // export. Returns null for an un-splittable table (e.g. one giant row) →
+    // fall through to the atomic whole-table path (own page), no loop.
+    if (tooTall && el && block.type.name === "table") {
+      const pieces = splitTableAtRowBoundaries(
+        block,
+        el,
+        measured.heights[i],
+        limitPx
+      );
+      if (pieces && pieces.length > 1) {
+        pieces.forEach((piece) => {
+          blocks.push(piece.node);
+          heights.push(piece.height);
+          if (
+            i === caretBlockOrig &&
+            caretBlock === -1 &&
+            caretInnerOrig >= piece.startOffset &&
+            caretInnerOrig <= piece.endOffset
+          ) {
+            caretBlock = blocks.length - 1;
+            caretInner =
+              caretInnerOrig - piece.startOffset + piece.innerShift;
+          }
+        });
+        continue;
+      }
+    }
 
     if (tooTall && !alreadyPiece && el && isSplittableText(block, el)) {
       const segs = findParagraphSegments(el, limitPx);
@@ -381,15 +442,10 @@ export function buildRepaginateTransaction(
     return { tr: null, changed: false, pageCount: flow.pageBlockCounts.length };
   }
 
-  const newPages: PMNode[] = desiredSegments.map((segment, idx) => {
-    const content = segment.length
-      ? Fragment.fromArray(segment)
-      : Fragment.from(paragraphType.create());
-    const body = pageBodyType.create(null, content);
-    return pageNodeType.create(
-      { pageNumber: idx + 1, pageSetup: flow.pageSetup },
-      [body]
-    );
+  const newPages = buildPageNodes(desiredSegments, flow, {
+    pageNodeType,
+    pageBodyType,
+    paragraphType,
   });
 
   const tr = editor.state.tr.replaceWith(
@@ -414,6 +470,56 @@ export function buildRepaginateTransaction(
   }
 
   return { tr, changed: true, pageCount: newPages.length };
+}
+
+interface PageNodeTypes {
+  pageNodeType: NodeType;
+  pageBodyType: NodeType;
+  paragraphType: NodeType;
+}
+
+/**
+ * Rebuild the `pageNode` list for a repagination, preserving each source page's
+ * editable header/footer.
+ *
+ * Source pages and rebuilt pages map 1:1 by index; a rebuilt page reuses its
+ * same-index source header/footer when present, otherwise falls back to page
+ * 0's. That covers:
+ *  - `{allPages}` headers (one on every source page) → re-applied per page;
+ *  - growing the doc (new pages inherit the document's page-1 header/footer);
+ *  - shrinking the doc (orphaned source headers/footers are simply not carried
+ *    onto a surviving page — never silently lost from a page that keeps it).
+ *
+ * Exported for unit testing the header/footer-preservation contract without
+ * DOM measurement.
+ */
+export function buildPageNodes(
+  desiredSegments: PMNode[][],
+  flow: Pick<FlowSnapshot, "pageHeaders" | "pageFooters" | "pageSetup">,
+  types: PageNodeTypes
+): PMNode[] {
+  const { pageNodeType, pageBodyType, paragraphType } = types;
+  const headerFor = (idx: number): PMNode | null =>
+    flow.pageHeaders[idx] ?? flow.pageHeaders[0] ?? null;
+  const footerFor = (idx: number): PMNode | null =>
+    flow.pageFooters[idx] ?? flow.pageFooters[0] ?? null;
+
+  return desiredSegments.map((segment, idx) => {
+    const content = segment.length
+      ? Fragment.fromArray(segment)
+      : Fragment.from(paragraphType.create());
+    const body = pageBodyType.create(null, content);
+    const children: PMNode[] = [];
+    const header = headerFor(idx);
+    if (header) children.push(header);
+    children.push(body);
+    const footer = footerFor(idx);
+    if (footer) children.push(footer);
+    return pageNodeType.create(
+      { pageNumber: idx + 1, pageSetup: flow.pageSetup },
+      children
+    );
+  });
 }
 
 function blockContentStarts(doc: PMNode): number[] {

@@ -1,14 +1,47 @@
-import type { PageSetup } from "@/types";
+import type { HeaderFooterConfig, PageSetup } from "@/types";
 import { replacePageTokens } from "@/lib/placeholders";
 import { resolveHeaderFooter } from "@/lib/headerFooterResolve";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
+
+/**
+ * Resolve the final, sanitized header/footer HTML for one page.
+ *
+ * Single source of truth shared by the live canvas chrome
+ * (`PageChromeLayer`), the HTML export (`buildHeaderFooterExportBlocks`)
+ * and the PDF export (`exportPdf`): variant selection (first page /
+ * odd-even) → page-token substitution → sanitize.
+ */
+export function resolvePageChromeHtml(
+  hf: HeaderFooterConfig,
+  pageNumber: number,
+  totalPages: number,
+  fileName?: string | null
+): { headerHtml: string; footerHtml: string } {
+  const { header, footer } = resolveHeaderFooter(
+    pageNumber,
+    hf.headerHtml ?? "",
+    hf.footerHtml ?? "",
+    hf.differentFirstPage ?? false,
+    hf.differentOddEven ?? false,
+    hf.firstPageHeaderHtml,
+    hf.firstPageFooterHtml,
+    hf.evenHeaderHtml,
+    hf.evenFooterHtml
+  );
+  const ctx = { pageNumber, totalPages, fileName };
+  return {
+    headerHtml: sanitizeHtml(replacePageTokens(header, ctx)),
+    footerHtml: sanitizeHtml(replacePageTokens(footer, ctx)),
+  };
+}
 
 /**
  * Build print CSS + fixed header/footer blocks for HTML/PDF export when enabled.
  */
 export function buildHeaderFooterExportBlocks(
   pageSetup: PageSetup | undefined,
-  totalPages: number
+  totalPages: number,
+  fileName?: string | null
 ): { css: string; bodyPrefix: string; bodySuffix: string } {
   const hf = pageSetup?.headerFooter;
   if (!hf?.enabled) {
@@ -17,19 +50,12 @@ export function buildHeaderFooterExportBlocks(
 
   const pages: string[] = [];
   for (let p = 1; p <= Math.max(1, totalPages); p++) {
-    const { header, footer } = resolveHeaderFooter(
+    const { headerHtml: h, footerHtml: f } = resolvePageChromeHtml(
+      hf,
       p,
-      hf.headerHtml,
-      hf.footerHtml,
-      hf.differentFirstPage,
-      hf.differentOddEven,
-      hf.firstPageHeaderHtml,
-      hf.firstPageFooterHtml,
-      hf.evenHeaderHtml,
-      hf.evenFooterHtml
+      totalPages,
+      fileName
     );
-    const h = sanitizeHtml(replacePageTokens(header, { pageNumber: p, totalPages }));
-    const f = sanitizeHtml(replacePageTokens(footer, { pageNumber: p, totalPages }));
     pages.push(
       `<div class="export-page-chrome" data-page="${p}" style="page-break-after: always;">
         <div class="export-hf-header">${h}</div>

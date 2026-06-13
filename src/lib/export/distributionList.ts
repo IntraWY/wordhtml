@@ -15,7 +15,7 @@ function escapeRegExp(text: string): string {
 }
 
 /** Trim, drop blanks, de-duplicate while preserving first-seen order. */
-function normalizeRecipients(recipients: string[]): string[] {
+export function normalizeRecipients(recipients: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of recipients) {

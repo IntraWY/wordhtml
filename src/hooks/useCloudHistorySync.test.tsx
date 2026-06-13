@@ -8,7 +8,9 @@ vi.mock("@/lib/firebaseConfig", () => ({
 }));
 
 const subscribeSnapshots = vi.fn();
-const uploadLocalSnapshotsToCloud = vi.fn(() => Promise.resolve());
+const uploadLocalSnapshotsToCloud = vi.fn(
+  (..._args: unknown[]): Promise<void> => Promise.resolve()
+);
 
 vi.mock("@/lib/historyFirestore", () => ({
   subscribeSnapshots: (...args: unknown[]) => subscribeSnapshots(...args),
@@ -51,10 +53,13 @@ describe("useCloudHistorySync", () => {
   });
 
   it("does not subscribe until persisted history has hydrated", () => {
-    let hydrationCb: (() => void) | null = null;
+    type HydrationListener = Parameters<
+      typeof useEditorStore.persist.onFinishHydration
+    >[0];
+    let hydrationCb: HydrationListener | null = null;
     vi.spyOn(useEditorStore.persist, "hasHydrated").mockReturnValue(false);
     vi.spyOn(useEditorStore.persist, "onFinishHydration").mockImplementation(
-      (cb: () => void) => {
+      (cb: HydrationListener) => {
         hydrationCb = cb;
         return () => {};
       }
@@ -64,7 +69,7 @@ describe("useCloudHistorySync", () => {
     expect(subscribeSnapshots).not.toHaveBeenCalled();
 
     act(() => {
-      hydrationCb?.();
+      hydrationCb?.(useEditorStore.getState());
     });
     expect(subscribeSnapshots).toHaveBeenCalledTimes(1);
   });
@@ -90,11 +95,44 @@ describe("useCloudHistorySync", () => {
     renderHook(() => useCloudHistorySync());
     expect(subscribeSnapshots).toHaveBeenCalledTimes(1);
 
+    const remote = [snap("a", ts, "<p>stale remote</p>")];
     act(() => {
-      onNext?.([snap("a", ts, "<p>stale remote</p>")]);
+      onNext?.(remote);
     });
 
     expect(useEditorStore.getState().history[0]!.html).toBe("<p>local edit</p>");
     expect(uploadLocalSnapshotsToCloud).toHaveBeenCalledTimes(1);
+    // Exercise the real snapshotsToUpload filter: the equal-savedAt local edit
+    // carrying locallyUpdatedAt must be passed through for upload with the
+    // exact (uid, current, remote) args the hook computed against.
+    expect(uploadLocalSnapshotsToCloud).toHaveBeenCalledWith(
+      "u1",
+      [snap("a", ts, "<p>local edit</p>", { locallyUpdatedAt: ts })],
+      remote
+    );
+  });
+
+  it("does NOT upload when remote already matches local (no local-newer diff)", () => {
+    vi.spyOn(useEditorStore.persist, "hasHydrated").mockReturnValue(true);
+
+    const ts = "2026-01-02T00:00:00.000Z";
+    useEditorStore.setState({
+      history: [snap("a", ts, "<p>same</p>", { locallyUpdatedAt: ts })],
+    });
+
+    let onNext: ((remote: DocumentSnapshot[]) => void) | null = null;
+    subscribeSnapshots.mockImplementation(
+      (_uid: string, next: (remote: DocumentSnapshot[]) => void) => {
+        onNext = next;
+        return () => {};
+      }
+    );
+
+    renderHook(() => useCloudHistorySync());
+    act(() => {
+      onNext?.([snap("a", ts, "<p>same</p>")]);
+    });
+
+    expect(uploadLocalSnapshotsToCloud).not.toHaveBeenCalled();
   });
 });

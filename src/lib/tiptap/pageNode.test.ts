@@ -1,7 +1,30 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { Editor } from "@tiptap/core";
+import StarterKit from "@tiptap/starter-kit";
 import { PageNode, type PageNodeAttributes } from "./pageNode";
+import { PageBodyNode } from "./pageBody";
+import { PagedDocument } from "./pagedDocument";
+import { PageBreak } from "./pageBreak";
 import { A4, LETTER, mmToPx } from "@/lib/page";
 import type { PageSetup } from "@/types";
+
+/**
+ * Editor harness with the page schema. PageNode bundles PageHeaderNode +
+ * PageFooterNode via addExtensions(), so registering PageNode + PageBodyNode is
+ * enough for the `pageHeader? pageBody pageFooter?` content expression.
+ */
+function createPageEditor(html: string) {
+  return new Editor({
+    extensions: [
+      StarterKit.configure({ document: false }),
+      PagedDocument,
+      PageNode,
+      PageBodyNode,
+      PageBreak,
+    ],
+    content: html,
+  });
+}
 
 // Tiptap v3 types config methods with a strict `this` context that cannot be
 // satisfied in unit tests without a full Editor instance. Cast to `any` so we
@@ -176,6 +199,60 @@ describe("PageNode", () => {
       const defs = c.addAttributes();
       const result = defs.pageSetup.renderHTML!({ pageSetup: undefined });
       expect(result).toEqual({});
+    });
+  });
+
+  describe("schema round-trip (header/footer bundled)", () => {
+    let editor: Editor | null = null;
+
+    afterEach(() => {
+      editor?.destroy();
+      editor = null;
+    });
+
+    it("parses and serializes a page with both header and footer", () => {
+      editor = createPageEditor(
+        '<div class="page-node"><div data-page-header>Top</div>' +
+          "<div data-page-body><p>Body</p></div>" +
+          "<div data-page-footer>Bottom</div></div>"
+      );
+      const html = editor.getHTML();
+      expect(html).toContain('data-page-header="true"');
+      expect(html).toContain('data-page-body="true"');
+      expect(html).toContain('data-page-footer="true"');
+      expect(html).toContain("Top");
+      expect(html).toContain("Bottom");
+      expect(html).toContain("Body");
+    });
+
+    it("parses a page with only a header", () => {
+      editor = createPageEditor(
+        '<div class="page-node"><div data-page-header>Just header</div>' +
+          "<div data-page-body><p>Body</p></div></div>"
+      );
+      const html = editor.getHTML();
+      expect(html).toContain('data-page-header="true"');
+      expect(html).not.toContain('data-page-footer="true"');
+      expect(html).toContain("Just header");
+    });
+
+    it("parses a page with only a footer", () => {
+      editor = createPageEditor(
+        '<div class="page-node"><div data-page-body><p>Body</p></div>' +
+          "<div data-page-footer>Just footer</div></div>"
+      );
+      const html = editor.getHTML();
+      expect(html).toContain('data-page-footer="true"');
+      expect(html).not.toContain('data-page-header="true"');
+      expect(html).toContain("Just footer");
+    });
+
+    it("registers pageHeader and pageFooter node types in the schema", () => {
+      editor = createPageEditor(
+        '<div class="page-node"><div data-page-body><p>Body</p></div></div>'
+      );
+      expect(editor.schema.nodes.pageHeader).toBeTruthy();
+      expect(editor.schema.nodes.pageFooter).toBeTruthy();
     });
   });
 });

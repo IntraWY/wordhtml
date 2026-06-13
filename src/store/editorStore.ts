@@ -163,6 +163,8 @@ interface EditorState {
   fieldValues: Record<string, string>;
   /** How missing {{vars}} appear in export output. */
   exportMissingPolicy: ExportMissingPolicy;
+  /** Strict export mode: unset-variable findings block export (GAP 04). */
+  exportStrictMode: boolean;
   // image compression
   autoCompressImages: boolean;
   // spellcheck
@@ -212,6 +214,7 @@ interface EditorState {
   setPreviewMode: (mode: "edit" | "preview") => void;
   setFieldValue: (fieldId: string, value: string) => void;
   setExportMissingPolicy: (policy: ExportMissingPolicy) => void;
+  setExportStrictMode: (strict: boolean) => void;
   setAutoSave: (partial: Partial<AutoSaveSettings>) => void;
   scheduleAutoSnapshot: () => void;
 }
@@ -259,6 +262,7 @@ export const useEditorStore = create<EditorState>()(
       previewMode: "edit",
       fieldValues: {},
       exportMissingPolicy: "bracket",
+      exportStrictMode: false,
       autoCompressImages: true,
       spellcheckEnabled: true,
       autoSave: DEFAULT_AUTO_SAVE,
@@ -488,6 +492,14 @@ export const useEditorStore = create<EditorState>()(
             };
             rest = state.history.filter((s) => s.id !== state.activeSnapshotId);
           } else {
+            // No active snapshot. Dedup against the most recent history entry
+            // (mirrors `scheduleAutoSnapshot`): if the latest snapshot already
+            // holds this exact HTML, creating a fresh id would duplicate it —
+            // polluting the 20-cap (evicting a real older snapshot) and doubling
+            // a cloud write. This is the race where a Firestore merge clears
+            // `activeSnapshotId` between the 25s cloud timer and the 2-min local
+            // timer. Bail out unchanged.
+            if (state.history[0]?.html === documentHtml) return state;
             snapshot = {
               id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
               fileName: state.fileName,
@@ -676,6 +688,7 @@ export const useEditorStore = create<EditorState>()(
           fieldValues: { ...state.fieldValues, [fieldId]: value },
         })),
       setExportMissingPolicy: (exportMissingPolicy) => set({ exportMissingPolicy }),
+      setExportStrictMode: (exportStrictMode) => set({ exportStrictMode }),
     };
     },
     {
@@ -718,6 +731,7 @@ export const useEditorStore = create<EditorState>()(
         autoCompressImages: state.autoCompressImages,
         spellcheckEnabled: state.spellcheckEnabled,
         exportMissingPolicy: state.exportMissingPolicy,
+        exportStrictMode: state.exportStrictMode,
         autoSave: state.autoSave,
       }),
     }

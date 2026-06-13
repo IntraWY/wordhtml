@@ -32,12 +32,13 @@ export function MobileBlock() {
         <Monitor className="size-3.5 shrink-0" />
         <span>
           หน้าจอเล็ก — ประสบการณ์ใช้งานอาจไม่สมบูรณ์ แนะนำให้ใช้บนเดสก์ท็อป
+          (Small screen — best experienced on desktop)
         </span>
       </div>
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        aria-label="ปิดข้อความ"
+        aria-label="ปิดข้อความ (Dismiss)"
         className="rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100"
       >
         <X className="size-3.5" />

@@ -33,15 +33,24 @@ export function cleanPastedHtml(input: string): string {
   // 5. Strip Office class names
   html = html.replace(/\sclass=["'](?:Mso[\w-]*\s?)+["']/gi, "");
 
-  // 6. Strip mso-* declarations from inline style attributes
-  html = html.replace(/\sstyle=["']([^"']*)["']/gi, (_, styles: string) => {
-    const cleaned = styles
-      .split(";")
-      .map((decl) => decl.trim())
-      .filter((decl) => decl.length > 0 && !/^mso-/i.test(decl))
-      .join("; ");
-    return cleaned ? ` style="${cleaned}"` : "";
-  });
+  // 6. Strip mso-* declarations from inline style attributes.
+  //    Quote-aware: Word emits single-quoted style attrs containing
+  //    double-quoted font names (style='font-family:"TH SarabunPSK",…') —
+  //    a naive [^"']* pattern stops at the inner quote and mangles the tag
+  //    into garbage attributes.
+  html = html.replace(
+    /\sstyle=("[^"]*"|'[^']*')/gi,
+    (_, quoted: string) => {
+      const quote = quoted[0];
+      const styles = quoted.slice(1, -1);
+      const cleaned = styles
+        .split(";")
+        .map((decl) => decl.trim())
+        .filter((decl) => decl.length > 0 && !/^mso-/i.test(decl))
+        .join("; ");
+      return cleaned ? ` style=${quote}${cleaned}${quote}` : "";
+    }
+  );
 
   // 7. Strip lang="" / xml:lang="" attributes
   html = html.replace(/\s(?:xml:)?lang=["'][^"']*["']/gi, "");
@@ -172,6 +181,60 @@ function normalizePastedStructure(html: string): string {
     }
   }
 
+  // ── 0. DOM-level scrub of Word artifacts the raw-string regexes miss ──
+  // Word's clipboard HTML uses unquoted attributes (class=MsoNormal,
+  // lang=TH) that the quoted-attribute regexes don't match. DOMParser has
+  // normalized them by now, so clean them at the DOM level.
+  for (const el of Array.from(doc.body.querySelectorAll("*"))) {
+    const tag = el.tagName.toLowerCase();
+    if (
+      tag === "meta" ||
+      tag === "link" ||
+      tag === "style" ||
+      tag === "script" ||
+      tag === "title"
+    ) {
+      el.remove();
+      continue;
+    }
+    el.removeAttribute("lang");
+    el.removeAttribute("xml:lang");
+    const cls = el.getAttribute("class");
+    if (cls) {
+      const kept = cls
+        .split(/\s+/)
+        .filter((c) => c.length > 0 && !/^(mso|wordsection)/i.test(c));
+      if (kept.length > 0) el.setAttribute("class", kept.join(" "));
+      else el.removeAttribute("class");
+    }
+  }
+
+  // ── 0.5 Unwrap inline elements that wrap block-level content ──
+  // Google Docs wraps the whole clipboard payload in
+  // <b id="docs-internal-guid-…" style="font-weight:normal">…</b>; other
+  // sources do the same with <span>. Block content trapped inside an inline
+  // wrapper confuses Tiptap's paste mapping and breaks Enter/splitBlock.
+  const inlineWrapperSelector =
+    "b,strong,i,em,u,s,strike,span,font,mark,big,small";
+  for (let pass = 0; pass < 10; pass++) {
+    const wrappers = Array.from(
+      doc.body.querySelectorAll(inlineWrapperSelector)
+    ).filter(
+      (el) =>
+        !isInsideSkipped(el) &&
+        Array.from(el.children).some((child) =>
+          blockTags.has(child.tagName.toLowerCase())
+        )
+    );
+    if (wrappers.length === 0) break;
+    for (const el of wrappers) {
+      const parent = el.parentNode;
+      if (!parent) continue;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    }
+  }
+
   // ── 1. Unwrap or convert generic container tags ──
   const containers = Array.from(doc.body.querySelectorAll(containerSelector));
   for (const container of containers) {
@@ -230,6 +293,48 @@ function normalizePastedStructure(html: string): string {
       if (!parent) continue;
       newPs.forEach((np) => parent.insertBefore(np, p));
       parent.removeChild(p);
+    }
+  }
+
+  // ── 3. Wrap loose inline runs at the top level into paragraphs ──
+  // Loose text / inline elements can arrive directly in the clipboard body
+  // ("Line 1<br>Line 2") or be exposed by unwrapping a mixed container
+  // ("<div>text<p>para</p></div>"). Left bare, they paste as content Tiptap
+  // merges into a single unsplittable region; wrap each run in a <p>,
+  // splitting at <br>.
+  {
+    let currentP: HTMLParagraphElement | null = null;
+    for (const node of Array.from(doc.body.childNodes)) {
+      if (node.nodeType === Node.COMMENT_NODE) {
+        doc.body.removeChild(node);
+        continue;
+      }
+      const isElement = node.nodeType === Node.ELEMENT_NODE;
+      const tag = isElement ? (node as Element).tagName.toLowerCase() : "";
+
+      if (isElement && tag === "br") {
+        doc.body.removeChild(node);
+        currentP = null; // close the current paragraph
+        continue;
+      }
+      if (isElement && (blockTags.has(tag) || tag === "img")) {
+        currentP = null;
+        continue;
+      }
+      // Skip whitespace-only text between blocks (don't open a paragraph).
+      if (
+        node.nodeType === Node.TEXT_NODE &&
+        !(node.textContent ?? "").trim() &&
+        currentP === null
+      ) {
+        doc.body.removeChild(node);
+        continue;
+      }
+      if (currentP === null) {
+        currentP = doc.createElement("p");
+        doc.body.insertBefore(currentP, node);
+      }
+      currentP.appendChild(node);
     }
   }
 

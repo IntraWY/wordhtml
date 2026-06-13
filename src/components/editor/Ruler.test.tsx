@@ -140,12 +140,22 @@ describe("Ruler", () => {
         name: /Left indent/i,
       });
 
+      // Default step: 0.25 cm
       fireEvent.keyDown(leftIndent, { key: "ArrowRight" });
-      expect(onIndentChange).toHaveBeenCalledWith(1.1, 0.5);
+      expect(onIndentChange).toHaveBeenCalledWith(1.25, 0.5);
 
       onIndentChange.mockClear();
       fireEvent.keyDown(leftIndent, { key: "ArrowLeft" });
-      expect(onIndentChange).toHaveBeenCalledWith(0.9, 0.5);
+      expect(onIndentChange).toHaveBeenCalledWith(0.75, 0.5);
+
+      // Fine step with Shift: 0.05 cm
+      onIndentChange.mockClear();
+      fireEvent.keyDown(leftIndent, { key: "ArrowRight", shiftKey: true });
+      expect(onIndentChange).toHaveBeenCalledWith(1.05, 0.5);
+
+      onIndentChange.mockClear();
+      fireEvent.keyDown(leftIndent, { key: "ArrowLeft", shiftKey: true });
+      expect(onIndentChange).toHaveBeenCalledWith(0.95, 0.5);
     });
 
     it("mouse drag on margin handle calls onMarginChange with snapped value", async () => {
@@ -471,6 +481,229 @@ describe("Ruler", () => {
       onMarginChange.mockClear();
       fireEvent.keyDown(topSlider, { key: "ArrowUp" });
       expect(onMarginChange).toHaveBeenCalledWith(24, 25);
+    });
+  });
+
+  describe("custom tab stops", () => {
+    it("renders one marker per tab stop", () => {
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[1.5, 4, 8.25]}
+          onTabStopsChange={vi.fn()}
+        />
+      );
+      const markers = container.querySelectorAll(".ruler-tab-stop");
+      expect(markers.length).toBe(3);
+    });
+
+    it("renders no markers and no track when not interactive", () => {
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[2, 5]}
+        />
+      );
+      expect(container.querySelectorAll(".ruler-tab-stop").length).toBe(0);
+      expect(
+        container.querySelector("[data-testid='ruler-tab-track']")
+      ).toBeNull();
+    });
+
+    it("tab-stop marker exposes slider a11y attributes (Thai label)", () => {
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[4]}
+          onTabStopsChange={vi.fn()}
+        />
+      );
+      const marker = screen.getByRole("slider", { name: /Tab stop/i });
+      expect(marker).toHaveAttribute("aria-orientation", "horizontal");
+      expect(marker).toHaveAttribute("aria-valuenow", "4");
+      expect(marker).toHaveAttribute("aria-valuemin", "0.25");
+      expect(marker).toHaveAttribute("aria-valuemax");
+      expect(marker.getAttribute("aria-label")).toContain("แท็บ");
+    });
+
+    it("ArrowRight/ArrowLeft move a tab stop by 0.25cm", () => {
+      const onTabStopsChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[4]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const marker = screen.getByRole("slider", { name: /Tab stop/i });
+
+      fireEvent.keyDown(marker, { key: "ArrowRight" });
+      expect(onTabStopsChange).toHaveBeenLastCalledWith([4.25]);
+
+      onTabStopsChange.mockClear();
+      fireEvent.keyDown(marker, { key: "ArrowLeft" });
+      expect(onTabStopsChange).toHaveBeenLastCalledWith([3.75]);
+    });
+
+    it("Delete/Backspace removes a tab stop", () => {
+      const onTabStopsChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[2, 5]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const markers = screen.getAllByRole("slider", { name: /Tab stop/i });
+      fireEvent.keyDown(markers[0], { key: "Delete" });
+      expect(onTabStopsChange).toHaveBeenLastCalledWith([5]);
+
+      onTabStopsChange.mockClear();
+      fireEvent.keyDown(markers[1], { key: "Backspace" });
+      expect(onTabStopsChange).toHaveBeenLastCalledWith([2]);
+    });
+
+    it("double-clicking a marker removes it", () => {
+      const onTabStopsChange = vi.fn();
+      render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={cmToPx(2.54)}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[3, 6]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const markers = screen.getAllByRole("slider", { name: /Tab stop/i });
+      fireEvent.doubleClick(markers[0]);
+      expect(onTabStopsChange).toHaveBeenLastCalledWith([6]);
+    });
+
+    it("clicking the lower-half track adds a snapped tab stop", () => {
+      const onTabStopsChange = vi.fn();
+      const marginStart = cmToPx(2.54);
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={marginStart}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const track = container.querySelector(
+        "[data-testid='ruler-tab-track']"
+      ) as HTMLElement;
+      expect(track).not.toBeNull();
+
+      // getBoundingClientRect is 0 in jsdom, so clientX maps directly:
+      // px = clientX - 0 - marginStart. Pick clientX = marginStart + 3cm.
+      const targetCm = 3;
+      fireEvent.click(track, {
+        clientX: marginStart + targetCm * PX_PER_CM,
+        clientY: 10,
+      });
+      expect(onTabStopsChange).toHaveBeenCalledTimes(1);
+      const added = onTabStopsChange.mock.calls[0][0] as number[];
+      expect(added).toContain(3);
+    });
+
+    it("track add fires on click, NOT on mousedown (so a drag never adds)", () => {
+      const onTabStopsChange = vi.fn();
+      const marginStart = cmToPx(2.54);
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={marginStart}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const track = container.querySelector(
+        "[data-testid='ruler-tab-track']"
+      ) as HTMLElement;
+
+      // A bare mousedown (the start of a drag) must NOT add a stop.
+      fireEvent.mouseDown(track, {
+        clientX: marginStart + 3 * PX_PER_CM,
+        clientY: 10,
+      });
+      expect(onTabStopsChange).not.toHaveBeenCalled();
+    });
+
+    it("track add skips when the click lands on an existing marker", () => {
+      const onTabStopsChange = vi.fn();
+      const marginStart = cmToPx(2.54);
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={marginStart}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[3]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const track = container.querySelector(
+        "[data-testid='ruler-tab-track']"
+      ) as HTMLElement;
+      const marker = container.querySelector(".ruler-tab-stop") as HTMLElement;
+      expect(marker).not.toBeNull();
+
+      // Click bubbling up from the marker (target = marker) must not add a stop —
+      // it should grab the marker for dragging instead.
+      fireEvent.click(track, {
+        target: marker,
+        clientX: marginStart + 3 * PX_PER_CM,
+        clientY: 10,
+      });
+      expect(onTabStopsChange).not.toHaveBeenCalled();
+    });
+
+    it("track add and drag use the same content origin (marginStart)", () => {
+      const onTabStopsChange = vi.fn();
+      const marginStart = cmToPx(2.54);
+      const { container } = render(
+        <Ruler
+          orientation="horizontal"
+          cm={21}
+          marginStart={marginStart}
+          marginEnd={cmToPx(2.54)}
+          tabStops={[]}
+          onTabStopsChange={onTabStopsChange}
+        />
+      );
+      const track = container.querySelector(
+        "[data-testid='ruler-tab-track']"
+      ) as HTMLElement;
+
+      // Clicking exactly marginStart + 4cm must add a stop AT 4cm — i.e. the add
+      // path measures content-relative cm from the same origin (marginStart) that
+      // drag deltas (pxToCm) preserve. A divergent origin would yield != 4.
+      fireEvent.click(track, {
+        clientX: marginStart + 4 * PX_PER_CM,
+        clientY: 10,
+      });
+      expect(onTabStopsChange).toHaveBeenLastCalledWith([4]);
     });
   });
 

@@ -1,6 +1,7 @@
 import type { TemplateVariable, DataSet, PageSetup } from "@/types";
 import { resolveHtmlPlaceholders } from "@/lib/placeholders/resolve";
 import { stripPaginationWrappers } from "./stripPaginationWrappers";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { wrapAsDocument, triggerDownload, deriveFileName } from "./wrap";
 
 export interface MailMergeOptions {
@@ -38,7 +39,10 @@ export function buildMergedDocuments(
       variables,
       dataRow: row,
     });
-    const body = stripPaginationWrappers(resolved);
+    // Defense-in-depth: sanitize the per-row document exactly like the
+    // single-doc export path (exportHtml/exportDocx) — strips <script>, event
+    // handlers, javascript: URLs from the downloaded HTML.
+    const body = sanitizeHtml(stripPaginationWrappers(resolved));
     const docHtml = wrapAsDocument(body, {
       title: title ?? "document",
       pageSetup,

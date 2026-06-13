@@ -1,3 +1,5 @@
+import { computeFillBreaks, type FillItem } from "./fillBreaks";
+
 export interface ComputePageBreaksOptions {
   /**
    * Indices of blocks that are atomic (cannot be split here, e.g. a table or
@@ -19,6 +21,11 @@ export interface ComputePageBreaksOptions {
  *
  * Never emits a break equal to `heights.length` (which would create an empty
  * trailing page).
+ *
+ * Thin adapter over the shared {@link computeFillBreaks} core (heights → fill
+ * items, atomic set → per-item flag) so the editor and preview engines share
+ * one fill-to-limit implementation. The editor compares with zero tolerance
+ * (`acc + h > limit`), matching `computeFillBreaks`' default.
  */
 export function computePageBreaks(
   heights: number[],
@@ -31,39 +38,9 @@ export function computePageBreaks(
   options: ComputePageBreaksOptions = {}
 ): number[] {
   const atomicOversize = options.atomicOversize ?? new Set<number>();
-  const limitFor =
-    typeof limitPx === "function" ? limitPx : () => limitPx;
-  const breaks: number[] = [];
-  let pageStart = 0;
-  let acc = 0;
-  let pageIndex = 0;
-
-  for (let i = 0; i < heights.length; i++) {
-    const h = heights[i];
-
-    if (atomicOversize.has(i)) {
-      // Close the current page before the oversized block (unless empty).
-      if (i > pageStart) {
-        breaks.push(i);
-        pageIndex++;
-      }
-      // The oversized block occupies its own page; next block starts after it.
-      breaks.push(i + 1);
-      pageIndex++;
-      pageStart = i + 1;
-      acc = 0;
-      continue;
-    }
-
-    if (acc + h > limitFor(pageIndex) && i > pageStart) {
-      breaks.push(i);
-      pageIndex++;
-      pageStart = i;
-      acc = 0;
-    }
-    acc += h;
-  }
-
-  // Drop any break that would create an empty final page.
-  return breaks.filter((b) => b < heights.length);
+  const items: FillItem[] = heights.map((height, i) => ({
+    height,
+    atomic: atomicOversize.has(i),
+  }));
+  return computeFillBreaks(items, limitPx);
 }

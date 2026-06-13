@@ -708,6 +708,22 @@ html[data-theme="dark"] .paper {
   opacity: 0.6;
 }
 
+/* Editing affordance: subtle dashed outline on hover and on the header/footer
+   that currently contains the selection (hf-editing decoration added by the
+   pageHeaderFooter plugin). Helps the user see the otherwise-invisible
+   editable region in the margin band. */
+.page-node .page-header:hover,
+.page-node .page-footer:hover {
+  outline: 1px dashed color-mix(in srgb, var(--color-accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.page-node .page-header.hf-editing,
+.page-node .page-footer.hf-editing {
+  outline: 1px dashed color-mix(in srgb, var(--color-accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
 .content-slot {
   border: 2px dashed var(--color-border-strong);
   border-radius: var(--radius-md);
@@ -787,6 +803,13 @@ html[data-theme="dark"] .paper {
     background: transparent !important;
   }
 
+  /* Off-screen containment must never hide pages from print. Force every
+     contained preview page fully visible so all pages render on paper. */
+  .page-virtual {
+    content-visibility: visible !important;
+    contain-intrinsic-size: auto !important;
+  }
+
   .page-node:last-child {
     page-break-after: auto;
     break-after: auto;
@@ -796,6 +819,14 @@ html[data-theme="dark"] .paper {
   .page-node[data-page-number]::after,
   .page-node::before {
     display: none !important;
+  }
+
+  /* Editing affordance must never print. */
+  .page-node .page-header,
+  .page-node .page-footer,
+  .page-node .page-header.hf-editing,
+  .page-node .page-footer.hf-editing {
+    outline: none !important;
   }
 
   @page {
@@ -973,11 +1004,18 @@ html[data-theme="dark"] .page-node {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-/* Virtual scrolling optimization */
+/* Off-screen page containment for the read-only multi-page preview.
+   `content-visibility: auto` lets the browser skip layout/paint for pages that
+   aren't near the viewport, which is the long-document (50–100+ page) win.
+   The intrinsic size is supplied per page by MultiPagePreview as page-size-aware
+   CSS vars (A4 portrait fallback below) so scroll height stays stable while a
+   page is skipped. PREVIEW-ONLY: never applied to the live editor `.page-node`s,
+   whose `.page-body` is measured by the pagination engine and hosts the caret —
+   `content-visibility` would zero those off-screen measurements. */
 .page-virtual {
-  contain: strict;
   content-visibility: auto;
-  contain-intrinsic-size: 794px 1123px;
+  contain-intrinsic-size: var(--page-intrinsic-w, 794px)
+    var(--page-intrinsic-h, 1143px);
 }
 
 /* Prevent break inside important elements */
@@ -1123,4 +1161,31 @@ html[data-theme="dark"] .wordhtml-driver-popover .driver-popover {
 .prose-editor span[data-type="math-equation"],
 .paper span[data-type="math-equation"] {
   display: inline-block;
+}
+
+/* ── Ruler tab stops (custom click-to-set markers) ── */
+.ruler-tab-stop {
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 9px;
+  outline: none;
+}
+.ruler-tab-stop-glyph {
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  color: #0d9488; /* teal — distinct from blue/purple indent handles */
+  transform: scaleX(0.85);
+  transition: transform 120ms ease, color 120ms ease;
+  pointer-events: none;
+}
+.ruler-tab-stop:hover .ruler-tab-stop-glyph {
+  color: #0f766e;
+  transform: scaleX(0.85) scale(1.2);
+}
+.ruler-tab-stop:focus-visible {
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--color-ring);
 }

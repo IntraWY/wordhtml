@@ -138,6 +138,57 @@ describe("editorStore saveSnapshot in-place", () => {
     expect(state.history[0]!.html).toBe("<p>v2</p>");
   });
 
+  it("new-snapshot branch dedups against history[0] when HTML matches latest", () => {
+    // No active snapshot, but the latest history entry already matches the
+    // live HTML (e.g. activeSnapshotId was cleared by a cloud merge). A second
+    // timer must NOT create a duplicate snapshot.
+    useEditorStore.setState({
+      documentHtml: "<p>same</p>",
+      activeSnapshotId: null,
+      history: [
+        {
+          id: "snap-latest",
+          fileName: null,
+          savedAt: "2026-01-01T00:00:00.000Z",
+          html: "<p>same</p>",
+          wordCount: 1,
+        },
+      ],
+    });
+
+    useEditorStore.getState().saveSnapshot();
+
+    const state = useEditorStore.getState();
+    expect(state.history).toHaveLength(1);
+    expect(state.history[0]!.id).toBe("snap-latest");
+    // No new snapshot, so activeSnapshotId is left untouched (still null).
+    expect(state.activeSnapshotId).toBeNull();
+  });
+
+  it("new-snapshot branch still creates an entry when HTML differs from history[0]", () => {
+    useEditorStore.setState({
+      documentHtml: "<p>changed</p>",
+      activeSnapshotId: null,
+      history: [
+        {
+          id: "snap-latest",
+          fileName: null,
+          savedAt: "2026-01-01T00:00:00.000Z",
+          html: "<p>original</p>",
+          wordCount: 1,
+        },
+      ],
+    });
+
+    useEditorStore.getState().saveSnapshot();
+
+    const state = useEditorStore.getState();
+    expect(state.history).toHaveLength(2);
+    expect(state.history[0]!.html).toBe("<p>changed</p>");
+    expect(state.history[0]!.locallyUpdatedAt).toBeTruthy();
+    expect(state.activeSnapshotId).toBe(state.history[0]!.id);
+  });
+
   it("reset then save creates a new entry", () => {
     useEditorStore.setState({ documentHtml: "<p>before reset</p>" });
     useEditorStore.getState().saveSnapshot();
