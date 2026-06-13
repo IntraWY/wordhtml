@@ -2,7 +2,15 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { useRulerDrag } from "@/hooks/useRulerDrag";
+import {
+  useRulerDrag,
+  snapTabStop,
+  TAB_STOP_SNAP_CM,
+} from "@/hooks/useRulerDrag";
+import {
+  MIN_TAB_STOP_CM,
+  MAX_TAB_STOP_CM,
+} from "@/lib/tiptap/paragraphFormat";
 import {
   PAGE_STACK_GAP_PX,
   PX_PER_CM,
@@ -17,6 +25,9 @@ interface RulerProps {
   indentLeft?: number;  // cm
   indentFirst?: number; // cm offset from indentLeft (can be negative)
   onIndentChange?: (marginLeft: number, textIndent: number) => void;
+  // Custom ruler tab stops (horizontal only). cm positions, content-relative.
+  tabStops?: number[];
+  onTabStopsChange?: (stops: number[]) => void;
   // Margin handles (horizontal or vertical)
   marginLeftMm?: number;
   marginRightMm?: number;
@@ -75,6 +86,8 @@ function RulerInner({
   indentLeft = 0,
   indentFirst = 0,
   onIndentChange,
+  tabStops = [],
+  onTabStopsChange,
   marginLeftMm = 0,
   marginRightMm = 0,
   marginTopMm = 0,
@@ -116,6 +129,7 @@ function RulerInner({
 
   const indentInteractive = isH && !!onIndentChange;
   const marginInteractive = !!onMarginChange;
+  const tabStopsInteractive = isH && !!onTabStopsChange;
 
   const pageSpanPx = totalPx;
 
@@ -196,14 +210,20 @@ function RulerInner({
     marginRightMm,
     marginTopMm,
     marginBottomMm,
+    tabStops,
     onIndentChange,
     onMarginChange,
+    onTabStopsChange,
     onRulerActive,
   });
 
 
   // Hover state helpers
   const [hovered, setHovered] = useState<string | null>(null);
+
+  // Visible focus indicator for keyboard users on slider handles
+  const focusRing =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-ring)] focus-visible:rounded-sm";
 
   const handleEnter = (id: string, label: string) => {
     setHovered(id);
@@ -214,6 +234,48 @@ function RulerInner({
     setHovered(null);
     if (!dragRef.current) onRulerActive?.(null);
   };
+
+  // Add a new tab stop where the user CLICKS the lower-half track.
+  // Click (not mousedown) so a drag — including grabbing an existing marker —
+  // never spuriously adds a stop. Also bail out if the event originated on a
+  // tab-stop marker so a click a pixel off the glyph grabs it instead of adding.
+  const handleTrackAddTabStop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tabStopsInteractive || !onTabStopsChange) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest(".ruler-tab-stop")) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = e.clientX - rect.left - marginStart;
+    const cmPos = snapTabStop(px / PX_PER_CM);
+    if (cmPos < MIN_TAB_STOP_CM || cmPos > MAX_TAB_STOP_CM) return;
+    // Skip if a stop already exists at this snapped position.
+    if (tabStops.some((s) => Math.abs(s - cmPos) < TAB_STOP_SNAP_CM / 2)) return;
+    onTabStopsChange([...tabStops, cmPos]);
+  };
+
+  // Keyboard a11y for an individual tab-stop marker.
+  const handleTabStopKeyDown =
+    (index: number) => (e: React.KeyboardEvent) => {
+      if (!onTabStopsChange) return;
+      const stop = tabStops[index];
+      if (stop == null) return;
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        onTabStopsChange(tabStops.filter((_, i) => i !== index));
+        return;
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const delta = e.key === "ArrowRight" ? TAB_STOP_SNAP_CM : -TAB_STOP_SNAP_CM;
+        const next = Math.round(
+          Math.max(MIN_TAB_STOP_CM, Math.min(MAX_TAB_STOP_CM, stop + delta)) * 100
+        ) / 100;
+        const updated = tabStops.map((s, i) => (i === index ? next : s));
+        onTabStopsChange(updated);
+        onRulerActive?.({
+          label: "แท็บ (Tab stop): " + next.toFixed(2) + " ซม.",
+        });
+      }
+    };
 
   return (
     <div
@@ -326,6 +388,7 @@ function RulerInner({
                 onMouseLeave={handleLeave}
                 className={cn(
                   "absolute z-10 grid cursor-ew-resize place-items-center",
+                  focusRing,
                   hovered === "marginLeft" && "z-20"
                 )}
                 style={{
@@ -364,6 +427,7 @@ function RulerInner({
                 onMouseLeave={handleLeave}
                 className={cn(
                   "absolute z-10 grid cursor-ew-resize place-items-center",
+                  focusRing,
                   hovered === "marginRight" && "z-20"
                 )}
                 style={{
@@ -405,6 +469,7 @@ function RulerInner({
                 onMouseLeave={handleLeave}
                 className={cn(
                   "absolute grid cursor-ns-resize place-items-center",
+                  focusRing,
                   hovered === "marginTop" && "z-20"
                 )}
                 style={{
@@ -450,6 +515,7 @@ function RulerInner({
                   onMouseLeave={handleLeave}
                   className={cn(
                     "absolute grid cursor-ns-resize place-items-center",
+                    focusRing,
                     hovered === "marginBottom" && "z-20"
                   )}
                   style={{
@@ -486,9 +552,10 @@ function RulerInner({
             tabIndex={0}
             aria-orientation="horizontal"
             aria-label={`ย่อหน้าแรก (First-line indent) ${indentFirst.toFixed(1)} ซม.`}
-            aria-valuemin={Number(-indentLeft)}
-            aria-valuemax={maxIndentCm - indentLeft}
+            aria-valuemin={Math.round(-indentLeft * 10)}
+            aria-valuemax={Math.round((maxIndentCm - indentLeft) * 10)}
             aria-valuenow={Math.round(indentFirst * 10)}
+            aria-valuetext={`${indentFirst.toFixed(2)} ซม. (${indentFirst.toFixed(2)} cm)`}
             onMouseDown={startDrag("first")}
             onTouchStart={startDrag("first")}
             onKeyDown={handleKeyDown("first")}
@@ -498,6 +565,7 @@ function RulerInner({
             onMouseLeave={handleLeave}
             className={cn(
               "absolute grid cursor-ew-resize place-items-center",
+              focusRing,
               hovered === "first" && "z-20"
             )}
             style={{
@@ -529,8 +597,9 @@ function RulerInner({
             aria-orientation="horizontal"
             aria-label={`ย่อหน้าซ้าย (Left indent) ${indentLeft.toFixed(1)} ซม.`}
             aria-valuemin={0}
-            aria-valuemax={maxIndentCm}
+            aria-valuemax={Math.round(maxIndentCm * 10)}
             aria-valuenow={Math.round(indentLeft * 10)}
+            aria-valuetext={`${indentLeft.toFixed(2)} ซม. (${indentLeft.toFixed(2)} cm)`}
             onMouseDown={startDrag("left")}
             onTouchStart={startDrag("left")}
             onKeyDown={handleKeyDown("left")}
@@ -540,6 +609,7 @@ function RulerInner({
             onMouseLeave={handleLeave}
             className={cn(
               "absolute grid cursor-ew-resize place-items-center",
+              focusRing,
               hovered === "left" && "z-20"
             )}
             style={{
@@ -580,6 +650,62 @@ function RulerInner({
               }}
             />
           )}
+        </>
+      )}
+
+      {/* Custom tab stops (horizontal interactive ruler only) */}
+      {tabStopsInteractive && (
+        <>
+          {/* Lower-half click target: click empty space to add a tab stop */}
+          <div
+            data-testid="ruler-tab-track"
+            className="absolute left-0 right-0 bottom-0 h-[9px] cursor-copy"
+            style={{ zIndex: 5 }}
+            onClick={handleTrackAddTabStop}
+          />
+          {tabStops.map((stop, i) => {
+            const left = marginStart + stop * PX_PER_CM;
+            const id = `tabStop-${i}`;
+            return (
+              <div
+                key={id}
+                role="slider"
+                tabIndex={0}
+                aria-orientation="horizontal"
+                aria-label={`แท็บ (Tab stop) ${stop.toFixed(2)} ซม.`}
+                aria-valuemin={MIN_TAB_STOP_CM}
+                aria-valuemax={MAX_TAB_STOP_CM}
+                aria-valuenow={stop}
+                aria-valuetext={`${stop.toFixed(2)} ซม. (${stop.toFixed(2)} cm)`}
+                onMouseDown={startDrag("tabStop", i)}
+                onTouchStart={startDrag("tabStop", i)}
+                onKeyDown={handleTabStopKeyDown(i)}
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  onTabStopsChange?.(tabStops.filter((_, j) => j !== i));
+                }}
+                onMouseEnter={() =>
+                  handleEnter(id, `แท็บ (Tab stop): ${stop.toFixed(2)} ซม.`)
+                }
+                onMouseLeave={handleLeave}
+                className={cn(
+                  "ruler-tab-stop absolute cursor-ew-resize",
+                  focusRing,
+                  hovered === id && "z-20"
+                )}
+                style={{
+                  left: `${left}px`,
+                  bottom: "0px",
+                  transform: "translateX(-50%)",
+                  zIndex: hovered === id ? 20 : 8,
+                }}
+              >
+                <span className="ruler-tab-stop-glyph" aria-hidden="true">
+                  L
+                </span>
+              </div>
+            );
+          })}
         </>
       )}
 

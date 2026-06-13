@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { replaceMergeFields, extractMergeFieldNames } from "./mergeFields";
+import {
+  replaceMergeFields,
+  extractMergeFieldNames,
+  applyMergeFilter,
+  parseNumericValue,
+  validateMergeFilters,
+} from "./mergeFields";
 import { replacePageTokens } from "./pageTokens";
 import type { TemplateVariable } from "@/types";
 
@@ -60,6 +66,55 @@ describe("merge-field filters", () => {
 
   it("extractMergeFieldNames sees the name behind |comma", () => {
     expect(extractMergeFieldNames("{{งบค่าแรง|comma}}")).toContain("งบค่าแรง");
+  });
+
+  it("applies |currency to render a fixed 2-decimal amount with separators", () => {
+    expect(applyMergeFilter("1234.5", "currency")).toBe("1,234.50");
+    expect(applyMergeFilter("1234567", "currency")).toBe("1,234,567.00");
+    const v: TemplateVariable[] = [{ name: "x", value: "1234.5", isList: false }];
+    expect(replaceMergeFields("{{x|currency}}", v, {}, { mode: "export" })).toContain(
+      "1,234.50"
+    );
+  });
+
+  it("applies |percent to append a percent sign", () => {
+    expect(applyMergeFilter("7", "percent")).toBe("7%");
+    expect(applyMergeFilter("12.5", "percent")).toBe("12.5%");
+  });
+
+  it("applies |upper / |lower to change case", () => {
+    expect(applyMergeFilter("hello", "upper")).toBe("HELLO");
+    expect(applyMergeFilter("HELLO", "lower")).toBe("hello");
+    const v: TemplateVariable[] = [{ name: "n", value: "hi", isList: false }];
+    expect(replaceMergeFields("{{n|upper}}", v, {}, { mode: "export" })).toContain(
+      "HI"
+    );
+  });
+
+  it("numeric filters pass through non-numeric values unchanged", () => {
+    expect(applyMergeFilter("abc", "currency")).toBe("abc");
+    expect(applyMergeFilter("abc", "percent")).toBe("abc");
+    expect(applyMergeFilter("", "comma")).toBe("");
+  });
+
+  it("parseNumericValue accepts Thai numerals and commas", () => {
+    expect(parseNumericValue("๑,๒๓๔.๕")).toBe(1234.5);
+    expect(parseNumericValue("1,000")).toBe(1000);
+    expect(parseNumericValue("abc")).toBeNull();
+    expect(parseNumericValue("")).toBeNull();
+  });
+
+  it("validateMergeFilters flags a non-numeric value for a numeric filter", () => {
+    const v: TemplateVariable[] = [{ name: "amt", value: "ไม่ใช่เลข", isList: false }];
+    const mismatches = validateMergeFilters("{{amt|currency}}", v, {});
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0].field).toBe("amt");
+    expect(mismatches[0].filter).toBe("currency");
+  });
+
+  it("validateMergeFilters does not flag a valid numeric value", () => {
+    const v: TemplateVariable[] = [{ name: "amt", value: "1234", isList: false }];
+    expect(validateMergeFilters("{{amt|currency}}", v, {})).toHaveLength(0);
   });
 });
 

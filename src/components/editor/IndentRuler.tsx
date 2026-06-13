@@ -56,6 +56,38 @@ function indentFromSiblingBlocks(
   return null;
 }
 
+function tabStopsFromBlock(node: ProseMirrorNode): number[] | null {
+  if (node.type.name === "paragraph" || node.type.name === "heading") {
+    const stops = node.attrs.tabStops;
+    return Array.isArray(stops) ? (stops as number[]) : [];
+  }
+  return null;
+}
+
+function tabStopsFromListItem(listItem: ProseMirrorNode): number[] | null {
+  for (let i = 0; i < listItem.childCount; i++) {
+    const stops = tabStopsFromBlock(listItem.child(i));
+    if (stops) return stops;
+  }
+  return null;
+}
+
+/** Read the current block's custom tab stops (cm). Mirrors readBlockIndent. */
+function readBlockTabStops(editor: Editor): number[] {
+  const { selection } = editor.state;
+  const { $from } = selection;
+  if (!$from) return [];
+  for (let d = $from.depth; d > 0; d--) {
+    const node = $from.node(d);
+    if (node.type.name === "listItem") {
+      return tabStopsFromListItem(node) ?? [];
+    }
+    const stops = tabStopsFromBlock(node);
+    if (stops) return stops;
+  }
+  return [];
+}
+
 function readBlockIndent(editor: Editor): {
   marginLeft: number;
   textIndent: number;
@@ -131,11 +163,21 @@ export function IndentRuler({
 
   const currentIndent = blockIndent ?? { marginLeft: 0, textIndent: 0 };
   const indentInteractive = blockIndent !== null;
+  const currentTabStops =
+    isLiveEditor(editor) && indentInteractive ? readBlockTabStops(editor) : [];
 
   const handleIndentChange = useCallback(
     (marginLeft: number, textIndent: number) => {
       if (!isLiveEditor(editor)) return;
       editor.commands.setIndent(marginLeft, textIndent);
+    },
+    [editor]
+  );
+
+  const handleTabStopsChange = useCallback(
+    (stops: number[]) => {
+      if (!isLiveEditor(editor)) return;
+      editor.commands.setTabStops(stops);
     },
     [editor]
   );
@@ -149,6 +191,8 @@ export function IndentRuler({
       indentLeft={currentIndent.marginLeft}
       indentFirst={currentIndent.textIndent}
       onIndentChange={indentInteractive ? handleIndentChange : undefined}
+      tabStops={currentTabStops}
+      onTabStopsChange={indentInteractive ? handleTabStopsChange : undefined}
       marginLeftMm={marginLeftMm}
       marginRightMm={marginRightMm}
       onMarginChange={onMarginChange}

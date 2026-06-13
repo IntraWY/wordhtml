@@ -71,7 +71,7 @@ export async function exportPdf(
     .prose-editor ul, .paper ul { list-style: disc; padding-left: 1.5em; margin: 0.75em 0; }
     .prose-editor ol, .paper ol { list-style: decimal; padding-left: 1.5em; margin: 0.75em 0; }
     .prose-editor li, .paper li { margin: 0.25em 0; }
-    .prose-editor blockquote, .paper blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
+    .prose-editor blockquote, .paper blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }
     .prose-editor a, .paper a { color: #2563eb; text-decoration: underline; }
     .prose-editor strong, .paper strong { font-weight: 700; }
     .prose-editor em, .paper em { font-style: italic; }
@@ -102,7 +102,7 @@ export async function exportPdf(
     td, th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
     th { background: #f4f4f5; font-weight: 600; }
     td[data-borders="none"], th[data-borders="none"] { border: none; }
-    blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
+    blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }
     code { background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.92em; }
     pre { background: #f4f4f5; padding: 1em; border-radius: 6px; overflow-x: auto; margin: 1em 0; }
     pre code { background: transparent; padding: 0; }

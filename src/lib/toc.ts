@@ -35,10 +35,15 @@ export function generateToc(html: string): TocItem[] {
 }
 
 function slugify(text: string): string {
+  // Keep Unicode marks (\p{M}) — Thai vowels/tone marks (ุ ี ่ ้ …) are
+  // nonspacing marks, not letters; stripping them turns "สรุป" into "สรป" and
+  // breaks anchor↔heading id matching. We also skip NFD normalization so
+  // composed Latin letters stay intact rather than decomposing into base +
+  // mark. generateToc() and assignHeadingIds() share this fn, so ids and
+  // anchor hrefs stay in lockstep.
   return text
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/[^\p{L}\p{N}\p{M}\s-]/gu, "")
     .trim()
     .replace(/\s+/g, "-");
 }

@@ -5,6 +5,7 @@ import { stripPaginationWrappers } from "@/lib/export/stripPaginationWrappers";
 import { splitHtmlIntoPages } from "@/lib/paginationEngine";
 import { measureChromeReservePx } from "@/lib/pageChromeReserve";
 import { PAGE_CANVAS_PADDING_PX, PAGE_STACK_GAP_PX } from "@/lib/page";
+import { intrinsicPageSize, shouldContainPages } from "@/lib/pageContainment";
 import { cn } from "@/lib/utils";
 import { ProcessedContent } from "./ProcessedContent";
 import { resolveHeaderFooter } from "./PageHeaderFooter";
@@ -40,6 +41,14 @@ export function MultiPagePreview({
     });
   }, [html, pageSetup, headerFooterReservePx]);
 
+  // Off-screen page containment: only for large previews, where skipping the
+  // render of off-screen pages is a clear win. The intrinsic size is page-size
+  // aware (A4 vs Letter, portrait vs landscape) so the scroll height stays
+  // stable while pages aren't rendered. Applied inline (overriding the static
+  // `.page-virtual` rule) so it tracks the active page setup.
+  const contain = shouldContainPages(pages.length);
+  const intrinsic = useMemo(() => intrinsicPageSize(pageSetup), [pageSetup]);
+
   return (
     <div
       className={cn("multi-page-preview flex flex-col items-center", className)}
@@ -64,7 +73,18 @@ export function MultiPagePreview({
         );
 
         return (
-          <div key={index} className="relative page-virtual">
+          <div
+            key={index}
+            className={cn("relative", contain && "page-virtual")}
+            style={
+              contain
+                ? ({
+                    contentVisibility: "auto",
+                    containIntrinsicSize: `${intrinsic.widthPx}px ${intrinsic.heightPx}px`,
+                  } as React.CSSProperties)
+                : undefined
+            }
+          >
             <ProcessedContent
               html={pageHtml}
               pageSetup={pageSetup}

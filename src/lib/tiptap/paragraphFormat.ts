@@ -55,8 +55,54 @@ declare module "@tiptap/core" {
       setLineSpacing: (mode: LineHeightMode, value?: number) => ReturnType;
       increaseBlockIndent: () => ReturnType;
       decreaseBlockIndent: () => ReturnType;
+      setTabStops: (stops: number[]) => ReturnType;
+      setTabSize: (sizeCm: number | null) => ReturnType;
     };
   }
+}
+
+// ── Custom ruler tab stops ───────────────────────────────────────────────────
+//
+// Word-fidelity caveats (CSS reality check):
+// - Only LEFT-aligned tab stops are supported. Center/right/decimal stops are
+//   out of scope — CSS `tab-size` cannot express alignment types.
+// - CSS `tab-size` is a single uniform interval per element; per-position
+//   stops (e.g. 1.5cm then 4cm then 8.25cm) are NOT expressible. We therefore:
+//     1. store the full clicked stop list in `tabStops` (data-tab-stops) for
+//        forward-compat and ruler display, and
+//     2. render tabs with a per-paragraph uniform `tab-size` equal to the
+//        FIRST stop (the common "first tab lands at stop 1" case is exact;
+//        later tabs land on multiples of the first stop, which only matches
+//        Word when the stops are evenly spaced).
+// - Paragraphs without custom stops inherit the global 1.27cm grid
+//   (globals.css / wrap.ts / exportPdf.ts).
+
+/** Smallest meaningful tab stop (cm). */
+export const MIN_TAB_STOP_CM = 0.25;
+/** Largest tab stop we accept (cm) — wider than any supported page. */
+export const MAX_TAB_STOP_CM = 50;
+
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Sort ascending, round to 2 decimals, clamp to valid range, dedupe. */
+export function normalizeTabStops(stops: number[]): number[] {
+  const valid = stops
+    .filter((v) => typeof v === "number" && Number.isFinite(v))
+    .map(round2)
+    .filter((v) => v >= MIN_TAB_STOP_CM && v <= MAX_TAB_STOP_CM)
+    .sort((a, b) => a - b);
+  return valid.filter((v, i) => i === 0 || v !== valid[i - 1]);
+}
+
+/** Parse a `data-tab-stops="1.5,4,8.25"` attribute value into cm positions. */
+export function parseTabStops(raw: string | null): number[] {
+  if (!raw) return [];
+  return normalizeTabStops(raw.split(",").map((s) => parseFloat(s)));
+}
+
+/** Serialize tab stops back to the `data-tab-stops` attribute value. */
+export function serializeTabStops(stops: number[]): string {
+  return normalizeTabStops(stops).join(",");
 }
 
 export function lineHeightFromMode(
@@ -135,6 +181,14 @@ export function buildParagraphStyle(
     attrs.lineHeight as number | undefined
   );
   if (lh) parts.push(`line-height:${lh}`);
+
+  // Per-paragraph uniform tab interval (cm) — overrides the global 1.27cm
+  // grid. Unprefixed only: every current engine (incl. Firefox 91+) supports
+  // `tab-size`, and CSSOM round-trips drop unknown `-moz-` longhands anyway.
+  const tabSize = attrs.tabSize as number | null | undefined;
+  if (typeof tabSize === "number" && tabSize > 0) {
+    parts.push(`tab-size:${tabSize}cm`);
+  }
 
   return parts.length > 0 ? parts.join(";") : undefined;
 }
@@ -230,6 +284,37 @@ export const ParagraphFormatExtension = Extension.create({
               if (!lh) return null;
               const parsed = parseLineHeight(lh);
               return parsed?.lineHeight ?? null;
+            },
+          },
+          // Custom ruler tab stops (cm, left-aligned only — see module note).
+          // Stored verbatim for forward-compat + ruler markers; rendering uses
+          // the derived uniform `tabSize` below.
+          tabStops: {
+            default: [] as number[],
+            renderHTML: (attrs) => {
+              const stops = attrs.tabStops as number[] | undefined;
+              if (!stops || stops.length === 0) return {};
+              return { "data-tab-stops": serializeTabStops(stops) };
+            },
+            parseHTML: (el): number[] =>
+              parseTabStops(el.getAttribute("data-tab-stops")),
+          },
+          // Uniform per-paragraph tab interval in cm (null → inherit the
+          // global 1.27cm grid). Rendered as inline `tab-size` via
+          // buildParagraphStyle (merged on marginLeft's renderHTML).
+          tabSize: {
+            default: null,
+            renderHTML: () => ({}),
+            parseHTML: (el): number | null => {
+              const raw = el.style.getPropertyValue("tab-size");
+              if (raw) {
+                const cm = parseCssLengthToCm(raw);
+                if (cm > 0) return Math.round(cm * 100) / 100;
+              }
+              // Fallback: derive from data-tab-stops (first stop) when the
+              // style attribute was stripped but the data attribute survived.
+              const stops = parseTabStops(el.getAttribute("data-tab-stops"));
+              return stops.length > 0 ? stops[0] : null;
             },
           },
           // Marks a paragraph as one piece of an auto-split long paragraph.
@@ -332,6 +417,33 @@ export const ParagraphFormatExtension = Extension.create({
             const next = Math.max(0, Math.round((current - 0.5) * 10) / 10);
             return { ...attrs, marginLeft: next };
           }),
+      // Set the full custom tab-stop list (cm) on the selected paragraphs.
+      // Derives the rendered uniform `tabSize` from the FIRST stop — see the
+      // Word-fidelity note at the top of this module. Empty array clears both
+      // (paragraph falls back to the global 1.27cm grid).
+      setTabStops:
+        (stops: number[]) =>
+        ({ tr, state }) => {
+          const next = normalizeTabStops(stops);
+          return applyToSelectedBlocks(state, tr, (attrs) => ({
+            ...attrs,
+            tabStops: next,
+            tabSize: next.length > 0 ? next[0] : null,
+          }));
+        },
+      // Set only the uniform tab interval (cm) without ruler stops.
+      setTabSize:
+        (sizeCm: number | null) =>
+        ({ tr, state }) =>
+          applyToSelectedBlocks(state, tr, (attrs) => ({
+            ...attrs,
+            tabSize:
+              typeof sizeCm === "number" &&
+              sizeCm >= MIN_TAB_STOP_CM &&
+              sizeCm <= MAX_TAB_STOP_CM
+                ? round2(sizeCm)
+                : null,
+          })),
     };
   },
 

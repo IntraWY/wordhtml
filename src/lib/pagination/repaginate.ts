@@ -6,6 +6,7 @@ import { Fragment } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
 import { TextSelection } from "@tiptap/pm/state";
 import { computePageBreaks } from "./computePageBreaks";
+import { splitTableAtRowBoundaries } from "./tableReflow";
 
 /**
  * Holistic re-pagination.
@@ -265,6 +266,37 @@ function expandTallBlocks(
     // cycle drifts offsets, multiplies pieces, and can drop content. Pieces are
     // re-joined on export; in-editor they stay as fitting paragraphs.
     const alreadyPiece = block.attrs.softSplit === true;
+
+    // A3 (auto): an over-tall TABLE splits at row boundaries, mirroring the
+    // paragraph path. `splitTableAtRowBoundaries` repeats the header on each
+    // continuation piece (marked via `data-repeat-source`) and re-joins on
+    // export. Returns null for an un-splittable table (e.g. one giant row) →
+    // fall through to the atomic whole-table path (own page), no loop.
+    if (tooTall && el && block.type.name === "table") {
+      const pieces = splitTableAtRowBoundaries(
+        block,
+        el,
+        measured.heights[i],
+        limitPx
+      );
+      if (pieces && pieces.length > 1) {
+        pieces.forEach((piece) => {
+          blocks.push(piece.node);
+          heights.push(piece.height);
+          if (
+            i === caretBlockOrig &&
+            caretBlock === -1 &&
+            caretInnerOrig >= piece.startOffset &&
+            caretInnerOrig <= piece.endOffset
+          ) {
+            caretBlock = blocks.length - 1;
+            caretInner =
+              caretInnerOrig - piece.startOffset + piece.innerShift;
+          }
+        });
+        continue;
+      }
+    }
 
     if (tooTall && !alreadyPiece && el && isSplittableText(block, el)) {
       const segs = findParagraphSegments(el, limitPx);
