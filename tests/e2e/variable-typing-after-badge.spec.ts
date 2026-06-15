@@ -6,6 +6,7 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
     const editorState = {
       state: {
         templateMode: true,

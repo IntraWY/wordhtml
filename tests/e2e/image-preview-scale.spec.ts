@@ -50,6 +50,7 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
   });
 });
 
@@ -57,6 +58,10 @@ test.describe("Image preview scale", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("[contenteditable='true']").first()).toBeVisible();
+    // Let hydration + mount-time normalization settle before interacting,
+    // otherwise the startup content reset races the dialog/image flow.
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1200);
     await page.getByRole("button", { name: "แทรก (Insert)" }).click();
     await page.getByRole("button", { name: "แทรกตัวแปร" }).click();
     await expect(page.getByRole("button", { name: "ดูตัวอย่าง (Preview)" })).toBeVisible();

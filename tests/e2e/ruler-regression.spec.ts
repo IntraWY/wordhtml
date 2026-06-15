@@ -11,12 +11,17 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
   });
 });
 
 async function enableTemplatePreview(page: import("@playwright/test").Page) {
   await page.goto("/");
   await expect(page.locator("[contenteditable='true']").first()).toBeVisible();
+  // Settle hydration + mount-time normalization before interacting, otherwise
+  // the startup content reset races the ribbon/image-dialog flow.
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1200);
   await page.getByRole("button", { name: "แทรก (Insert)" }).click();
   await page.getByRole("button", { name: "แทรกตัวแปร" }).click();
   await expect(

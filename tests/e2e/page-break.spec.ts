@@ -42,6 +42,7 @@ test.describe("Multi-page pagination", () => {
         "wordhtml-onboarding",
         JSON.stringify({ hasSeenTour: true })
       );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
     });
   });
 

@@ -6,6 +6,7 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
   });
 });
 
@@ -31,5 +32,5 @@ test("VariablePanel clear button removes all variables after confirm", async ({
   await page.getByRole("button", { name: "ยืนยัน (Confirm)" }).click();
 
   await expect(valueInput).toHaveCount(0);
-  await expect(page.getByText("ตัวแปร (0)")).toBeVisible();
+  await expect(page.getByText("ตัวแปร (0/0)")).toBeVisible();
 });

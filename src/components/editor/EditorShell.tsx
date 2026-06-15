@@ -350,6 +350,7 @@ export function EditorShell() {
                 <div
                   ref={scrollContainerRef}
                   className="flex-1 overflow-auto bg-[color:var(--color-muted)]"
+                  style={{ scrollbarGutter: "stable" }}
                 >
                   <div className="sticky top-0 z-10 bg-[color:var(--color-muted)] px-8 pt-8">
                     <EditorRulerBar
