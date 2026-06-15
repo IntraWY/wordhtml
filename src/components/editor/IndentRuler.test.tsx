@@ -72,17 +72,24 @@ function createMockEditor(selection: MockSelection) {
   return { editor, listeners };
 }
 
-vi.mock("@tiptap/pm/state", () => ({
-  NodeSelection: class NodeSelection {
-    static [Symbol.hasInstance](obj: unknown) {
-      return Boolean(
-        obj &&
-          typeof obj === "object" &&
-          (obj as { __nodeSel?: boolean }).__nodeSel
-      );
-    }
-  },
-}));
+// Spread the real module so PluginKey/Plugin (pulled in transitively via
+// Ruler → paragraphFormat → tabStopPlugin) stay real; only NodeSelection is
+// overridden with a tagging-based instanceof for the test's fake selections.
+vi.mock("@tiptap/pm/state", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tiptap/pm/state")>();
+  return {
+    ...actual,
+    NodeSelection: class NodeSelection {
+      static [Symbol.hasInstance](obj: unknown) {
+        return Boolean(
+          obj &&
+            typeof obj === "object" &&
+            (obj as { __nodeSel?: boolean }).__nodeSel
+        );
+      }
+    },
+  };
+});
 
 vi.mock("@/lib/editorLive", () => ({
   isLiveEditor: (ed: unknown) => Boolean(ed),
