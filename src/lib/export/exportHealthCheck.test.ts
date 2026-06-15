@@ -58,4 +58,65 @@ describe("checkExportHealth", () => {
     });
     expect(nonTemplate.some((i) => i.code === "unknown-merge-filter")).toBe(false);
   });
+
+  it("does not flag vars hidden inside a FALSE conditional branch", () => {
+    const issues = checkExportHealth({
+      documentHtml: "<p>{{#if cond}}{{secret}}{{/if}}</p>",
+      variables: [{ name: "cond", type: "text", value: "", isList: false }],
+      dataRow: {},
+      templateMode: true,
+      previewMode: "preview",
+    });
+    expect(issues.some((i) => i.code === "missing-merge-fields")).toBe(false);
+  });
+
+  it("still flags vars inside a TRUE conditional branch", () => {
+    const issues = checkExportHealth({
+      documentHtml: "<p>{{#if cond}}{{secret}}{{/if}}</p>",
+      variables: [{ name: "cond", type: "text", value: "yes", isList: false }],
+      dataRow: {},
+      templateMode: true,
+      previewMode: "preview",
+    });
+    expect(issues.some((i) => i.code === "missing-merge-fields")).toBe(true);
+  });
+
+  it("does not flag loop-local {{this}} tokens as unset", () => {
+    const issues = checkExportHealth({
+      documentHtml: "<p>{{#each items}}{{this}}{{/each}}</p>",
+      variables: [
+        { name: "items", type: "text", value: "", isList: true, listValues: ["a", "b"] },
+      ],
+      dataRow: {},
+      templateMode: true,
+      previewMode: "preview",
+    });
+    expect(issues.some((i) => i.code === "missing-merge-fields")).toBe(false);
+  });
+
+  it("warns on a filter type mismatch (numeric filter, non-numeric value)", () => {
+    const issues = checkExportHealth({
+      documentHtml: "<p>{{amt|currency}}</p>",
+      variables: [{ name: "amt", type: "text", value: "ไม่ใช่เลข", isList: false }],
+      dataRow: {},
+      templateMode: true,
+      previewMode: "edit",
+    });
+    expect(issues.some((i) => i.code === "filter-type-mismatch")).toBe(true);
+  });
+
+  it("strict mode escalates unset-variable-defaults to error", () => {
+    const issues = checkExportHealth(
+      {
+        documentHtml: "<p>{{name}}</p>",
+        variables: [{ name: "name", type: "text", value: "", isList: false }],
+        dataRow: {},
+        templateMode: true,
+        previewMode: "edit",
+      },
+      { strict: true }
+    );
+    const issue = issues.find((i) => i.code === "unset-variable-defaults");
+    expect(issue?.severity).toBe("error");
+  });
 });

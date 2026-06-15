@@ -63,6 +63,7 @@ export async function exportPdf(
   const styleEl = document.createElement("style");
   const cssText = `
     .prose-editor, .paper { outline: none; tab-size: 1.27cm; -moz-tab-size: 1.27cm; }
+    .tab-bake { display: inline-block; white-space: pre; }
     .prose-editor p, .paper p, .prose-editor h1, .paper h1, .prose-editor h2, .paper h2, .prose-editor h3, .paper h3, .prose-editor li, .paper li { white-space: pre-wrap; }
     .prose-editor h1, .paper h1 { font-size: 2em; font-weight: 700; margin: 0.67em 0; letter-spacing: -0.01em; }
     .prose-editor h2, .paper h2 { font-size: 1.5em; font-weight: 700; margin: 0.75em 0; letter-spacing: -0.01em; }
@@ -71,7 +72,7 @@ export async function exportPdf(
     .prose-editor ul, .paper ul { list-style: disc; padding-left: 1.5em; margin: 0.75em 0; }
     .prose-editor ol, .paper ol { list-style: decimal; padding-left: 1.5em; margin: 0.75em 0; }
     .prose-editor li, .paper li { margin: 0.25em 0; }
-    .prose-editor blockquote, .paper blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
+    .prose-editor blockquote, .paper blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }
     .prose-editor a, .paper a { color: #2563eb; text-decoration: underline; }
     .prose-editor strong, .paper strong { font-weight: 700; }
     .prose-editor em, .paper em { font-style: italic; }
@@ -82,6 +83,9 @@ export async function exportPdf(
     .paper img[data-align="left"] { float: left; margin: 0.5em 1em 0.5em 0; }
     .paper img[data-align="center"] { margin: 0.5em auto; display: block; }
     .paper img[data-align="right"] { float: right; margin: 0.5em 0 0.5em 1em; }
+    /* Free-floating images: absolute against the page container (non-chrome mode)
+       or the .pdf-page (chrome mode), both positioned ancestors. */
+    img[data-float="true"] { position: absolute; margin: 0; }
     .prose-editor hr, .paper hr { border: none; border-top: 1px solid #d4d4d8; margin: 1.5em 0; }
     .prose-editor table, .paper table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
     .prose-editor td, .prose-editor th, .paper td, .paper th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
@@ -102,7 +106,7 @@ export async function exportPdf(
     td, th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
     th { background: #f4f4f5; font-weight: 600; }
     td[data-borders="none"], th[data-borders="none"] { border: none; }
-    blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #71717a; font-style: italic; margin: 1em 0; }
+    blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }
     code { background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.92em; }
     pre { background: #f4f4f5; padding: 1em; border-radius: 6px; overflow-x: auto; margin: 1em 0; }
     pre code { background: transparent; padding: 0; }

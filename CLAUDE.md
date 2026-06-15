@@ -256,9 +256,17 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.9)
+## Current state (v0.2.10)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **630 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **841 unit tests pass; lint + build clean.**
+
+**v0.2.10 — Word-style ruler upgrades.** Four additions bringing the ruler closer to Microsoft Word:
+1. **Right-indent marker** — a draggable ▽ triangle on the horizontal ruler bound to the paragraph `marginRight` attr (already existed; now ruler-draggable). New `"right"` drag type in `useRulerDrag.ts`; `IndentRuler.readBlockIndent` reads `marginRight`; `Ruler` props `indentRight`/`onIndentRightChange`.
+2. **Per-position tab stops that actually align text** — a ProseMirror plugin (`src/lib/tiptap/tabStopPlugin.ts`) gives each `\t` an inline `Decoration` whose explicit width lands the following text on the next ruler stop (CSS `tab-size` can only do one uniform interval). The document model is untouched — `\t` stays a literal char, so all existing tab machinery (preserveWhitespace, Shift-Tab delete, collapseSpaces) keeps working. Pure math in `src/lib/tiptap/tabStopLayout.ts` (`nextStop`/`computeTabWidth`/`decimalPrefix`). Widths recompute on a self-managed rAF + ResizeObserver and converge in 1–2 frames (fingerprint by pos+width). `paragraphFormat.setTabStops` no longer derives a uniform `tabSize` from the first stop.
+3. **Tab alignment types** (left/center/right/decimal/bar) + a **corner type selector** (`TabTypeSelector.tsx`, mounted in the `EditorRulerBar` corner via a new `cornerSlot` prop; state `currentTabType` in `uiStore`). Model is a **parallel `tabStopTypes: TabType[]`** attribute (index-aligned with `tabStops`, `data-tab-stop-types`), so `useRulerDrag`'s `number[]` logic is untouched; type bookkeeping is isolated to `IndentRuler` (`remapTabStopTypes` keeps a stop's type through drags/sorts by value identity) + `normalizeTabStopPairs` in `paragraphFormat.ts`. Decimal stops align the decimal point; legacy docs with only `data-tab-stops` default every type to left.
+4. **Double-click affordances** — dbl-click the ruler body → Paragraph dialog (`uiStore.openParagraph`); dbl-click a margin zone/handle or the vertical ruler → Page Setup (`wordhtml:open-page-setup`). Plus a **left-indent ◼ square** grip that moves left + first-line together (Word combined marker).
+
+**Export of tab stops:** decorations aren't in `getHTML()`, so `src/lib/export/bakeTabStops.ts` reads the live `.ProseMirror` rendered `.pm-tab` widths and bakes each `\t` into a fixed-width `<span class="tab-bake">` in the exported HTML (wired into `ExportDialog.cleanedHtml` after cleaners; `.tab-bake` CSS in `wrap.ts` + `exportPdf.ts`; `data-tab-stops`/`data-tab-stop-types` whitelisted in `cleaners.ts`). Blocks are paired by document order; tab-count mismatch or a 0-width (virtualized page) leaves that block on the global 1.27cm `tab-size` fallback. Limitations: mail-merge resolved rows and DOCX use the fallback / spacer spans (not true Word tabs). A standalone interactive preview lives at `ruler-mockup.html` (repo root). Manual checks: `docs/ruler-test-matrix.md`.
 
 **v0.2.9 — Placeholder polish round 3 (fillable fields + persistence).** (1) **ช่องกรอก (placeholderField) is now fillable** — clicking it opens `FieldFillPopover.tsx` (always mounted, not template-gated); the value writes into the node's `value` **attribute** via `setNodeMarkup`, so it lives in the document HTML and survives save/reload/template/export for free. `inlinePlaceholderFields` priority flipped: node attr > session `fieldValues` > label. (2) **Variables travel with saves** — `DocumentSnapshot.variables?` + `DocumentTemplate.variables?` (both optional, backward-compatible): `saveSnapshot` captures `compactVariables(state.variables)` (JSON round-trip — Firestore rejects `undefined` fields like unset `delimiter`), `loadSnapshot`/template `doLoad` restore via `mergeRestoredVariables` (incoming fills empty slots, never clobbers user-typed values); Firestore serializers in `historyFirestore.ts`/`templateFirestore.ts` include the field only when non-empty; `saveTemplate` stores only `variablesUsedIn(html, vars)`. (3) **dataSet survives reload** — added to `partialize` behind `shouldPersistDataSet` (≤200KB JSON guard); the old `version<3` migration that stripped dataSet only fires for pre-v3 stores, so no version bump needed (additive field). Helpers live in `src/lib/placeholders/variableStorage.ts`.
 
@@ -368,7 +376,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.9**
+- **Current version**: **v0.2.10**
 
 ### Patch bump rule (deploy default)
 

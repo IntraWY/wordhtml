@@ -32,6 +32,7 @@ import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { resolveHtmlPlaceholders } from "@/lib/placeholders";
 import { checkExportHealth } from "@/lib/export/exportHealthCheck";
 import { inlinePlaceholderFields } from "@/lib/export/inlinePlaceholderFields";
+import { bakeTabStops } from "@/lib/export/bakeTabStops";
 import { buildProjectBlob, projectFileName } from "@/lib/project";
 import { downloadMailMergeZip } from "@/lib/export/exportMailMerge";
 
@@ -85,6 +86,10 @@ export function ExportDialog() {
         missingPolicy: exportMissingPolicy,
       });
     }
+    // Bake per-position tab widths from the live editor DOM so exported HTML/PDF
+    // matches what the user sees (decorations aren't in getHTML). Safe no-op when
+    // there are no ruler tab stops.
+    html = bakeTabStops(html);
     return html;
   }, [
     open,
@@ -447,6 +452,14 @@ export function ExportDialog() {
                   <p className="text-right text-[11px] text-[color:var(--color-muted-foreground)]">
                     หัว/ท้ายกระดาษจะรวมอยู่ใน PDF และ HTML (ตอนพิมพ์) — .docx
                     ยังไม่รองรับหัว/ท้ายกระดาษ
+                  </p>
+                )}
+
+                {documentHtml.includes('data-float="true"') && (
+                  <p className="text-right text-[11px] text-[color:var(--color-muted-foreground)]">
+                    รูปภาพลอยอิสระวางตรงตำแหน่งดีที่สุดใน PDF (เอกสารหน้าเดียว) —
+                    HTML อ้างอิงตามเอกสาร (เอกสารหลายหน้าอาจวางคลาดเคลื่อน/ซ้อนกัน)
+                    ส่วน .docx / Markdown ยังไม่รองรับการวางลอย (รูปจะกลับเป็นแบบ inline)
                   </p>
                 )}
                 <div className="flex flex-wrap items-center justify-end gap-2">

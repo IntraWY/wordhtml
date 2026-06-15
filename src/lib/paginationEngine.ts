@@ -1,5 +1,6 @@
 import type { PageSetup } from "@/types";
 import { A4, LETTER, mmToPx } from "@/lib/page";
+import { fitsWithinLimit } from "./pagination/fillBreaks";
 
 export interface PageMetrics {
   widthPx: number;
@@ -30,6 +31,10 @@ const DEFAULT_WIDOW_ORPHAN = true;
 const DEFAULT_MIN_LINES_BEFORE = 2;
 const DEFAULT_MIN_LINES_AFTER = 2;
 const DEFAULT_KEEP_HEADING = true;
+
+/** Slack (px) the preview allows so a block whose bottom lands ~exactly on the
+ *  page edge still counts as fitting. Preserves the legacy `+1` behavior. */
+const PREVIEW_FIT_TOLERANCE_PX = 1;
 
 const SIZE_MAP = {
   A4,
@@ -195,7 +200,13 @@ function groupChildrenIntoPages(
     const { child, childTop, childBottom, childHeight } = childData[i];
 
     const relativeBottom = childBottom - pageStart;
-    const fitsOnCurrent = relativeBottom <= metrics.contentHeightPx + 1; // +1px tolerance
+    // Same fit rule as the editor engine (shared `fitsWithinLimit`), here with a
+    // 1px tolerance and an absolute-offset extent (collapsed-margin aware).
+    const fitsOnCurrent = fitsWithinLimit(
+      relativeBottom,
+      metrics.contentHeightPx,
+      PREVIEW_FIT_TOLERANCE_PX
+    );
     const tooBigForPage = childHeight > metrics.contentHeightPx;
     const mustKeepTogether = avoidBreakInside.has(child.tagName.toLowerCase());
 
@@ -203,8 +214,16 @@ function groupChildrenIntoPages(
     if (keepHeadingWithNext && isHeading(child)) {
       const nextData = childData[i + 1];
       if (nextData && nextData.child.tagName.toLowerCase() === "p") {
-        const headingFitsAlone = childBottom - pageStart <= metrics.contentHeightPx + 1;
-        const combinedFits = nextData.childBottom - pageStart <= metrics.contentHeightPx + 1;
+        const headingFitsAlone = fitsWithinLimit(
+          childBottom - pageStart,
+          metrics.contentHeightPx,
+          PREVIEW_FIT_TOLERANCE_PX
+        );
+        const combinedFits = fitsWithinLimit(
+          nextData.childBottom - pageStart,
+          metrics.contentHeightPx,
+          PREVIEW_FIT_TOLERANCE_PX
+        );
         if (headingFitsAlone && !combinedFits) {
           // Heading would be left alone at the bottom of the page.
           // Pull heading + paragraph to the next page.

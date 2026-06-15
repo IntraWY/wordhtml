@@ -50,7 +50,12 @@ export function handleVariableAdjacentTextInput(
   if (!insideFrom) return false;
 
   if (to !== from) {
-    const insideTo = findVariableMarkRangeAtPos(state, to);
+    // `findVariableMarkRangeAtPos` is exclusive at the badge end (`pos < to`), so a
+    // selection ending exactly on the badge boundary is still fully inside the badge.
+    const insideTo =
+      to <= insideFrom.to
+        ? insideFrom
+        : findVariableMarkRangeAtPos(state, to);
     if (!insideTo || insideFrom.from !== insideTo.from || insideFrom.to !== insideTo.to) {
       return false;
     }

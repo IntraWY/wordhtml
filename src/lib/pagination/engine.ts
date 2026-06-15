@@ -113,6 +113,7 @@ function measurePageBodyContentHeight(el: HTMLElement): number {
   const containerTop = container.getBoundingClientRect().top;
   let maxBottom = 0;
   for (const child of children) {
+    if (isFloatingBlock(child)) continue; // floating images are out of flow
     const rect = child.getBoundingClientRect();
     maxBottom = Math.max(maxBottom, rect.bottom - containerTop);
   }
@@ -131,6 +132,24 @@ function isAtomicBlock(el: HTMLElement, atomicTags: Set<string>): boolean {
   if (atomicTags.has(tag)) return true;
   if (el.querySelector("img")) return true;
   return false;
+}
+
+/**
+ * Free-floating images (position:absolute, anchored to the page) are out of the
+ * normal flow — they must NOT count toward content height or be chosen as a
+ * split boundary, or pagination spawns phantom pages / loops.
+ *
+ * The image node-view wrapper carries BOTH `data-float="true"` and an inline
+ * `position:absolute` style, so this is an O(1) check on the element itself —
+ * no descendant `querySelector` (which would wrongly skip a whole paragraph that
+ * merely contains a floating image) and no `getComputedStyle` (a reflow on every
+ * block, every measure pass — janky on long documents).
+ */
+export function isFloatingBlock(el: HTMLElement): boolean {
+  return (
+    el.matches?.('[data-float="true"]') === true ||
+    el.style?.position === "absolute"
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -209,6 +228,8 @@ export function findSplitPosition(
   // Walk from last child backwards.
   for (let i = children.length - 1; i >= 0; i--) {
     const child = children[i];
+    // Floating images are out of flow — never a split boundary.
+    if (isFloatingBlock(child)) continue;
     const childRect = child.getBoundingClientRect();
     const childBottom = childRect.bottom - containerTop;
 

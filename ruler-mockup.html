@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ruler — ปรับให้เหมือน Word (Mockup)</title>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --fg: #1c1917;
+    --muted: #efe9e0;
+    --muted-fg: #57534e;
+    --canvas: #e8e2d9;
+    --paper: #ffffff;
+    --border: #d6cdbf;
+    --border-strong: #b8ac99;
+    --accent: #3b82f6;
+    --accent-soft: #93b8fb;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --PX_PER_CM: 37.8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "IBM Plex Sans Thai", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.5;
+    padding: 32px 20px 80px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header.page { margin-bottom: 28px; }
+  header.page h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header.page p { color: var(--muted-fg); margin: 4px 0; font-size: 14px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 12.5px; color: var(--muted-fg); }
+  .legend b { color: var(--fg); }
+
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px 26px;
+    margin-bottom: 26px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.03);
+  }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
+  .card-head h2 { font-size: 18px; margin: 0; }
+  .card-head .en { color: var(--muted-fg); font-weight: 400; font-size: 14px; }
+  .num { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; background:var(--accent); color:#fff; font-weight:700; font-size:14px; margin-right:10px; vertical-align: middle; }
+  .badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .badge.impact-high { background: #dcfce7; color: #166534; }
+  .badge.impact-med { background: #fef9c3; color: #854d0e; }
+  .badge.effort-low { background: #dbeafe; color: #1e40af; }
+  .badge.effort-high { background: #fee2e2; color: #991b1b; }
+  .desc { color: var(--muted-fg); font-size: 13.5px; margin: 8px 0 18px; }
+  .desc code { background: var(--muted); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  /* ---- Ruler primitives ---- */
+  .stage { background: var(--canvas); border-radius: 10px; padding: 18px 18px 22px; }
+  .ruler {
+    position: relative;
+    height: 22px;
+    background: #fff;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    user-select: none;
+    margin: 0 auto;
+  }
+  .ruler .zone-margin { position:absolute; top:0; bottom:0; background: repeating-linear-gradient(45deg,#0000,#0000 4px,#00000008 4px,#00000008 8px); }
+  .ruler .tick { position: absolute; bottom: 0; width: 1px; background: var(--fg); }
+  .ruler .tick.major { height: 7px; }
+  .ruler .tick.minor { height: 4px; background: var(--border-strong); }
+  .ruler .lbl { position: absolute; top: 1px; font: 9px/1 ui-monospace, monospace; color: var(--muted-fg); transform: translateX(-50%); }
+  .ruler .mguide { position: absolute; top: 0; bottom: 0; width: 1px; background: oklch(70% .15 25 / .55); }
+
+  .handle { position: absolute; cursor: ew-resize; }
+  .handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  /* margin grip */
+  .grip { width: 9px; height: 15px; background: #6b7280; border-radius: 2px; top: 50%; transform: translate(-50%,-50%); transition: transform .12s, background .12s; }
+  .grip:hover { background: #374151; transform: translate(-50%,-50%) scale(1.18); }
+  /* triangles */
+  .tri-down { width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--accent); bottom:1px; transform: translateX(-50%); }
+  .tri-up { width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:8px solid #1e3a8a; top:1px; transform: translateX(-50%); }
+  .sq { width:9px;height:6px;background:#1e3a8a;bottom:1px;transform:translateX(-50%);border-radius:1px; }
+  .handle.hot { filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+
+  .readout { margin-top: 12px; font: 12px/1.6 ui-monospace, monospace; color: var(--muted-fg); }
+  .readout b { color: var(--accent); }
+
+  /* sample paragraph / page */
+  /* padding L/R = ruler marginStart/End (40px) so page content origin lines up with the ruler's 0cm tick */
+  .pageframe { background:#fff; border:1px solid var(--border); border-radius:4px; margin: 12px auto 0; padding: 14px 40px; }
+  .para { font-size: 13px; color: #292524; }
+  .para .first { }
+
+  /* tab demo */
+  .tabline { position: relative; height: 22px; }
+  .tabline .chunk { position:absolute; top:0; font-size:13px; white-space:nowrap; }
+  .tabline .col-head { font-weight:700; color: var(--accent); }
+  .stopglyph { position:absolute; bottom:0; transform: translateX(-50%); font:700 12px/1 ui-monospace,monospace; color:#1e3a8a; cursor: ew-resize; }
+  .toggle-row { display:flex; gap:8px; margin: 4px 0 14px; }
+  .toggle-row button { font-size:12.5px; padding:6px 12px; border-radius:8px; border:1px solid var(--border-strong); background:#fff; color:var(--fg); cursor:pointer; }
+  .toggle-row button.active { background: var(--accent); color:#fff; border-color: var(--accent); }
+
+  /* corner type selector */
+  .corner { display:inline-flex; align-items:center; justify-content:center; width:30px;height:22px; border:1px solid var(--border-strong); border-radius:5px; background:#fff; cursor:pointer; font:700 13px/1 ui-monospace,monospace; color:#1e3a8a; }
+  .corner:hover { background: var(--muted); }
+  .typedstop { position:absolute; bottom:0; transform: translateX(-50%); cursor:ew-resize; font:700 12px/1 ui-monospace,monospace; color:#1e3a8a; }
+
+  /* dialog */
+  .dlg-backdrop { position: fixed; inset:0; background: rgba(0,0,0,.32); display:none; align-items:center; justify-content:center; z-index: 50; }
+  .dlg-backdrop.open { display:flex; }
+  .dlg { background:#fff; border-radius:12px; padding:20px 22px; width:330px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .dlg h3 { margin:0 0 12px; font-size:16px; }
+  .dlg label { display:block; font-size:12.5px; color:var(--muted-fg); margin:10px 0 4px; }
+  .dlg input { width:100%; padding:7px 9px; border:1px solid var(--border-strong); border-radius:7px; font-size:13px; }
+  .dlg .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+  .dlg .actions button { padding:7px 16px; border-radius:8px; border:1px solid var(--border-strong); background:#fff; cursor:pointer; font-size:13px; }
+  .dlg .actions button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .hint { font-size:12px; color:var(--muted-fg); margin-top:10px; }
+  .hint kbd { background: var(--muted); border:1px solid var(--border-strong); border-radius:4px; padding:1px 5px; font:11px/1 ui-monospace,monospace; }
+
+  footer.note { text-align:center; color:var(--muted-fg); font-size:12.5px; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page">
+    <h1>Ruler — ปรับให้เหมือน Microsoft Word</h1>
+    <p>Mockup สำหรับเลือกว่าจะทำจุดไหนบ้าง · ลองจับลากได้จริงทุกอัน (ไม่กระทบโปรเจคจริง)</p>
+    <p style="font-size:13px">ระบบ ruler ปัจจุบัน <b>ใกล้เคียง Word มากแล้ว</b> — 4 การ์ดข้างล่างคือสิ่งที่ <i>ยัง</i> ต่างจาก Word</p>
+    <div class="legend">
+      <span><b>1 ซม.</b> = 37.8px (A4 96 DPI)</span>
+      <span>🟢 = ทำง่าย/เสี่ยงน้อย</span>
+      <span>🔴 = งานใหญ่/เสี่ยง</span>
+      <span>ลากสามเหลี่ยม/สี่เหลี่ยม/ตัวอักษรบนไม้บรรทัดได้</span>
+    </div>
+  </header>
+
+  <!-- ============ CARD 3 first (easiest, recommended) ============ -->
+  <section class="card" id="card-right">
+    <div class="card-head">
+      <h2><span class="num">3</span>Right-indent marker บนไม้บรรทัด <span class="en">/ Right indent handle</span></h2>
+      <div class="badges"><span class="badge impact-med">Impact: กลาง</span><span class="badge effort-low">Effort: ต่ำ 🟢</span></div>
+    </div>
+    <p class="desc">★ <b>แนะนำ</b> — Word มีสามเหลี่ยมย่อหน้าฝั่งขวาให้ลากบนไม้บรรทัด แต่ของเรายังต้องตั้งผ่านกล่อง "ย่อหน้า" เท่านั้น
+      ค่า <code>marginRight</code> มีอยู่แล้วในโค้ด แค่เพิ่ม handle ลากได้ · <b>ลองลากสามเหลี่ยม 🔵 ฝั่งขวา</b></p>
+    <div class="stage">
+      <div class="ruler" id="r3" style="width:700px;"></div>
+      <div class="pageframe" style="width:700px;">
+        <div class="para" id="p3" style="padding:0 0;">
+          <span class="first" style="display:inline-block;text-indent:1cm;">
+            ตัวอย่างย่อหน้า — ลากสามเหลี่ยมขวาเข้ามาแล้วข้อความฝั่งขวาจะหดตามเหมือนใน Microsoft Word ทุกประการ
+            ทดสอบได้โดยลากเข้า–ออก ข้อความจะ reflow ทันที และตัวเลขด้านล่างจะอัปเดตค่าระยะเป็นเซนติเมตร
+            เพื่อให้เห็นว่าฟีเจอร์นี้พร้อมต่อยอดลงโปรเจคจริงได้เลย</span>
+        </div>
+      </div>
+      <div class="readout" id="ro3"></div>
+    </div>
+  </section>
+
+  <!-- ============ CARD 1 ============ -->
+  <section class="card" id="card-pertab">
+    <div class="card-head">
+      <h2><span class="num">1</span>Tab stop จัดข้อความได้จริง <span class="en">/ Per-position tab stops</span></h2>
+      <div class="badges"><span class="badge impact-high">Impact: สูง</span><span class="badge effort-high">Effort: สูง 🔴</span></div>
+    </div>
+    <p class="desc">จุดต่างที่สำคัญสุด — ตอนนี้ไม้บรรทัดโชว์ stop หลายจุด แต่ตอน render ใช้แค่ <b>stop แรก</b> เป็นระยะ <code>tab-size</code> เท่า ๆ กัน
+      → tab ที่ 1.5/7/12 ซม. จึงไม่ลงตรงตำแหน่งจริง · <b>กดสลับโหมดเพื่อเทียบ</b> และลากตัว <code>L</code> เพื่อย้าย stop</p>
+    <div class="stage">
+      <div class="toggle-row">
+        <button id="t1-old" class="">เดิม: tab-size เท่ากัน (ผิด)</button>
+        <button id="t1-new" class="active">ใหม่: ลงตรง stop จริง (Word)</button>
+      </div>
+      <div class="ruler" id="r1" style="width:700px;"></div>
+      <div class="pageframe" style="width:700px;">
+        <div style="padding:0 0;">
+          <div class="tabline" id="l1a"></div>
+          <div class="tabline" id="l1b"></div>
+          <div class="tabline" id="l1c"></div>
+        </div>
+      </div>
+      <div class="readout" id="ro1"></div>
+    </div>
+  </section>
+
+  <!-- ============ CARD 2 ============ -->
+  <section class="card" id="card-types">
+    <div class="card-head">
+      <h2><span class="num">2</span>ชนิด Tab + ตัวเลือกมุม <span class="en">/ Tab types &amp; corner selector</span></h2>
+      <div class="badges"><span class="badge impact-med">Impact: กลาง</span><span class="badge effort-high">Effort: สูง 🔴</span></div>
+    </div>
+    <p class="desc">Word มี tab ซ้าย / กลาง / ขวา / ทศนิยม / เส้น (L C R D |) เลือกจากกล่องมุมซ้าย แล้วคลิกไม้บรรทัดเพื่อวาง · ของเรามีแต่ซ้าย
+      · <b>คลิกกล่องมุมเพื่อสลับชนิด แล้วคลิกบนไม้บรรทัดเพื่อวาง stop</b> (ต่อยอดจากข้อ 1)</p>
+    <div class="stage">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span class="corner" id="corner2" title="คลิกเพื่อสลับชนิด tab">L</span>
+        <span id="corner2-label" style="font-size:12.5px;color:var(--muted-fg)">ชนิดปัจจุบัน: ซ้าย (Left) — คลิกไม้บรรทัดเพื่อวาง</span>
+      </div>
+      <div class="ruler" id="r2" style="width:700px;cursor:copy;"></div>
+      <div class="pageframe" style="width:700px;">
+        <div style="padding:0;position:relative;">
+          <div class="tabline" id="l2a" style="height:20px"></div>
+          <div class="tabline" id="l2b" style="height:20px"></div>
+          <div class="tabline" id="l2c" style="height:20px"></div>
+        </div>
+      </div>
+      <div class="readout" id="ro2"></div>
+    </div>
+  </section>
+
+  <!-- ============ CARD 4 ============ -->
+  <section class="card" id="card-polish">
+    <div class="card-head">
+      <h2><span class="num">4</span>Double-click + สี่เหลี่ยม Left-indent <span class="en">/ Dbl-click dialog &amp; combined marker</span></h2>
+      <div class="badges"><span class="badge impact-med">Impact: เล็ก</span><span class="badge effort-low">Effort: ต่ำ 🟢</span></div>
+    </div>
+    <p class="desc">Word: <b>ดับเบิลคลิก</b>ไม้บรรทัดเปิด Page Setup/ย่อหน้า และมี<b>สี่เหลี่ยม</b>ใต้สามเหลี่ยมที่ลากแล้วเลื่อน first-line + left พร้อมกัน
+      · <b>ลากสี่เหลี่ยม ◼ / ดับเบิลคลิกช่องขอบหรือช่องย่อหน้า</b></p>
+    <div class="stage">
+      <div class="ruler" id="r4" style="width:700px;"></div>
+      <div class="pageframe" style="width:700px;">
+        <div class="para" id="p4">
+          <span class="first" style="display:inline-block;text-indent:1.2cm;">
+            ลากสี่เหลี่ยม ◼ ด้านล่าง → สามเหลี่ยมบน (first-line) และซ้าย (left) จะขยับไปพร้อมกัน เหมือน Word
+            ส่วนดับเบิลคลิกบริเวณช่องขอบกระดาษ (สีลายทาง) จะเปิดกล่อง Page Setup จำลอง
+            และดับเบิลคลิกในช่องย่อหน้าจะเปิดกล่อง "ย่อหน้า" จำลอง</span>
+        </div>
+      </div>
+      <div class="hint">เคล็ดลับ: <kbd>ดับเบิลคลิก</kbd> ช่องลายทาง = Page Setup · <kbd>ดับเบิลคลิก</kbd> กลางไม้บรรทัด = ย่อหน้า</div>
+      <div class="readout" id="ro4"></div>
+    </div>
+  </section>
+
+  <footer class="note">Mockup ชั่วคราว · ไฟล์ <code>ruler-mockup.html</code> · เลือกแล้วบอกผมได้เลยว่าจะทำข้อไหน แล้วผมจะลงมือกับโค้ดจริง</footer>
+</div>
+
+<!-- simulated dialogs -->
+<div class="dlg-backdrop" id="dlg-page">
+  <div class="dlg">
+    <h3>ตั้งค่าหน้ากระดาษ (Page Setup) — จำลอง</h3>
+    <label>ขอบซ้าย (Left margin) มม.</label><input value="25.4" />
+    <label>ขอบขวา (Right margin) มม.</label><input value="25.4" />
+    <div class="actions"><button onclick="closeDlg()">ยกเลิก</button><button class="primary" onclick="closeDlg()">ตกลง</button></div>
+  </div>
+</div>
+<div class="dlg-backdrop" id="dlg-para">
+  <div class="dlg">
+    <h3>ย่อหน้า (Paragraph) — จำลอง</h3>
+    <label>เยื้องซ้าย (Left indent) ซม.</label><input value="0" />
+    <label>เยื้องบรรทัดแรก (First line) ซม.</label><input value="1.2" />
+    <div class="actions"><button onclick="closeDlg()">ยกเลิก</button><button class="primary" onclick="closeDlg()">ตกลง</button></div>
+  </div>
+</div>
+
+<script>
+const PCM = 37.8;
+const cm = px => px / PCM;
+const px = c => c * PCM;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const round2 = v => Math.round(v*100)/100;
+
+// shared ruler geometry: marginStart px (left margin zone), content width px, marginEnd px
+function buildTicks(host, marginStart, contentPx){
+  const totalContentCm = cm(contentPx);
+  for(let i=0; i*PCM <= contentPx+0.5; i++){
+    const t=document.createElement('div'); t.className='tick major';
+    t.style.left=(marginStart+i*PCM)+'px'; host.appendChild(t);
+    if(i>0){ const lb=document.createElement('div'); lb.className='lbl'; lb.style.left=(marginStart+i*PCM)+'px'; lb.textContent=i; host.appendChild(lb); }
+    if((i+0.5)*PCM<=contentPx+0.5){ const m=document.createElement('div'); m.className='tick minor'; m.style.left=(marginStart+(i+0.5)*PCM)+'px'; host.appendChild(m); }
+  }
+}
+function marginZones(host, marginStart, contentPx, marginEnd){
+  const zl=document.createElement('div'); zl.className='zone-margin'; zl.style.left='0'; zl.style.width=marginStart+'px'; host.appendChild(zl);
+  const zr=document.createElement('div'); zr.className='zone-margin'; zr.style.left=(marginStart+contentPx)+'px'; zr.style.width=marginEnd+'px'; host.appendChild(zr);
+  const gl=document.createElement('div'); gl.className='mguide'; gl.style.left=marginStart+'px'; host.appendChild(gl);
+  const gr=document.createElement('div'); gr.className='mguide'; gr.style.left=(marginStart+contentPx)+'px'; host.appendChild(gr);
+}
+function dragX(handle, onMove){
+  handle.addEventListener('mousedown', e=>{
+    e.preventDefault(); handle.classList.add('hot');
+    const sx=e.clientX;
+    const mv=ev=>onMove(ev.clientX-sx);
+    const up=()=>{handle.classList.remove('hot');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  });
+}
+
+/* ---------------- Card 3: right indent ---------------- */
+(function(){
+  const MS=40, CW=620, ME=40; // marginStart, content, marginEnd
+  const r=document.getElementById('r3');
+  marginZones(r,MS,CW,ME); buildTicks(r,MS,CW);
+  let left=0, first=1.0, right=0; // cm
+  const maxCm=cm(CW);
+  // left indent (down tri)
+  const hl=document.createElement('div'); hl.className='handle tri-down'; hl.tabIndex=0; r.appendChild(hl);
+  // first line (up tri)
+  const hf=document.createElement('div'); hf.className='handle tri-up'; hf.tabIndex=0; r.appendChild(hf);
+  // RIGHT indent (down tri, new) — highlighted
+  const hr=document.createElement('div'); hr.className='handle tri-down'; hr.tabIndex=0; hr.style.borderTopColor='var(--accent)'; hr.style.filter='drop-shadow(0 0 4px var(--accent-soft))'; r.appendChild(hr);
+  const p=document.getElementById('p3'); const span=p.querySelector('.first');
+  const ro=document.getElementById('ro3');
+  function render(){
+    hl.style.left=(MS+px(left))+'px';
+    hf.style.left=(MS+px(left+first))+'px';
+    hr.style.left=(MS+CW-px(right))+'px';
+    p.style.paddingLeft=px(left)+'px';
+    p.style.paddingRight=px(right)+'px';
+    span.style.textIndent=first+'cm';
+    ro.innerHTML=`เยื้องซ้าย <b>${left.toFixed(2)}</b> ซม. · บรรทัดแรก <b>${first.toFixed(2)}</b> ซม. · <span style="color:var(--accent)">เยื้องขวา <b>${right.toFixed(2)}</b> ซม. ← ลากอันนี้</span>`;
+  }
+  dragX(hl,d=>{left=clamp(round2(cm(px(left)+d)),0,maxCm-right-0.5);render();});
+  dragX(hf,d=>{first=round2(cm(px(first)+d));render();});
+  dragX(hr,d=>{right=clamp(round2(cm(px(right)-d)),0,maxCm-left-0.5);render();});
+  render();
+})();
+
+/* ---------------- Card 1: per-position tab stops ---------------- */
+(function(){
+  const MS=40, CW=620;
+  const r=document.getElementById('r1'); marginZones(r,MS,CW,40); buildTicks(r,MS,CW);
+  let stops=[1.5,7,12]; let mode='new';
+  const rows=[
+    ['ลำดับ','รายการ','ราคา'],
+    ['1','ค่าติดตั้งอุปกรณ์','1,250.00'],
+    ['2','ค่าแรงและดำเนินการ','875.50'],
+  ];
+  const hosts=[document.getElementById('l1a'),document.getElementById('l1b'),document.getElementById('l1c')];
+  const ro=document.getElementById('ro1');
+  function glyphs(){ r.querySelectorAll('.stopglyph').forEach(e=>e.remove());
+    stops.forEach((s,i)=>{ const g=document.createElement('div'); g.className='stopglyph'; g.textContent='L'; g.style.left=(MS+px(s))+'px'; r.appendChild(g);
+      dragX(g,d=>{ stops[i]=clamp(round2(cm(px(s)+d)),0.25,cm(CW)); render(); });
+    });
+  }
+  function render(){
+    hosts.forEach((h,ri)=>{ h.innerHTML='';
+      rows[ri].forEach((txt,ci)=>{ const c=document.createElement('div'); c.className='chunk'+(ri===0?' col-head':'');
+        let x;
+        if(ci===0) x=0;
+        else if(mode==='new') x=px(stops[ci-1]!=null?stops[ci-1]:stops[stops.length-1]);
+        else { const first=stops[0]; x=px(first*ci); } // uniform: multiples of first stop
+        c.style.left=x+'px'; c.textContent=txt; h.appendChild(c);
+      });
+    });
+    glyphs();
+    ro.innerHTML = mode==='new'
+      ? `stop = <b>${stops.map(s=>s.toFixed(2)).join(', ')}</b> ซม. — แต่ละคอลัมน์ลงตรง stop จริง ✅`
+      : `tab-size = stop แรก <b>${stops[0].toFixed(2)}</b> ซม. — คอลัมน์ไปตกที่ทวีคูณ ${stops[0].toFixed(1)}, ${(stops[0]*2).toFixed(1)}, … ❌ (ผิดตำแหน่ง)`;
+  }
+  document.getElementById('t1-old').onclick=function(){mode='old';this.classList.add('active');document.getElementById('t1-new').classList.remove('active');render();};
+  document.getElementById('t1-new').onclick=function(){mode='new';this.classList.add('active');document.getElementById('t1-old').classList.remove('active');render();};
+  render();
+})();
+
+/* ---------------- Card 2: tab types ---------------- */
+(function(){
+  const MS=40, CW=620;
+  const r=document.getElementById('r2'); marginZones(r,MS,CW,40); buildTicks(r,MS,CW);
+  const types=['L','C','R','D','|'];
+  const typeNames={L:'ซ้าย (Left)',C:'กลาง (Center)',R:'ขวา (Right)',D:'ทศนิยม (Decimal)','|':'เส้น (Bar)'};
+  let cur='L';
+  // seed with a few typed stops to showcase
+  let stops=[{pos:3,type:'L'},{pos:8,type:'C'},{pos:12.5,type:'D'}];
+  const corner=document.getElementById('corner2'), label=document.getElementById('corner2-label');
+  const rows=[['สินค้า A','12.50'],['อุปกรณ์ยาว ๆ','7.00'],['ค่าบริการ','1,234.75']];
+  const hosts=[document.getElementById('l2a'),document.getElementById('l2b'),document.getElementById('l2c')];
+  const ro=document.getElementById('ro2');
+  corner.onclick=()=>{ cur=types[(types.indexOf(cur)+1)%types.length]; corner.textContent=cur; label.textContent='ชนิดปัจจุบัน: '+typeNames[cur]+' — คลิกไม้บรรทัดเพื่อวาง'; };
+  r.addEventListener('click',e=>{
+    if(e.target.closest('.typedstop')) return;
+    const rect=r.getBoundingClientRect(); const pcm=round2(cm(e.clientX-rect.left-MS));
+    if(pcm<0.25||pcm>cm(CW)) return;
+    stops.push({pos:pcm,type:cur}); render();
+  });
+  function place(host, text, stop){
+    const c=document.createElement('div'); c.className='chunk'; c.textContent=text; c.style.visibility='hidden'; host.appendChild(c);
+    const w=c.offsetWidth; const sx=px(stop.pos);
+    let left=sx;
+    if(stop.type==='C') left=sx-w/2;
+    else if(stop.type==='R') left=sx-w;
+    else if(stop.type==='D'){ const dot=text.indexOf('.'); const pre=dot>=0?text.slice(0,dot):text; const cc=document.createElement('div'); cc.className='chunk'; cc.textContent=pre; cc.style.visibility='hidden'; host.appendChild(cc); const pw=cc.offsetWidth; cc.remove(); left=sx-pw; }
+    c.style.left=left+'px'; c.style.visibility='visible';
+  }
+  function render(){
+    hosts.forEach((h,ri)=>{ h.innerHTML='';
+      // first column always left at 0
+      const c0=document.createElement('div'); c0.className='chunk'; c0.textContent=rows[ri][0]; c0.style.left='0'; h.appendChild(c0);
+      // second column uses first numeric-ish stop after 0 — demo: align value to LAST stop
+      const valStop=stops[stops.length-1]||{pos:12.5,type:'D'};
+      place(h, rows[ri][1], valStop);
+    });
+    // glyphs
+    r.querySelectorAll('.typedstop').forEach(e=>e.remove());
+    stops.forEach((s,i)=>{ const g=document.createElement('div'); g.className='typedstop'; g.textContent=s.type; g.style.left=(MS+px(s.pos))+'px'; r.appendChild(g);
+      g.addEventListener('mousedown',ev=>ev.stopPropagation());
+      dragX(g,d=>{ s.pos=clamp(round2(s.pos+cm(d)),0.25,cm(CW)); render(); });
+      g.ondblclick=ev=>{ev.stopPropagation(); stops.splice(i,1); render();};
+    });
+    ro.innerHTML=`stops: ${stops.map(s=>s.type+'@'+s.pos.toFixed(1)).join(' · ')} — คอลัมน์ค่าจัดชิดตาม stop สุดท้าย (ลองตั้งเป็น D/ทศนิยมแล้วดูจุดตรงกัน)`;
+  }
+  render();
+})();
+
+/* ---------------- Card 4: combined square + dblclick ---------------- */
+(function(){
+  const MS=40, CW=620, ME=40;
+  const r=document.getElementById('r4'); marginZones(r,MS,CW,ME); buildTicks(r,MS,CW);
+  let left=0, first=1.2;
+  const hl=document.createElement('div'); hl.className='handle tri-down'; hl.tabIndex=0; r.appendChild(hl);
+  const hf=document.createElement('div'); hf.className='handle tri-up'; hf.tabIndex=0; r.appendChild(hf);
+  const sq=document.createElement('div'); sq.className='handle sq'; sq.tabIndex=0; sq.title='ลากเลื่อนทั้งคู่'; r.appendChild(sq);
+  const p=document.getElementById('p4'); const span=p.querySelector('.first'); const ro=document.getElementById('ro4');
+  function render(){
+    hl.style.left=(MS+px(left))+'px';
+    hf.style.left=(MS+px(left+first))+'px';
+    sq.style.left=(MS+px(left))+'px'; sq.style.bottom='-6px';
+    p.style.paddingLeft=px(left)+'px'; span.style.textIndent=first+'cm';
+    ro.innerHTML=`ซ้าย <b>${left.toFixed(2)}</b> · บรรทัดแรก <b>${first.toFixed(2)}</b> ซม. · <span style="color:var(--accent)">◼ ลากเลื่อนทั้งคู่พร้อมกัน</span>`;
+  }
+  dragX(hl,d=>{left=clamp(round2(cm(px(left)+d)),0,cm(CW)-1);render();});
+  dragX(hf,d=>{first=round2(cm(px(first)+d));render();});
+  dragX(sq,d=>{left=clamp(round2(cm(px(left)+d)),0,cm(CW)-1);render();}); // moves both (first is relative offset)
+  // dblclick zones
+  r.addEventListener('dblclick',e=>{
+    const rect=r.getBoundingClientRect(); const x=e.clientX-rect.left;
+    if(x<MS || x>MS+CW){ openDlg('dlg-page'); } else { openDlg('dlg-para'); }
+  });
+  render();
+})();
+
+function openDlg(id){ document.getElementById(id).classList.add('open'); }
+function closeDlg(){ document.querySelectorAll('.dlg-backdrop').forEach(d=>d.classList.remove('open')); }
+document.querySelectorAll('.dlg-backdrop').forEach(b=>b.addEventListener('click',e=>{if(e.target===b)closeDlg();}));
+</script>
+</body>
+</html>

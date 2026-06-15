@@ -2,17 +2,41 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { pxToMm, pxToCm } from "@/lib/page";
+import {
+  MIN_TAB_STOP_CM,
+  MAX_TAB_STOP_CM,
+  normalizeTabStops,
+} from "@/lib/tiptap/paragraphFormat";
 
 export interface DragState {
-  type: "left" | "first" | "marginLeft" | "marginRight" | "marginTop" | "marginBottom";
+  type:
+    | "left"
+    | "first"
+    | "right"
+    | "marginLeft"
+    | "marginRight"
+    | "marginTop"
+    | "marginBottom"
+    | "tabStop";
   startX: number;
   startY: number;
   startLeft: number;
   startFirst: number;
+  startRight: number;
   startMarginLeftMm: number;
   startMarginRightMm: number;
   startMarginTopMm: number;
   startMarginBottomMm: number;
+  /** Index into `tabStops` being dragged (tabStop drags only). */
+  tabStopIndex: number;
+  /** Snapshot of the tab-stop list (cm) at drag start (tabStop drags only). */
+  startTabStops: number[];
+  /** Value (cm) of the stop being dragged at drag start — tracks identity, not index. */
+  startTabValue: number;
+  /** Live value (cm) of the dragged stop during the drag (tabStop drags only). */
+  activeTabValue: number;
+  /** True once the remove threshold has been crossed — finalized on drag END only. */
+  tabPendingRemove: boolean;
 }
 
 export type DragType = DragState["type"];
@@ -26,13 +50,26 @@ interface TooltipState {
 // ── Constants ───────────────────────────────────────────────────────────────
 const SNAP_MARGIN_STEP = 5; // mm
 const SNAP_INDENT_STEP = 0.5; // cm
-const KEYBOARD_INDENT_STEP = 0.1; // cm per arrow key press
+const KEYBOARD_INDENT_STEP = 0.25; // cm per arrow key press
+const KEYBOARD_INDENT_FINE_STEP = 0.05; // cm per arrow key press with Shift
 const KEYBOARD_MARGIN_STEP = 1; // mm per arrow key press
 const MIN_CONTENT_MM = 20;
+// Minimum text column (cm) kept between left and right paragraph indents so the
+// two indent markers can never cross / collapse the writing area to nothing.
+const MIN_INDENT_CONTENT_CM = 1;
 const TOOLTIP_OFFSET_Y = 16; // px below cursor
+
+// Custom ruler tab stops
+export const TAB_STOP_SNAP_CM = 0.25; // grid tab markers snap to
+/** Vertical drag distance (px) past the ruler before a tab stop is dropped
+ *  (Word: drag a tab off the ruler to delete it). */
+export const TAB_STOP_REMOVE_THRESHOLD_PX = 20;
 
 const snapMargin = (v: number) => Math.round(v / SNAP_MARGIN_STEP) * SNAP_MARGIN_STEP;
 const snapIndent = (v: number) => Math.round(v / SNAP_INDENT_STEP) * SNAP_INDENT_STEP;
+
+export const snapTabStop = (cm: number) =>
+  Math.round(cm / TAB_STOP_SNAP_CM) * TAB_STOP_SNAP_CM;
 
 export function makeTooltipText(type: DragType, value: number): string {
   switch (type) {
@@ -48,6 +85,10 @@ export function makeTooltipText(type: DragType, value: number): string {
       return "ย่อหน้าซ้าย (Left indent): " + value.toFixed(1) + " ซม.";
     case "first":
       return "ย่อหน้าแรก (First line): " + value.toFixed(1) + " ซม.";
+    case "right":
+      return "ย่อหน้าขวา (Right indent): " + value.toFixed(1) + " ซม.";
+    case "tabStop":
+      return "แท็บ (Tab stop): " + value.toFixed(2) + " ซม.";
   }
 }
 
@@ -63,6 +104,47 @@ function clampMargin(
   return clamp(value, 0, pageSize - otherMargin - minContent);
 }
 
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
+/**
+ * Build the live list during a tab-stop drag, tracking the dragged stop by
+ * IDENTITY (its `startValue`) rather than array index. The dragged stop is
+ * carried as a distinct value (`activeValue`); the *other* stops are emitted
+ * unchanged and never sorted/deduped mid-drag, so crossing a neighbor can't
+ * collapse the dragged stop onto it and delete it. Normalization (sort/dedupe)
+ * happens exactly once on drag END via `normalizeTabStops`.
+ */
+function liveTabStops(
+  stops: number[],
+  startValue: number,
+  activeValue: number
+): number[] {
+  const active = round2(clamp(activeValue, MIN_TAB_STOP_CM, MAX_TAB_STOP_CM));
+  // Drop only the FIRST occurrence of the dragged stop's start value (identity),
+  // keeping any same-valued neighbor intact, then append the live active value.
+  let dropped = false;
+  const rest = stops.filter((v) => {
+    if (!dropped && v === startValue) {
+      dropped = true;
+      return false;
+    }
+    return true;
+  });
+  return [...rest, active];
+}
+
+/** The list with the dragged stop (by identity) removed entirely. */
+function withTabStopRemoved(stops: number[], startValue: number): number[] {
+  let dropped = false;
+  return stops.filter((v) => {
+    if (!dropped && v === startValue) {
+      dropped = true;
+      return false;
+    }
+    return true;
+  });
+}
+
 // ── Hook ────────────────────────────────────────────────────────────────────
 interface UseRulerDragOptions {
   maxIndentCm: number;
@@ -71,12 +153,18 @@ interface UseRulerDragOptions {
   minContentMm: number;
   indentLeft: number;
   indentFirst: number;
+  /** Current right paragraph indent (cm) on the active block. */
+  indentRight?: number;
   marginLeftMm: number;
   marginRightMm: number;
   marginTopMm: number;
   marginBottomMm: number;
+  /** Current tab stops (cm) on the active block — left-edge relative. */
+  tabStops?: number[];
   onIndentChange?: (marginLeft: number, textIndent: number) => void;
+  onIndentRightChange?: (marginRight: number) => void;
   onMarginChange?: (aMm: number, bMm: number) => void;
+  onTabStopsChange?: (stops: number[]) => void;
   onRulerActive?: (info: { label: string } | null) => void;
 }
 
@@ -87,18 +175,26 @@ export function useRulerDrag({
   minContentMm,
   indentLeft,
   indentFirst,
+  indentRight,
   marginLeftMm,
   marginRightMm,
   marginTopMm,
   marginBottomMm,
+  tabStops,
   onIndentChange,
+  onIndentRightChange,
   onMarginChange,
+  onTabStopsChange,
   onRulerActive,
 }: UseRulerDragOptions) {
   const dragRef = useRef<DragState | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
-  const anyInteractive = !!onIndentChange || !!onMarginChange;
+  const anyInteractive =
+    !!onIndentChange ||
+    !!onIndentRightChange ||
+    !!onMarginChange ||
+    !!onTabStopsChange;
 
   // Stabilize mutable values with refs so callbacks can have empty deps
   const optsRef = useRef<UseRulerDragOptions>({
@@ -108,12 +204,16 @@ export function useRulerDrag({
     minContentMm,
     indentLeft,
     indentFirst,
+    indentRight,
     marginLeftMm,
     marginRightMm,
     marginTopMm,
     marginBottomMm,
+    tabStops,
     onIndentChange,
+    onIndentRightChange,
     onMarginChange,
+    onTabStopsChange,
     onRulerActive,
   });
 
@@ -128,38 +228,55 @@ export function useRulerDrag({
       minContentMm,
       indentLeft,
       indentFirst,
+      indentRight,
       marginLeftMm,
       marginRightMm,
       marginTopMm,
       marginBottomMm,
+      tabStops,
       onIndentChange,
+      onIndentRightChange,
       onMarginChange,
+      onTabStopsChange,
       onRulerActive,
     };
   });
 
-  const startDrag = useCallback((type: DragType) => (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    const o = optsRef.current;
-    dragRef.current = {
-      type,
-      startX: clientX,
-      startY: clientY,
-      startLeft: o.indentLeft,
-      startFirst: o.indentFirst,
-      startMarginLeftMm: o.marginLeftMm,
-      startMarginRightMm: o.marginRightMm,
-      startMarginTopMm: o.marginTopMm,
-      startMarginBottomMm: o.marginBottomMm,
-    };
-  }, []);
+  const startDrag = useCallback(
+    (type: DragType, tabStopIndex = -1) =>
+      (e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+        const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+        const o = optsRef.current;
+        const startTabStops = (o.tabStops ?? []).slice();
+        const startTabValue =
+          tabStopIndex >= 0 ? startTabStops[tabStopIndex] ?? 0 : 0;
+        dragRef.current = {
+          type,
+          startX: clientX,
+          startY: clientY,
+          startLeft: o.indentLeft,
+          startFirst: o.indentFirst,
+          startRight: o.indentRight ?? 0,
+          startMarginLeftMm: o.marginLeftMm,
+          startMarginRightMm: o.marginRightMm,
+          startMarginTopMm: o.marginTopMm,
+          startMarginBottomMm: o.marginBottomMm,
+          tabStopIndex,
+          startTabStops,
+          startTabValue,
+          activeTabValue: startTabValue,
+          tabPendingRemove: false,
+        };
+      },
+    []
+  );
 
   const handleKeyDown = useCallback((type: DragType) => (e: React.KeyboardEvent) => {
     const o = optsRef.current;
     const isVerticalMargin = type === "marginTop" || type === "marginBottom";
-    const isIndent = type === "left" || type === "first";
+    const isIndent = type === "left" || type === "first" || type === "right";
 
     if (isVerticalMargin) {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
@@ -169,15 +286,30 @@ export function useRulerDrag({
 
     e.preventDefault();
 
-    if (isIndent) {
+    if (type === "right") {
+      if (!o.onIndentRightChange) return;
+      const step = e.shiftKey ? KEYBOARD_INDENT_FINE_STEP : KEYBOARD_INDENT_STEP;
+      // ArrowLeft drags the right marker inward → MORE right indent; ArrowRight → less.
+      const delta = e.key === "ArrowLeft" ? step : -step;
+      const maxRight = Math.max(0, o.maxIndentCm - o.indentLeft - MIN_INDENT_CONTENT_CM);
+      const newRight = round2(clamp((o.indentRight ?? 0) + delta, 0, maxRight));
+      o.onIndentRightChange(newRight);
+      o.onRulerActive?.({ label: makeTooltipText("right", newRight) });
+      return;
+    }
+
+    if (type === "left" || type === "first") {
       if (!o.onIndentChange) return;
-      const delta = e.key === "ArrowRight" ? KEYBOARD_INDENT_STEP : -KEYBOARD_INDENT_STEP;
+      const step = e.shiftKey ? KEYBOARD_INDENT_FINE_STEP : KEYBOARD_INDENT_STEP;
+      const delta = e.key === "ArrowRight" ? step : -step;
+      // Round to 2 decimals to avoid floating-point drift (e.g. 0.30000000000000004)
+      const round2 = (v: number) => Math.round(v * 100) / 100;
       if (type === "left") {
-        const newLeft = clamp(o.indentLeft + delta, 0, o.maxIndentCm);
+        const newLeft = round2(clamp(o.indentLeft + delta, 0, o.maxIndentCm));
         o.onIndentChange(newLeft, o.indentFirst);
         o.onRulerActive?.({ label: makeTooltipText("left", newLeft) });
       } else {
-        const newFirst = o.indentFirst + delta;
+        const newFirst = round2(o.indentFirst + delta);
         o.onIndentChange(o.indentLeft, newFirst);
         o.onRulerActive?.({ label: makeTooltipText("first", newFirst) });
       }
@@ -241,6 +373,17 @@ export function useRulerDrag({
           o.onIndentChange(drag.startLeft, newFirst);
           return { x: clientX, y: clientY + TOOLTIP_OFFSET_Y, text: makeTooltipText("first", newFirst) };
         }
+        case "right": {
+          if (!o.onIndentRightChange) return null;
+          const dx = clientX - drag.startX;
+          // Dragging the right marker LEFT (negative dx) increases the right indent.
+          const maxRight = Math.max(0, o.maxIndentCm - o.indentLeft - MIN_INDENT_CONTENT_CM);
+          let newRight = clamp(drag.startRight - pxToCm(dx), 0, maxRight);
+          if (!shiftKey) newRight = snapIndent(newRight);
+          newRight = round2(clamp(newRight, 0, maxRight));
+          o.onIndentRightChange(newRight);
+          return { x: clientX, y: clientY + TOOLTIP_OFFSET_Y, text: makeTooltipText("right", newRight) };
+        }
         case "marginLeft": {
           if (!o.onMarginChange) return null;
           const dx = clientX - drag.startX;
@@ -293,6 +436,43 @@ export function useRulerDrag({
           o.onMarginChange(drag.startMarginTopMm, newBottom);
           return { x: clientX, y: clientY + TOOLTIP_OFFSET_Y, text: makeTooltipText("marginBottom", newBottom) };
         }
+        case "tabStop": {
+          if (!o.onTabStopsChange) return null;
+          const stops = drag.startTabStops;
+          const startValue = drag.startTabValue;
+          if (drag.tabStopIndex < 0 || stops[drag.tabStopIndex] == null) return null;
+
+          // Recompute the live horizontal value regardless, so a release back
+          // ON the ruler always lands at the cursor's current position.
+          const dx = clientX - drag.startX;
+          let value = startValue + pxToCm(dx);
+          if (!shiftKey) value = snapTabStop(value);
+          value = round2(clamp(value, MIN_TAB_STOP_CM, MAX_TAB_STOP_CM));
+          drag.activeTabValue = value;
+
+          // Off-ruler: mark "will remove" (Word behaviour) but DON'T commit the
+          // delete — only on drag END. Show a live preview with the stop gone.
+          const offRuler =
+            Math.abs(clientY - drag.startY) > TAB_STOP_REMOVE_THRESHOLD_PX;
+          drag.tabPendingRemove = offRuler;
+          if (offRuler) {
+            o.onTabStopsChange(withTabStopRemoved(stops, startValue));
+            return {
+              x: clientX,
+              y: clientY + TOOLTIP_OFFSET_Y,
+              text: "ลบแท็บ (Remove tab stop)",
+            };
+          }
+
+          // On-ruler: emit the live list with the dragged stop carried by
+          // identity (un-normalized) so crossing a neighbor never deletes it.
+          o.onTabStopsChange(liveTabStops(stops, startValue, value));
+          return {
+            x: clientX,
+            y: clientY + TOOLTIP_OFFSET_Y,
+            text: makeTooltipText("tabStop", value),
+          };
+        }
       }
     };
 
@@ -329,6 +509,26 @@ export function useRulerDrag({
         rafId = 0;
       }
       pendingMove = null;
+
+      // Finalize tab-stop drags: normalize (sort/dedupe) exactly once on release.
+      // Removal is committed here, not mid-drag, so it stays reversible — if the
+      // user dragged back onto the ruler before letting go, the stop is kept at
+      // its current position instead.
+      const drag = dragRef.current;
+      if (drag?.type === "tabStop") {
+        const o = optsRef.current;
+        if (o.onTabStopsChange) {
+          const finalStops = drag.tabPendingRemove
+            ? withTabStopRemoved(drag.startTabStops, drag.startTabValue)
+            : liveTabStops(
+                drag.startTabStops,
+                drag.startTabValue,
+                drag.activeTabValue
+              );
+          o.onTabStopsChange(normalizeTabStops(finalStops));
+        }
+      }
+
       dragRef.current = null;
       setTooltip(null);
       optsRef.current.onRulerActive?.(null);

@@ -17,6 +17,53 @@ export function createImageWithAlign(
           renderHTML: (attrs) =>
             attrs.align ? { "data-align": attrs.align as string } : {},
         },
+        // Free-floating image (Word-style "in front of text"): position:absolute
+        // anchored to the page (.page-node). The `float` attribute owns the whole
+        // positioning style; posX/posY/zIndex are data holders parsed from the
+        // inline style and rendered back through `float` so the style string stays
+        // a single coherent fragment.
+        float: {
+          default: null,
+          parseHTML: (el) =>
+            el.getAttribute("data-float") === "true" ||
+            el.style.position === "absolute"
+              ? true
+              : null,
+          renderHTML: (attrs) => {
+            if (!attrs.float) return {};
+            const x = Number(attrs.posX) || 0;
+            const y = Number(attrs.posY) || 0;
+            const z = Number(attrs.zIndex) || 5;
+            return {
+              "data-float": "true",
+              style: `position:absolute;left:${x}px;top:${y}px;z-index:${z}`,
+            };
+          },
+        },
+        posX: {
+          default: 0,
+          parseHTML: (el) => {
+            const v = el.style.left;
+            return v ? Math.round(parseFloat(v)) || 0 : 0;
+          },
+          renderHTML: () => ({}),
+        },
+        posY: {
+          default: 0,
+          parseHTML: (el) => {
+            const v = el.style.top;
+            return v ? Math.round(parseFloat(v)) || 0 : 0;
+          },
+          renderHTML: () => ({}),
+        },
+        zIndex: {
+          default: 5,
+          parseHTML: (el) => {
+            const v = el.style.zIndex;
+            return v ? parseInt(v, 10) || 5 : 5;
+          },
+          renderHTML: () => ({}),
+        },
         width: {
           default: null,
           parseHTML: (el) => {
