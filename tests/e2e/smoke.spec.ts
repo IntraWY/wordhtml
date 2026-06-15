@@ -7,6 +7,7 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
   });
 });
 
@@ -62,10 +63,14 @@ test.describe("Smoke", () => {
     await page.goto("/");
     const editor = page.locator(".ProseMirror").first();
     await expect(editor).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1200); // settle before the slash-menu interaction
     await editor.click();
     await editor.pressSequentially("/");
+    // Scope to the slash-menu tippy popup — "หัวข้อ 1" also exists as a hidden
+    // <option> in the ribbon heading select, which the bare locator would match.
     await expect(
-      page.getByText("หัวข้อ 1", { exact: false }).first()
+      page.locator("[data-tippy-root]").getByText("หัวข้อ 1", { exact: false }).first()
     ).toBeVisible({ timeout: 5000 });
     await expect(
       page.getByRole("heading", { name: /พบปัญหาที่ไม่คาดคิด/i })
@@ -86,6 +91,8 @@ test.describe("Smoke", () => {
 
     const editor = page.locator("[contenteditable='true']").first();
     await expect(editor).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1200); // settle so the startup reset can't wipe loaded docx content
 
     const fixturePath = path.resolve(__dirname, "../fixtures/sample.docx");
 

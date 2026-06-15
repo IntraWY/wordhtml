@@ -6,6 +6,7 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
     localStorage.setItem(
       "wordhtml-editor",
       JSON.stringify({
@@ -54,5 +55,5 @@ test("VariablePanel remove button deletes variable from panel and document", asy
 
   await expect(page.locator('.variable-badge[data-variable="customer"]')).toHaveCount(0);
   await expect(page.getByPlaceholder("ค่า (value)")).toHaveCount(0);
-  await expect(page.getByText("ตัวแปร (0)")).toBeVisible();
+  await expect(page.getByText("ตัวแปร (0/0)")).toBeVisible();
 });

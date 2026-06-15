@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { gotoEditor, typeText, pasteHtml } from "./helpers";
 
 /**
  * E2E regression specs for three previously-fixed pagination bugs:
@@ -24,6 +25,7 @@ test.beforeEach(async ({ page }) => {
       "wordhtml-onboarding",
       JSON.stringify({ hasSeenTour: true })
     );
+    localStorage.setItem("wordhtml-recovery-opt-out", "1");
   });
 });
 
@@ -52,27 +54,13 @@ const pagesFitSnapshot = () => {
 test("single ~8,956-char paragraph soft-splits across pages and re-joins to one paragraph", async ({
   page,
 }) => {
-  await page.goto("/");
-  const editor = page.locator(".ProseMirror").first();
-  await expect(editor).toBeVisible();
-  await editor.click();
+  await gotoEditor(page);
 
-  const expected = await page.evaluate(() => {
-    const el = document.querySelector(".ProseMirror") as HTMLElement;
-    el.focus();
-    const sel = window.getSelection();
-    if (sel) {
-      sel.selectAllChildren(el);
-      sel.collapseToEnd();
-    }
-    const block =
-      "ทดสอบการแบ่งย่อหน้าเดียวที่ยาวมากให้ไหลข้ามหน้ากระดาษโดยอัตโนมัติของระบบจัดหน้าเอกสารราชการไทย เพื่อยืนยันว่าการตัดแบบซอฟต์สปลิตไม่ทำให้เนื้อหาสูญหายแม้แต่ตัวอักษรเดียว ";
-    const text = block
-      .repeat(Math.ceil(8956 / block.length))
-      .slice(0, 8956);
-    document.execCommand("insertText", false, text);
-    return text.replace(/\s/g, "");
-  });
+  const block =
+    "ทดสอบการแบ่งย่อหน้าเดียวที่ยาวมากให้ไหลข้ามหน้ากระดาษโดยอัตโนมัติของระบบจัดหน้าเอกสารราชการไทย เพื่อยืนยันว่าการตัดแบบซอฟต์สปลิตไม่ทำให้เนื้อหาสูญหายแม้แต่ตัวอักษรเดียว ";
+  const text = block.repeat(Math.ceil(8956 / block.length)).slice(0, 8956);
+  const expected = text.replace(/\s/g, "");
+  await typeText(page, text);
 
   // Deterministic wait: repagination is debounced — poll until the paragraph
   // has been split onto more than one page AND nothing overflows a page body.
@@ -165,25 +153,13 @@ test("single ~8,956-char paragraph soft-splits across pages and re-joins to one 
 test("40 medium paragraphs paginate into multiple pages with no empty ghost page", async ({
   page,
 }) => {
-  await page.goto("/");
-  const editor = page.locator(".ProseMirror").first();
-  await expect(editor).toBeVisible();
-  await editor.click();
+  await gotoEditor(page);
 
-  await page.evaluate(() => {
-    const el = document.querySelector(".ProseMirror") as HTMLElement;
-    el.focus();
-    const sel = window.getSelection();
-    if (sel) {
-      sel.selectAllChildren(el);
-      sel.collapseToEnd();
-    }
-    let html = "";
-    for (let i = 1; i <= 40; i++) {
-      html += `<p>ย่อหน้าที่ ${i} สำหรับทดสอบการจัดหน้าอัตโนมัติของเอกสารราชการไทย เนื้อหายาวพอสมควรเพื่อให้แต่ละย่อหน้ากินพื้นที่หลายบรรทัด และเมื่อนำมารวมกันทั้งสี่สิบย่อหน้าจะเกินความสูงของหน้ากระดาษหนึ่งหน้าอย่างแน่นอน</p>`;
-    }
-    document.execCommand("insertHTML", false, html);
-  });
+  let html = "";
+  for (let i = 1; i <= 40; i++) {
+    html += `<p>ย่อหน้าที่ ${i} สำหรับทดสอบการจัดหน้าอัตโนมัติของเอกสารราชการไทย เนื้อหายาวพอสมควรเพื่อให้แต่ละย่อหน้ากินพื้นที่หลายบรรทัด และเมื่อนำมารวมกันทั้งสี่สิบย่อหน้าจะเกินความสูงของหน้ากระดาษหนึ่งหน้าอย่างแน่นอน</p>`;
+  }
+  await pasteHtml(page, html);
 
   // Poll until reflow settles: multiple pages, none overflowing.
   await expect
@@ -228,34 +204,20 @@ test("40 medium paragraphs paginate into multiple pages with no empty ghost page
 test("pasting exported page-node markup strips ghost pages and keeps content intact", async ({
   page,
 }) => {
-  await page.goto("/");
-  const editor = page.locator(".ProseMirror").first();
-  await expect(editor).toBeVisible();
-  await editor.click();
+  const editor = await gotoEditor(page);
 
   // Simulate pasting a previous wordhtml export: two pages with content plus
   // an empty trailing ghost page, delivered through the real clipboard paste
   // pipeline (transformPastedHTML → cleanPastedHtml → schema parse).
-  await page.evaluate(() => {
-    const el = document.querySelector(".ProseMirror") as HTMLElement;
-    el.focus();
-    const html =
-      `<div class="page-node" data-page-number="1"><div class="page-body">` +
+  await pasteHtml(
+    page,
+    `<div class="page-node" data-page-number="1"><div class="page-body">` +
       `<p>เนื้อหาหน้าแรกจากการส่งออกครั้งก่อน</p></div></div>` +
       `<div class="page-node" data-page-number="2"><div class="page-body">` +
       `<p>เนื้อหาหน้าที่สองจากการส่งออกครั้งก่อน</p></div></div>` +
       `<div class="page-node" data-page-number="3"><div class="page-body">` +
-      `<p></p></div></div>`;
-    const dt = new DataTransfer();
-    dt.setData("text/html", html);
-    el.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: dt,
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-  });
+      `<p></p></div></div>`
+  );
 
   // Content from both source pages must survive the paste.
   await expect(editor).toContainText("เนื้อหาหน้าแรกจากการส่งออกครั้งก่อน");

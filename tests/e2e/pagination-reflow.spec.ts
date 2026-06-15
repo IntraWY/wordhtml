@@ -1,29 +1,17 @@
 import { test, expect } from "@playwright/test";
+import { primeEditorPage, gotoEditor, typeText, pasteHtml } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem(
-      "wordhtml-onboarding",
-      JSON.stringify({ hasSeenTour: true })
-    );
-  });
+  await primeEditorPage(page);
 });
 
 test("pasting page-node html does not create ghost pages", async ({ page }) => {
-  await page.goto("/");
-  const editor = page.locator(".ProseMirror").first();
-  await expect(editor).toBeVisible();
-  await editor.click();
+  await gotoEditor(page);
 
-  await page.evaluate(() => {
-    const el = document.querySelector(".ProseMirror") as HTMLElement;
-    el.focus();
-    document.execCommand(
-      "insertHTML",
-      false,
-      `<div class="page-node"><div class="page-body"><p>เนื้อหาทดสอบ</p></div></div>`
-    );
-  });
+  await pasteHtml(
+    page,
+    `<div class="page-node"><div class="page-body"><p>เนื้อหาทดสอบ</p></div></div>`
+  );
   await page.waitForTimeout(1500);
 
   const result = await page.evaluate(() => {
@@ -41,25 +29,13 @@ test("pasting page-node html does not create ghost pages", async ({ page }) => {
 test("long multi-paragraph content reflows into evenly-filled pages", async ({
   page,
 }) => {
-  await page.goto("/");
-  const editor = page.locator(".ProseMirror").first();
-  await expect(editor).toBeVisible();
-  await editor.click();
+  await gotoEditor(page);
 
-  await page.evaluate(() => {
-    const el = document.querySelector(".ProseMirror") as HTMLElement;
-    el.focus();
-    const sel = window.getSelection();
-    if (sel) {
-      sel.selectAllChildren(el);
-      sel.collapseToEnd();
-    }
-    let html = "";
-    for (let i = 1; i <= 40; i++) {
-      html += `<p>ย่อหน้าที่ ${i} สำหรับทดสอบการจัดหน้าอัตโนมัติของเอกสารราชการไทย เนื้อหายาวพอสมควรเพื่อให้แต่ละย่อหน้ากินพื้นที่หลายบรรทัดและเมื่อรวมกันจะเกินหนึ่งหน้ากระดาษ</p>`;
-    }
-    document.execCommand("insertHTML", false, html);
-  });
+  let html = "";
+  for (let i = 1; i <= 40; i++) {
+    html += `<p>ย่อหน้าที่ ${i} สำหรับทดสอบการจัดหน้าอัตโนมัติของเอกสารราชการไทย เนื้อหายาวพอสมควรเพื่อให้แต่ละย่อหน้ากินพื้นที่หลายบรรทัดและเมื่อรวมกันจะเกินหนึ่งหน้ากระดาษ</p>`;
+  }
+  await pasteHtml(page, html);
   await page.waitForTimeout(2800);
 
   const result = await page.evaluate(() => {
@@ -105,25 +81,13 @@ test("long multi-paragraph content reflows into evenly-filled pages", async ({
 test("a single over-tall paragraph splits across pages without losing content", async ({
   page,
 }) => {
-  await page.goto("/");
-  const editor = page.locator(".ProseMirror").first();
-  await expect(editor).toBeVisible();
-  await editor.click();
+  await gotoEditor(page);
 
-  const expected = await page.evaluate(() => {
-    const el = document.querySelector(".ProseMirror") as HTMLElement;
-    el.focus();
-    const sel = window.getSelection();
-    if (sel) {
-      sel.selectAllChildren(el);
-      sel.collapseToEnd();
-    }
-    const block =
-      "ประโยคทดสอบการตัดย่อหน้าเดียวที่ยาวมากให้ไหลข้ามหน้ากระดาษโดยอัตโนมัติสำหรับเอกสารราชการไทยเพื่อพิสูจน์ว่าระบบแบ่งย่อหน้าเดียวที่สูงเกินหนึ่งหน้าได้โดยไม่มีเนื้อหาหาย ";
-    const text = block.repeat(45);
-    document.execCommand("insertText", false, text);
-    return text.replace(/\s/g, "");
-  });
+  const block =
+    "ประโยคทดสอบการตัดย่อหน้าเดียวที่ยาวมากให้ไหลข้ามหน้ากระดาษโดยอัตโนมัติสำหรับเอกสารราชการไทยเพื่อพิสูจน์ว่าระบบแบ่งย่อหน้าเดียวที่สูงเกินหนึ่งหน้าได้โดยไม่มีเนื้อหาหาย ";
+  const text = block.repeat(45);
+  const expected = text.replace(/\s/g, "");
+  await typeText(page, text);
   await page.waitForTimeout(2800);
 
   const result = await page.evaluate(() => {
