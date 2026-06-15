@@ -6,6 +6,7 @@ import {
   decimalPrefix,
   zipTabStops,
   remapTabStopTypes,
+  shouldDispatchTabDecorations,
   MIN_TAB_WIDTH_PX,
   type TabStopSpec,
   type TabType,
@@ -146,5 +147,43 @@ describe("remapTabStopTypes", () => {
 
   it("seeds the first stop with the default type", () => {
     expect(remapTabStopTypes([], [], [3], "right")).toEqual(T("right"));
+  });
+});
+
+describe("shouldDispatchTabDecorations", () => {
+  it("dispatches on the first pass (empty history)", () => {
+    expect(shouldDispatchTabDecorations("A", "", "")).toBe(true);
+  });
+
+  it("stops once converged (sig === lastSig)", () => {
+    expect(shouldDispatchTabDecorations("A", "A", "")).toBe(false);
+  });
+
+  it("dispatches through a forward cascade of distinct sigs", () => {
+    // A → B → C each progress, none revisits a 2-frames-old state
+    expect(shouldDispatchTabDecorations("B", "A", "")).toBe(true);
+    expect(shouldDispatchTabDecorations("C", "B", "A")).toBe(true);
+  });
+
+  it("breaks a 2-cycle oscillation (sig === prevSig)", () => {
+    // last committed = B, two-ago = A; layout wants to flip back to A → stop
+    expect(shouldDispatchTabDecorations("A", "B", "A")).toBe(false);
+  });
+
+  it("simulated A↔B oscillation terminates instead of looping forever", () => {
+    // Drive the same state machine the plugin's rebuild() loop runs.
+    let lastSig = "";
+    let prevSig = "";
+    const frames = ["A", "B", "A", "B", "A", "B"];
+    let dispatches = 0;
+    for (const sig of frames) {
+      if (shouldDispatchTabDecorations(sig, lastSig, prevSig)) {
+        dispatches++;
+        prevSig = lastSig;
+        lastSig = sig;
+      }
+    }
+    // A dispatches, B dispatches, then the next A hits the 2-cycle guard → halt.
+    expect(dispatches).toBe(2);
   });
 });

@@ -256,9 +256,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.10)
+## Current state (v0.2.11)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **841 unit tests pass; lint + build clean.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **851 unit tests pass; lint + build clean; e2e 34/34.**
+
+**v0.2.11 — Tab-stop plugin hardening.** A debug pass over the v0.2.10 tab-stop engine. The decoration rebuild loop (`tabStopPlugin.ts`) re-dispatched while `sig !== lastSig` with **no upper bound** — if a tab width flips a line-wrap back and forth (A↔B), the rAF loop never settles and pegs the CPU. Added a pure 2-cycle guard `shouldDispatchTabDecorations(sig, lastSig, prevSig)` in `tabStopLayout.ts` (stops on convergence *or* when about to revisit the state from two dispatches ago); the plugin now tracks `prevSig`. A forward cascade still produces a fresh sig per frame and dispatches normally, so real updates are never blocked. Locked by 5 new tests incl. a simulated A↔B oscillation that terminates after 2 dispatches. Also corrected two stale `paragraphFormat.ts` comments that still claimed tab stops were "left-aligned only" / derived a uniform `tabSize` from the first stop (both false since v0.2.10 — rendering is per-type via the plugin, `setTabStops` clears `tabSize` to null). Note: an audit flagged a "CRITICAL" type-loss-during-drag, but verification showed it was a false positive — `remapTabStopTypes`'s `leftover` pool already carries a moved stop's type (locked by the existing `"preserves a moved stop's type"` test).
 
 **v0.2.10 — Word-style ruler upgrades.** Four additions bringing the ruler closer to Microsoft Word:
 1. **Right-indent marker** — a draggable ▽ triangle on the horizontal ruler bound to the paragraph `marginRight` attr (already existed; now ruler-draggable). New `"right"` drag type in `useRulerDrag.ts`; `IndentRuler.readBlockIndent` reads `marginRight`; `Ruler` props `indentRight`/`onIndentRightChange`.
@@ -376,7 +378,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.10**
+- **Current version**: **v0.2.11**
 
 ### Patch bump rule (deploy default)
 

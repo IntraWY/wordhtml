@@ -150,6 +150,30 @@ export function zipTabStops(
  * This lives here (pure) so `useRulerDrag` can stay a plain `number[]` mover and
  * all the type bookkeeping is isolated to the IndentRuler/paragraphFormat path.
  */
+/**
+ * Decide whether the tab-decoration plugin should re-dispatch given the new
+ * layout fingerprint (`sig`) and the previous two committed fingerprints.
+ *
+ * Each decoration pass relays out later tabs, so a forward cascade legitimately
+ * produces a NEW sig per frame until it converges (then `sig === lastSig` and we
+ * stop). But a tab whose width flips a line-wrap can oscillate between exactly
+ * two layouts (A↔B) forever — the bare `sig !== lastSig` guard never settles
+ * that, pegging the CPU in an unbounded rAF loop. Detecting a 2-cycle
+ * (`sig === prevSig`, i.e. we're about to return to the state from two dispatches
+ * ago) breaks it by settling on the current committed layout. A genuine forward
+ * edit yields an unseen sig and dispatches normally, so this never blocks real
+ * updates.
+ */
+export function shouldDispatchTabDecorations(
+  sig: string,
+  lastSig: string,
+  prevSig: string
+): boolean {
+  if (sig === lastSig) return false; // converged
+  if (sig === prevSig) return false; // 2-cycle oscillation — settle
+  return true;
+}
+
 export function remapTabStopTypes(
   oldStops: number[],
   oldTypes: TabType[],
