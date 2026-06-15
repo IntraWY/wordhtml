@@ -330,9 +330,10 @@ export const ParagraphFormatExtension = Extension.create({
               return parsed?.lineHeight ?? null;
             },
           },
-          // Custom ruler tab stops (cm, left-aligned only — see module note).
-          // Stored verbatim for forward-compat + ruler markers; rendering uses
-          // the derived uniform `tabSize` below.
+          // Custom ruler tab stops (cm). Stored verbatim for ruler markers +
+          // export; per-position alignment is rendered by the tabStopPlugin
+          // decorations (see tabStopPlugin.ts), not a uniform `tabSize`. Each
+          // stop's alignment lives in the parallel `tabStopTypes` attr below.
           tabStops: {
             default: [] as number[],
             renderHTML: (attrs) => {
@@ -474,10 +475,10 @@ export const ParagraphFormatExtension = Extension.create({
             const next = Math.max(0, Math.round((current - 0.5) * 10) / 10);
             return { ...attrs, marginLeft: next };
           }),
-      // Set the full custom tab-stop list (cm) on the selected paragraphs.
-      // Derives the rendered uniform `tabSize` from the FIRST stop — see the
-      // Word-fidelity note at the top of this module. Empty array clears both
-      // (paragraph falls back to the global 1.27cm grid).
+      // Set the full custom tab-stop list (cm) + parallel alignment types on the
+      // selected paragraphs. Clears the uniform `tabSize` (null) — per-position
+      // rendering is handled by the tabStopPlugin decorations. An empty array
+      // clears the stops (paragraph falls back to the global 1.27cm grid).
       setTabStops:
         (stops: number[], types?: TabType[]) =>
         ({ tr, state }) => {

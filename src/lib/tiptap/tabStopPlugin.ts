@@ -7,6 +7,7 @@ import {
   computeTabWidth,
   decimalPrefix,
   zipTabStops,
+  shouldDispatchTabDecorations,
   type TabStopSpec,
 } from "./tabStopLayout";
 
@@ -165,14 +166,17 @@ export function createTabStopPlugin(): Plugin<DecorationSet> {
     view(view) {
       let raf = 0;
       let lastSig = "";
+      let prevSig = "";
       const hasRaf = typeof requestAnimationFrame === "function";
       const rebuild = () => {
         raf = 0;
         if (view.isDestroyed) return;
         const { set, sig } = buildDecorations(view);
         // Re-dispatch while widths still change (each pass relays out later
-        // tabs); converges in 1–2 frames, then sig is stable and we stop.
-        if (sig !== lastSig) {
+        // tabs); converges in 1–2 frames. Stop on convergence (sig stable) or a
+        // 2-cycle (a wrap-flip oscillation) so we can never loop unbounded.
+        if (shouldDispatchTabDecorations(sig, lastSig, prevSig)) {
+          prevSig = lastSig;
           lastSig = sig;
           view.dispatch(view.state.tr.setMeta(tabStopPluginKey, set));
         }
