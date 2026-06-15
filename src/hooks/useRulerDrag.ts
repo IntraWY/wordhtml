@@ -12,6 +12,7 @@ export interface DragState {
   type:
     | "left"
     | "first"
+    | "right"
     | "marginLeft"
     | "marginRight"
     | "marginTop"
@@ -21,6 +22,7 @@ export interface DragState {
   startY: number;
   startLeft: number;
   startFirst: number;
+  startRight: number;
   startMarginLeftMm: number;
   startMarginRightMm: number;
   startMarginTopMm: number;
@@ -52,6 +54,9 @@ const KEYBOARD_INDENT_STEP = 0.25; // cm per arrow key press
 const KEYBOARD_INDENT_FINE_STEP = 0.05; // cm per arrow key press with Shift
 const KEYBOARD_MARGIN_STEP = 1; // mm per arrow key press
 const MIN_CONTENT_MM = 20;
+// Minimum text column (cm) kept between left and right paragraph indents so the
+// two indent markers can never cross / collapse the writing area to nothing.
+const MIN_INDENT_CONTENT_CM = 1;
 const TOOLTIP_OFFSET_Y = 16; // px below cursor
 
 // Custom ruler tab stops
@@ -80,6 +85,8 @@ export function makeTooltipText(type: DragType, value: number): string {
       return "ย่อหน้าซ้าย (Left indent): " + value.toFixed(1) + " ซม.";
     case "first":
       return "ย่อหน้าแรก (First line): " + value.toFixed(1) + " ซม.";
+    case "right":
+      return "ย่อหน้าขวา (Right indent): " + value.toFixed(1) + " ซม.";
     case "tabStop":
       return "แท็บ (Tab stop): " + value.toFixed(2) + " ซม.";
   }
@@ -146,6 +153,8 @@ interface UseRulerDragOptions {
   minContentMm: number;
   indentLeft: number;
   indentFirst: number;
+  /** Current right paragraph indent (cm) on the active block. */
+  indentRight?: number;
   marginLeftMm: number;
   marginRightMm: number;
   marginTopMm: number;
@@ -153,6 +162,7 @@ interface UseRulerDragOptions {
   /** Current tab stops (cm) on the active block — left-edge relative. */
   tabStops?: number[];
   onIndentChange?: (marginLeft: number, textIndent: number) => void;
+  onIndentRightChange?: (marginRight: number) => void;
   onMarginChange?: (aMm: number, bMm: number) => void;
   onTabStopsChange?: (stops: number[]) => void;
   onRulerActive?: (info: { label: string } | null) => void;
@@ -165,12 +175,14 @@ export function useRulerDrag({
   minContentMm,
   indentLeft,
   indentFirst,
+  indentRight,
   marginLeftMm,
   marginRightMm,
   marginTopMm,
   marginBottomMm,
   tabStops,
   onIndentChange,
+  onIndentRightChange,
   onMarginChange,
   onTabStopsChange,
   onRulerActive,
@@ -178,7 +190,11 @@ export function useRulerDrag({
   const dragRef = useRef<DragState | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
-  const anyInteractive = !!onIndentChange || !!onMarginChange || !!onTabStopsChange;
+  const anyInteractive =
+    !!onIndentChange ||
+    !!onIndentRightChange ||
+    !!onMarginChange ||
+    !!onTabStopsChange;
 
   // Stabilize mutable values with refs so callbacks can have empty deps
   const optsRef = useRef<UseRulerDragOptions>({
@@ -188,12 +204,14 @@ export function useRulerDrag({
     minContentMm,
     indentLeft,
     indentFirst,
+    indentRight,
     marginLeftMm,
     marginRightMm,
     marginTopMm,
     marginBottomMm,
     tabStops,
     onIndentChange,
+    onIndentRightChange,
     onMarginChange,
     onTabStopsChange,
     onRulerActive,
@@ -210,12 +228,14 @@ export function useRulerDrag({
       minContentMm,
       indentLeft,
       indentFirst,
+      indentRight,
       marginLeftMm,
       marginRightMm,
       marginTopMm,
       marginBottomMm,
       tabStops,
       onIndentChange,
+      onIndentRightChange,
       onMarginChange,
       onTabStopsChange,
       onRulerActive,
@@ -238,6 +258,7 @@ export function useRulerDrag({
           startY: clientY,
           startLeft: o.indentLeft,
           startFirst: o.indentFirst,
+          startRight: o.indentRight ?? 0,
           startMarginLeftMm: o.marginLeftMm,
           startMarginRightMm: o.marginRightMm,
           startMarginTopMm: o.marginTopMm,
@@ -255,7 +276,7 @@ export function useRulerDrag({
   const handleKeyDown = useCallback((type: DragType) => (e: React.KeyboardEvent) => {
     const o = optsRef.current;
     const isVerticalMargin = type === "marginTop" || type === "marginBottom";
-    const isIndent = type === "left" || type === "first";
+    const isIndent = type === "left" || type === "first" || type === "right";
 
     if (isVerticalMargin) {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
@@ -265,7 +286,19 @@ export function useRulerDrag({
 
     e.preventDefault();
 
-    if (isIndent) {
+    if (type === "right") {
+      if (!o.onIndentRightChange) return;
+      const step = e.shiftKey ? KEYBOARD_INDENT_FINE_STEP : KEYBOARD_INDENT_STEP;
+      // ArrowLeft drags the right marker inward → MORE right indent; ArrowRight → less.
+      const delta = e.key === "ArrowLeft" ? step : -step;
+      const maxRight = Math.max(0, o.maxIndentCm - o.indentLeft - MIN_INDENT_CONTENT_CM);
+      const newRight = round2(clamp((o.indentRight ?? 0) + delta, 0, maxRight));
+      o.onIndentRightChange(newRight);
+      o.onRulerActive?.({ label: makeTooltipText("right", newRight) });
+      return;
+    }
+
+    if (type === "left" || type === "first") {
       if (!o.onIndentChange) return;
       const step = e.shiftKey ? KEYBOARD_INDENT_FINE_STEP : KEYBOARD_INDENT_STEP;
       const delta = e.key === "ArrowRight" ? step : -step;
@@ -339,6 +372,17 @@ export function useRulerDrag({
           if (!shiftKey) newFirst = snapIndent(newFirst);
           o.onIndentChange(drag.startLeft, newFirst);
           return { x: clientX, y: clientY + TOOLTIP_OFFSET_Y, text: makeTooltipText("first", newFirst) };
+        }
+        case "right": {
+          if (!o.onIndentRightChange) return null;
+          const dx = clientX - drag.startX;
+          // Dragging the right marker LEFT (negative dx) increases the right indent.
+          const maxRight = Math.max(0, o.maxIndentCm - o.indentLeft - MIN_INDENT_CONTENT_CM);
+          let newRight = clamp(drag.startRight - pxToCm(dx), 0, maxRight);
+          if (!shiftKey) newRight = snapIndent(newRight);
+          newRight = round2(clamp(newRight, 0, maxRight));
+          o.onIndentRightChange(newRight);
+          return { x: clientX, y: clientY + TOOLTIP_OFFSET_Y, text: makeTooltipText("right", newRight) };
         }
         case "marginLeft": {
           if (!o.onMarginChange) return null;

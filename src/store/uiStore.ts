@@ -1,6 +1,9 @@
 "use client";
 
 import { create } from "zustand";
+import type { TabType } from "@/lib/tiptap/tabStopLayout";
+
+const TAB_TYPE_CYCLE: TabType[] = ["left", "center", "right", "decimal", "bar"];
 
 interface UiState {
   exportDialogOpen: boolean;
@@ -22,6 +25,8 @@ interface UiState {
   distributionOpen: boolean;
   commentsOpen: boolean;
   lastAction: string | null;
+  /** Active tab-stop alignment type for the ruler corner selector (session-scoped). */
+  currentTabType: TabType;
 
   openExportDialog: () => void;
   closeExportDialog: () => void;
@@ -58,6 +63,8 @@ interface UiState {
   toggleComments: () => void;
   closeComments: () => void;
   setLastAction: (action: string | null) => void;
+  cycleTabType: () => void;
+  setTabType: (t: TabType) => void;
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -80,6 +87,7 @@ export const useUiStore = create<UiState>()((set) => ({
   distributionOpen: false,
   commentsOpen: false,
   lastAction: null,
+  currentTabType: "left",
 
   openExportDialog: () => set({ exportDialogOpen: true }),
   closeExportDialog: () => set({ exportDialogOpen: false }),
@@ -116,4 +124,12 @@ export const useUiStore = create<UiState>()((set) => ({
   toggleComments: () => set((s) => ({ commentsOpen: !s.commentsOpen })),
   closeComments: () => set({ commentsOpen: false }),
   setLastAction: (lastAction) => set({ lastAction }),
+  cycleTabType: () =>
+    set((s) => ({
+      currentTabType:
+        TAB_TYPE_CYCLE[
+          (TAB_TYPE_CYCLE.indexOf(s.currentTabType) + 1) % TAB_TYPE_CYCLE.length
+        ],
+    })),
+  setTabType: (currentTabType) => set({ currentTabType }),
 }));

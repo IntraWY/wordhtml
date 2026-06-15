@@ -11,6 +11,8 @@ interface EditorRulerBarProps {
   widthPx: number;
   /** Top horizontal ruler (IndentRuler) or empty spacer in preview */
   horizontalRuler?: ReactNode;
+  /** Optional content for the ruler corner cell (e.g. tab-type selector) */
+  cornerSlot?: ReactNode;
   className?: string;
 }
 
@@ -21,6 +23,7 @@ interface EditorRulerBarProps {
 export function EditorRulerBar({
   widthPx,
   horizontalRuler,
+  cornerSlot,
   className,
 }: EditorRulerBarProps) {
   const gridColumns = `${RULER_COLUMN_PX}px ${widthPx}px`;
@@ -34,7 +37,13 @@ export function EditorRulerBar({
         className="grid items-start"
         style={{ gridTemplateColumns: gridColumns }}
       >
-        <div className={cn(cornerClass)} aria-hidden="true" />
+        <div
+          className={cn(cornerClass, "overflow-hidden")}
+          style={{ height: RULER_COLUMN_PX }}
+          aria-hidden={cornerSlot ? undefined : "true"}
+        >
+          {cornerSlot}
+        </div>
         <div className="bg-[color:var(--color-muted)]">
           {horizontalRuler ?? (
             <div

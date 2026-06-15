@@ -7,6 +7,7 @@ import type { Transaction } from "@tiptap/pm/state";
 import { TextSelection } from "@tiptap/pm/state";
 import { computePageBreaks } from "./computePageBreaks";
 import { splitTableAtRowBoundaries } from "./tableReflow";
+import { isFloatingBlock } from "./engine";
 
 /**
  * Holistic re-pagination.
@@ -169,9 +170,13 @@ function measureDomBlocks(): DomMeasurement | null {
   let i = 0;
   for (const body of pageBodies) {
     for (const child of Array.from(body.children)) {
-      heights.push(blockOuterHeight(child));
+      // Floating images are out of flow: contribute 0 height and are never
+      // atomic split blocks. Push 0 (don't skip) so indices stay aligned with
+      // the flow blocks in readFlow().
+      const floating = isFloatingBlock(child as HTMLElement);
+      heights.push(floating ? 0 : blockOuterHeight(child));
       els.push(child);
-      if (isAtomic(child)) atomic.add(i);
+      if (!floating && isAtomic(child)) atomic.add(i);
       i++;
     }
   }

@@ -341,6 +341,10 @@ describe("useRulerDrag — tab stops", () => {
     expect(finalCall).toEqual([2, 6]);
   });
 
+  it("makeTooltipText formats the right indent in Thai", () => {
+    expect(makeTooltipText("right", 2)).toBe("ย่อหน้าขวา (Right indent): 2.0 ซม.");
+  });
+
   it("does not start tab drag math when onTabStopsChange is absent", () => {
     const { result } = renderHook(() =>
       useRulerDrag({
@@ -365,5 +369,100 @@ describe("useRulerDrag — tab stops", () => {
     });
     // Nothing to assert beyond "no crash" — dragRef may be set but no callback fires.
     expect(result.current.tooltip).toBeNull();
+  });
+});
+
+describe("useRulerDrag — right indent", () => {
+  it("dragging the right marker LEFT increases the right indent (snapped 0.5cm)", () => {
+    const onIndentRightChange = vi.fn();
+    const { result } = renderHook(() =>
+      useRulerDrag({
+        ...baseOptions,
+        indentRight: 0,
+        onIndentRightChange,
+      })
+    );
+
+    withRaf(() => {
+      act(() => {
+        result.current.startDrag("right")({
+          preventDefault: () => {},
+          clientX: 300,
+          clientY: 50,
+        } as unknown as React.MouseEvent);
+      });
+      // Drag 1cm to the LEFT → +1cm right indent.
+      act(() => {
+        document.dispatchEvent(
+          new MouseEvent("mousemove", { clientX: 300 - PX_PER_CM, clientY: 50 })
+        );
+      });
+    });
+
+    const last =
+      onIndentRightChange.mock.calls[onIndentRightChange.mock.calls.length - 1][0];
+    expect(last).toBe(1);
+
+    act(() => {
+      document.dispatchEvent(new MouseEvent("mouseup"));
+    });
+  });
+
+  it("right indent clamps so it cannot cross the left indent (keeps ≥1cm content)", () => {
+    const onIndentRightChange = vi.fn();
+    const { result } = renderHook(() =>
+      useRulerDrag({
+        ...baseOptions,
+        maxIndentCm: 16,
+        indentLeft: 14, // only 16 - 14 - 1 = 1cm of right-indent headroom
+        indentRight: 0,
+        onIndentRightChange,
+      })
+    );
+
+    withRaf(() => {
+      act(() => {
+        result.current.startDrag("right")({
+          preventDefault: () => {},
+          clientX: 300,
+          clientY: 50,
+        } as unknown as React.MouseEvent);
+      });
+      // Yank far left — would be ~8cm but must clamp to the 1cm headroom.
+      act(() => {
+        document.dispatchEvent(
+          new MouseEvent("mousemove", { clientX: 0, clientY: 50 })
+        );
+      });
+    });
+
+    const last =
+      onIndentRightChange.mock.calls[onIndentRightChange.mock.calls.length - 1][0];
+    expect(last).toBe(1);
+
+    act(() => {
+      document.dispatchEvent(new MouseEvent("mouseup"));
+    });
+  });
+
+  it("ArrowLeft on the right marker nudges the indent inward by 0.25cm", () => {
+    const onIndentRightChange = vi.fn();
+    const { result } = renderHook(() =>
+      useRulerDrag({
+        ...baseOptions,
+        indentRight: 0,
+        onIndentRightChange,
+      })
+    );
+
+    act(() => {
+      result.current.handleKeyDown("right")({
+        key: "ArrowLeft",
+        preventDefault: () => {},
+        shiftKey: false,
+      } as unknown as React.KeyboardEvent);
+    });
+
+    expect(onIndentRightChange).toHaveBeenCalledWith(0.25);
   });
 });

@@ -42,6 +42,33 @@ describe("removeInlineStyles", () => {
     expect(result).toMatch(/style="[^"]*border/);
     expect(result).toContain(`data-borders="none"`);
   });
+
+  it("preserves absolute positioning on floating images", () => {
+    const html = `<img src="x.png" data-float="true" style="position:absolute;left:120px;top:60px;z-index:5" />`;
+    const result = removeInlineStyles(html);
+    expect(result).toMatch(/position:\s*absolute/);
+    expect(result).toMatch(/left:\s*120px/);
+    expect(result).toMatch(/top:\s*60px/);
+    expect(result).toMatch(/z-index:\s*5/);
+  });
+
+  it("strips position on NON-floating images (no data-float)", () => {
+    const html = `<img src="x.png" style="position:absolute;left:120px;top:60px;width:200px" />`;
+    const result = removeInlineStyles(html);
+    expect(result).not.toMatch(/position/);
+    expect(result).not.toMatch(/left:/);
+    expect(result).not.toMatch(/top:/);
+    // width (a structural KEEP prop) still survives
+    expect(result).toMatch(/width:\s*200px/);
+  });
+
+  it("strips positioned Word/Office junk on non-image elements", () => {
+    const html = `<p style="position:absolute;left:5px;top:10px">x</p>`;
+    const result = removeInlineStyles(html);
+    expect(result).not.toMatch(/position/);
+    expect(result).not.toMatch(/left:/);
+    expect(result).not.toMatch(/top:/);
+  });
 });
 
 describe("removeEmptyTags", () => {
@@ -111,6 +138,13 @@ describe("removeAttributes", () => {
     const result = removeAttributes(html);
     expect(result).toContain(`data-borders="none"`);
     expect(result).not.toContain("align=");
+  });
+
+  it("preserves data-float on floating images", () => {
+    const html = `<img src="a.png" data-float="true" class="x">`;
+    const result = removeAttributes(html);
+    expect(result).toContain(`data-float="true"`);
+    expect(result).not.toContain("class=");
   });
 });
 

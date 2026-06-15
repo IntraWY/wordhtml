@@ -15,6 +15,11 @@ import {
   PAGE_STACK_GAP_PX,
   PX_PER_CM,
 } from "@/lib/page";
+import {
+  TAB_TYPE_GLYPH,
+  TAB_TYPE_LABEL,
+  type TabType,
+} from "@/lib/tiptap/tabStopLayout";
 
 interface RulerProps {
   orientation: "horizontal" | "vertical";
@@ -24,9 +29,16 @@ interface RulerProps {
   // Interactive indent handles (horizontal only, omit for visual-only ruler)
   indentLeft?: number;  // cm
   indentFirst?: number; // cm offset from indentLeft (can be negative)
+  indentRight?: number; // cm — right paragraph indent (distance from content right edge)
   onIndentChange?: (marginLeft: number, textIndent: number) => void;
+  onIndentRightChange?: (marginRight: number) => void;
+  // Double-click affordances (Word-style): margin zone → Page Setup, body → Paragraph
+  onOpenPageSetup?: () => void;
+  onOpenParagraphDialog?: () => void;
   // Custom ruler tab stops (horizontal only). cm positions, content-relative.
   tabStops?: number[];
+  /** Alignment type per tab stop (index-aligned with tabStops). */
+  tabStopTypes?: TabType[];
   onTabStopsChange?: (stops: number[]) => void;
   // Margin handles (horizontal or vertical)
   marginLeftMm?: number;
@@ -85,8 +97,13 @@ function RulerInner({
   marginEnd,
   indentLeft = 0,
   indentFirst = 0,
+  indentRight = 0,
   onIndentChange,
+  onIndentRightChange,
+  onOpenPageSetup,
+  onOpenParagraphDialog,
   tabStops = [],
+  tabStopTypes = [],
   onTabStopsChange,
   marginLeftMm = 0,
   marginRightMm = 0,
@@ -128,6 +145,7 @@ function RulerInner({
   ]);
 
   const indentInteractive = isH && !!onIndentChange;
+  const rightIndentInteractive = isH && !!onIndentRightChange;
   const marginInteractive = !!onMarginChange;
   const tabStopsInteractive = isH && !!onTabStopsChange;
 
@@ -193,6 +211,8 @@ function RulerInner({
   // Pixel positions of indent handles
   const leftPx = marginStart + indentLeft * PX_PER_CM;
   const firstPx = marginStart + (indentLeft + indentFirst) * PX_PER_CM;
+  // Right-indent marker sits inward from the content's right edge (marginGuideEnd).
+  const rightPx = marginGuideEnd - indentRight * PX_PER_CM;
 
   const maxIndentCm = (totalPx - marginEnd - marginStart) / PX_PER_CM;
   const pageWidthMm = cm * 10;
@@ -206,12 +226,14 @@ function RulerInner({
     minContentMm,
     indentLeft,
     indentFirst,
+    indentRight,
     marginLeftMm,
     marginRightMm,
     marginTopMm,
     marginBottomMm,
     tabStops,
     onIndentChange,
+    onIndentRightChange,
     onMarginChange,
     onTabStopsChange,
     onRulerActive,
@@ -233,6 +255,32 @@ function RulerInner({
   const handleLeave = () => {
     setHovered(null);
     if (!dragRef.current) onRulerActive?.(null);
+  };
+
+  // Word-style double-click: the margin zone/handle opens Page Setup; the body
+  // (white indent area) opens the Paragraph dialog. Tab-stop markers keep their
+  // own double-click (remove), so bail out when the event started on one.
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onOpenPageSetup && !onOpenParagraphDialog) return;
+    const target = e.target as HTMLElement | null;
+    // Tab-stop markers (remove on dblclick) and the add-tab track own their gestures.
+    if (target?.closest(".ruler-tab-stop")) return;
+    if (target?.closest('[data-testid="ruler-tab-track"]')) return;
+    if (target?.closest("[data-ruler-margin]")) {
+      onOpenPageSetup?.();
+      return;
+    }
+    if (!isH) {
+      onOpenPageSetup?.();
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < marginStart || x > marginGuideEnd) {
+      onOpenPageSetup?.();
+      return;
+    }
+    if (indentInteractive) onOpenParagraphDialog?.();
   };
 
   // Add a new tab stop where the user CLICKS the lower-half track.
@@ -287,6 +335,7 @@ function RulerInner({
         isH ? "h-[18px] border-b" : "w-[18px] overflow-hidden border-r"
       )}
       style={{ [isH ? "width" : "height"]: `${rulerLengthPx}px` }}
+      onDoubleClick={handleDoubleClick}
     >
       {ticks.map((t, i) => (
         <div
@@ -374,6 +423,7 @@ function RulerInner({
               <div
                 role="slider"
                 tabIndex={0}
+                data-ruler-margin="left"
                 aria-orientation="horizontal"
                 aria-label={`ขอบซ้าย (Left margin) ${marginLeftMm.toFixed(1)} มม.`}
                 aria-valuemin={0}
@@ -413,6 +463,7 @@ function RulerInner({
               <div
                 role="slider"
                 tabIndex={0}
+                data-ruler-margin="right"
                 aria-orientation="horizontal"
                 aria-label={`ขอบขวา (Right margin) ${marginRightMm.toFixed(1)} มม.`}
                 aria-valuemin={0}
@@ -455,6 +506,7 @@ function RulerInner({
               <div
                 role="slider"
                 tabIndex={0}
+                data-ruler-margin="top"
                 aria-orientation="vertical"
                 aria-label={`ขอบบน (Top margin) ${marginTopMm.toFixed(1)} มม.`}
                 aria-valuemin={0}
@@ -501,6 +553,7 @@ function RulerInner({
                   key={`margin-bottom-handle-${i}`}
                   role="slider"
                   tabIndex={0}
+                  data-ruler-margin="bottom"
                   aria-orientation="vertical"
                   aria-label={`ขอบล่าง (Bottom margin) ${marginBottomMm.toFixed(1)} มม.`}
                   aria-valuemin={0}
@@ -650,7 +703,91 @@ function RulerInner({
               }}
             />
           )}
+          {/* ◼ Left-indent square (Word combined marker) — a mouse/touch grab that
+              drags first-line + left together. Not a slider: the bottom triangle
+              already exposes the accessible "Left indent" control, so this stays
+              aria-hidden to avoid a duplicate slider for screen readers. */}
+          <div
+            aria-hidden="true"
+            onMouseDown={startDrag("left")}
+            onTouchStart={startDrag("left")}
+            onMouseEnter={() =>
+              handleEnter("leftSquare", `เยื้องซ้ายทั้งย่อหน้า (Left indent): ${indentLeft.toFixed(1)} ซม.`)
+            }
+            onMouseLeave={handleLeave}
+            className={cn(
+              "absolute grid cursor-ew-resize place-items-center",
+              hovered === "leftSquare" && "z-20"
+            )}
+            style={{
+              left: `${leftPx}px`,
+              bottom: "-5px",
+              transform: "translateX(-50%)",
+              width: "16px",
+              height: "10px",
+            }}
+          >
+            <div
+              className={cn(
+                "transition-transform duration-150",
+                hovered === "leftSquare" ? "scale-125" : "hover:scale-[1.15]"
+              )}
+              style={{
+                width: "9px",
+                height: "6px",
+                background: "color-mix(in srgb, var(--color-accent) 80%, var(--color-foreground))",
+                borderRadius: "1px",
+              }}
+            />
+          </div>
         </>
+      )}
+
+      {/* ▽ Right indent — bottom triangle near the content right edge */}
+      {rightIndentInteractive && (
+        <div
+          role="slider"
+          tabIndex={0}
+          aria-orientation="horizontal"
+          aria-label={`ย่อหน้าขวา (Right indent) ${indentRight.toFixed(1)} ซม.`}
+          aria-valuemin={0}
+          aria-valuemax={Math.round(Math.max(0, maxIndentCm - indentLeft - 1) * 10)}
+          aria-valuenow={Math.round(indentRight * 10)}
+          aria-valuetext={`${indentRight.toFixed(2)} ซม. (${indentRight.toFixed(2)} cm)`}
+          onMouseDown={startDrag("right")}
+          onTouchStart={startDrag("right")}
+          onKeyDown={handleKeyDown("right")}
+          onMouseEnter={() =>
+            handleEnter("right", `ย่อหน้าขวา (Right indent): ${indentRight.toFixed(1)} ซม.`)
+          }
+          onMouseLeave={handleLeave}
+          className={cn(
+            "absolute grid cursor-ew-resize place-items-center",
+            focusRing,
+            hovered === "right" && "z-20"
+          )}
+          style={{
+            left: `${rightPx}px`,
+            bottom: "1px",
+            transform: "translateX(-50%)",
+            width: "20px",
+            height: "16px",
+          }}
+        >
+          <div
+            className={cn(
+              "transition-transform duration-150",
+              hovered === "right" ? "scale-125" : "hover:scale-[1.15]"
+            )}
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "7px solid color-mix(in srgb, var(--color-accent) 80%, var(--color-foreground))",
+            }}
+          />
+        </div>
       )}
 
       {/* Custom tab stops (horizontal interactive ruler only) */}
@@ -666,13 +803,14 @@ function RulerInner({
           {tabStops.map((stop, i) => {
             const left = marginStart + stop * PX_PER_CM;
             const id = `tabStop-${i}`;
+            const type = tabStopTypes[i] ?? "left";
             return (
               <div
                 key={id}
                 role="slider"
                 tabIndex={0}
                 aria-orientation="horizontal"
-                aria-label={`แท็บ (Tab stop) ${stop.toFixed(2)} ซม.`}
+                aria-label={`แท็บ ${TAB_TYPE_LABEL[type]} (Tab stop) ${stop.toFixed(2)} ซม.`}
                 aria-valuemin={MIN_TAB_STOP_CM}
                 aria-valuemax={MAX_TAB_STOP_CM}
                 aria-valuenow={stop}
@@ -701,7 +839,7 @@ function RulerInner({
                 }}
               >
                 <span className="ruler-tab-stop-glyph" aria-hidden="true">
-                  L
+                  {TAB_TYPE_GLYPH[type]}
                 </span>
               </div>
             );

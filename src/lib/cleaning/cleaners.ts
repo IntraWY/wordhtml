@@ -7,7 +7,7 @@
 
 const PRESERVE_ATTRS_BY_TAG: Record<string, ReadonlyArray<string>> = {
   a: ["href", "title", "target", "rel"],
-  img: ["src", "alt", "width", "height", "data-align"],
+  img: ["src", "alt", "width", "height", "data-align", "data-float"],
   td: ["colspan", "rowspan", "data-borders"],
   th: ["colspan", "rowspan", "data-borders"],
   ol: ["start", "type"],
@@ -20,7 +20,8 @@ const GLOBAL_PRESERVE_ATTRS = new Set([
   "data-variable", "data-type", "data-latex", "data-inline", "data-align",
   "data-indent", "data-field-id", "data-placeholder-field",
   "data-page-body", "data-page-header", "data-page-footer", "data-page-number", "data-page-setup",
-  "data-repeat", "data-repeat-source", "data-borders",
+  "data-repeat", "data-repeat-source", "data-borders", "data-float",
+  "data-tab-stops", "data-tab-stop-types",
 ]);
 
 function shouldPreserveAttribute(tag: string, name: string): boolean {
@@ -66,9 +67,18 @@ export function removeInlineStyles(html: string): string {
     "font-size", "font-family", "color", "background-color", "line-height", "text-align",
     "border", // borderless form cells render inline border:none
   ];
+  // Free-positioning props are preserved ONLY on floating images (img[data-float]).
+  // Keeping them globally would let Word/Office positioned junk (e.g. text boxes,
+  // comment bubbles) survive export.
+  const FLOAT_KEEP = ["position", "left", "top", "z-index"];
   doc.body.querySelectorAll("[style]").forEach((el) => {
     const s = (el as HTMLElement).style;
-    const saved: [string, string][] = KEEP
+    const keep =
+      el.tagName.toLowerCase() === "img" &&
+      el.getAttribute("data-float") === "true"
+        ? [...KEEP, ...FLOAT_KEEP]
+        : KEEP;
+    const saved: [string, string][] = keep
       .map((p) => [p, s.getPropertyValue(p)] as [string, string])
       .filter(([, v]) => v);
     el.removeAttribute("style");

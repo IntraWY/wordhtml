@@ -390,6 +390,20 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   -moz-tab-size: 1.27cm;
 }
 
+/* กระดาษ .page-node เป็นสีขาวเสมอแม้ในธีมมืด — caret ต้องไม่ตาม
+   --color-foreground (พลิกเป็น #faf8f5 เกือบขาวในโหมดมืด → มองไม่เห็นบนพื้นขาว).
+   ใช้ค่าเข้มแบบ literal ให้ caret เห็นชัดทุกธีม. */
+.prose-editor,
+.prose-editor .ProseMirror {
+  caret-color: #1c1917;
+}
+/* Respect ProseMirror's hide-caret-during-selection — the rule above (specificity
+   0,1,1) would otherwise beat .ProseMirror-hideselection (0,1,0) and keep the
+   caret visible while a selection is active. */
+.prose-editor .ProseMirror.ProseMirror-hideselection {
+  caret-color: transparent;
+}
+
 .prose-editor h1,
 .paper h1 {
   font-size: 2rem;

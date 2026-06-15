@@ -18,6 +18,7 @@ import { VariableFillPopover } from "./VariableFillPopover";
 import { FieldFillPopover } from "./FieldFillPopover";
 import { IndentRuler } from "./IndentRuler";
 import { EditorRulerBar, EditorPaperScrollBody } from "./EditorPaperLayout";
+import { TabTypeSelector } from "./TabTypeSelector";
 import { TemplatePreview } from "./TemplatePreview";
 import { SourcePane } from "./SourcePane";
 import { useEditorStore } from "@/store/editorStore";
@@ -353,6 +354,7 @@ export function EditorShell() {
                   <div className="sticky top-0 z-10 bg-[color:var(--color-muted)] px-8 pt-8">
                     <EditorRulerBar
                       widthPx={widthPx}
+                      cornerSlot={<TabTypeSelector />}
                       horizontalRuler={
                         <IndentRuler
                           editor={editor}

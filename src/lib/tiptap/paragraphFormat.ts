@@ -2,6 +2,8 @@ import { Extension } from "@tiptap/core";
 import type { EditorState } from "@tiptap/pm/state";
 import type { Transaction } from "@tiptap/pm/state";
 import { PX_PER_CM } from "@/lib/page";
+import { createTabStopPlugin } from "./tabStopPlugin";
+import type { TabType } from "./tabStopLayout";
 
 function applyToSelectedBlocks(
   state: EditorState,
@@ -55,7 +57,7 @@ declare module "@tiptap/core" {
       setLineSpacing: (mode: LineHeightMode, value?: number) => ReturnType;
       increaseBlockIndent: () => ReturnType;
       decreaseBlockIndent: () => ReturnType;
-      setTabStops: (stops: number[]) => ReturnType;
+      setTabStops: (stops: number[], types?: TabType[]) => ReturnType;
       setTabSize: (sizeCm: number | null) => ReturnType;
     };
   }
@@ -63,19 +65,20 @@ declare module "@tiptap/core" {
 
 // ── Custom ruler tab stops ───────────────────────────────────────────────────
 //
-// Word-fidelity caveats (CSS reality check):
-// - Only LEFT-aligned tab stops are supported. Center/right/decimal stops are
-//   out of scope — CSS `tab-size` cannot express alignment types.
-// - CSS `tab-size` is a single uniform interval per element; per-position
-//   stops (e.g. 1.5cm then 4cm then 8.25cm) are NOT expressible. We therefore:
-//     1. store the full clicked stop list in `tabStops` (data-tab-stops) for
-//        forward-compat and ruler display, and
-//     2. render tabs with a per-paragraph uniform `tab-size` equal to the
-//        FIRST stop (the common "first tab lands at stop 1" case is exact;
-//        later tabs land on multiples of the first stop, which only matches
-//        Word when the stops are evenly spaced).
+// Word-fidelity: per-position stops with alignment types now WORK.
+// - `tabStops` (data-tab-stops, cm) holds the positions; `tabStopTypes`
+//   (data-tab-stop-types) holds an index-aligned alignment per stop
+//   (left/center/right/decimal/bar). Legacy docs with only `data-tab-stops`
+//   default every type to "left".
+// - Rendering is done by a ProseMirror plugin (tabStopPlugin.ts) that gives each
+//   `\t` an inline decoration whose explicit width lands the following text on
+//   the next stop (CSS `tab-size` cannot express per-position/typed stops). The
+//   document model is untouched — `\t` stays a literal character.
+// - Export bakes the measured widths from the live DOM (lib/export/bakeTabStops.ts).
 // - Paragraphs without custom stops inherit the global 1.27cm grid
-//   (globals.css / wrap.ts / exportPdf.ts).
+//   (globals.css / wrap.ts / exportPdf.ts) via CSS `tab-size`.
+// - `tabSize` remains an independent uniform-interval feature (setTabSize),
+//   no longer derived from the first stop.
 
 /** Smallest meaningful tab stop (cm). */
 export const MIN_TAB_STOP_CM = 0.25;
@@ -103,6 +106,47 @@ export function parseTabStops(raw: string | null): number[] {
 /** Serialize tab stops back to the `data-tab-stops` attribute value. */
 export function serializeTabStops(stops: number[]): string {
   return normalizeTabStops(stops).join(",");
+}
+
+const VALID_TAB_TYPES: TabType[] = ["left", "center", "right", "decimal", "bar"];
+
+/** Parse a `data-tab-stop-types="left,decimal,right"` value into TabTypes. */
+export function parseTabStopTypes(raw: string | null): TabType[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is TabType => (VALID_TAB_TYPES as string[]).includes(s));
+}
+
+/** Serialize the alignment types back to `data-tab-stop-types`. */
+export function serializeTabStopTypes(types: TabType[]): string {
+  return types.join(",");
+}
+
+/**
+ * Normalize positions AND their alignment types together (sort by position,
+ * round, clamp, dedupe) so the two parallel arrays stay index-aligned. Used by
+ * `setTabStops` — callers pass un-sorted lists from the ruler.
+ */
+export function normalizeTabStopPairs(
+  stops: number[],
+  types: (TabType | undefined)[]
+): { stops: number[]; types: TabType[] } {
+  const pairs = stops
+    .map((pos, i) => ({ pos: round2(pos), type: types[i] ?? "left" }))
+    .filter(
+      (p) =>
+        Number.isFinite(p.pos) &&
+        p.pos >= MIN_TAB_STOP_CM &&
+        p.pos <= MAX_TAB_STOP_CM
+    )
+    .sort((a, b) => a.pos - b.pos);
+  const out: { pos: number; type: TabType }[] = [];
+  for (const p of pairs) {
+    if (out.length === 0 || out[out.length - 1].pos !== p.pos) out.push(p);
+  }
+  return { stops: out.map((p) => p.pos), types: out.map((p) => p.type) };
 }
 
 export function lineHeightFromMode(
@@ -299,6 +343,20 @@ export const ParagraphFormatExtension = Extension.create({
             parseHTML: (el): number[] =>
               parseTabStops(el.getAttribute("data-tab-stops")),
           },
+          // Per-stop alignment types (index-aligned with tabStops). Only emitted
+          // when at least one stop is non-left; legacy docs parse to [] → all left.
+          tabStopTypes: {
+            default: [] as TabType[],
+            renderHTML: (attrs) => {
+              const types = attrs.tabStopTypes as TabType[] | undefined;
+              const stops = attrs.tabStops as number[] | undefined;
+              if (!types || !types.length || !stops || !stops.length) return {};
+              if (types.every((t) => t === "left")) return {};
+              return { "data-tab-stop-types": serializeTabStopTypes(types) };
+            },
+            parseHTML: (el): TabType[] =>
+              parseTabStopTypes(el.getAttribute("data-tab-stop-types")),
+          },
           // Uniform per-paragraph tab interval in cm (null → inherit the
           // global 1.27cm grid). Rendered as inline `tab-size` via
           // buildParagraphStyle (merged on marginLeft's renderHTML).
@@ -306,15 +364,14 @@ export const ParagraphFormatExtension = Extension.create({
             default: null,
             renderHTML: () => ({}),
             parseHTML: (el): number | null => {
+              // Only the explicit uniform interval (setTabSize). Per-position
+              // ruler stops are rendered by the plugin, not via tab-size.
               const raw = el.style.getPropertyValue("tab-size");
               if (raw) {
                 const cm = parseCssLengthToCm(raw);
                 if (cm > 0) return Math.round(cm * 100) / 100;
               }
-              // Fallback: derive from data-tab-stops (first stop) when the
-              // style attribute was stripped but the data attribute survived.
-              const stops = parseTabStops(el.getAttribute("data-tab-stops"));
-              return stops.length > 0 ? stops[0] : null;
+              return null;
             },
           },
           // Marks a paragraph as one piece of an auto-split long paragraph.
@@ -422,13 +479,18 @@ export const ParagraphFormatExtension = Extension.create({
       // Word-fidelity note at the top of this module. Empty array clears both
       // (paragraph falls back to the global 1.27cm grid).
       setTabStops:
-        (stops: number[]) =>
+        (stops: number[], types?: TabType[]) =>
         ({ tr, state }) => {
-          const next = normalizeTabStops(stops);
+          const { stops: nextStops, types: nextTypes } = normalizeTabStopPairs(
+            stops,
+            types ?? []
+          );
           return applyToSelectedBlocks(state, tr, (attrs) => ({
             ...attrs,
-            tabStops: next,
-            tabSize: next.length > 0 ? next[0] : null,
+            tabStops: nextStops,
+            tabStopTypes: nextTypes,
+            // ruler stops take over from any uniform interval
+            tabSize: null,
           }));
         },
       // Set only the uniform tab interval (cm) without ruler stops.
@@ -510,5 +572,10 @@ export const ParagraphFormatExtension = Extension.create({
         return blockIndent(-0.5);
       },
     };
+  },
+
+  addProseMirrorPlugins() {
+    // Per-position / typed tab-stop layout (see tabStopPlugin.ts).
+    return [createTabStopPlugin()];
   },
 });

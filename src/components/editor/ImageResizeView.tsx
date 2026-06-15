@@ -25,6 +25,16 @@ interface DragState {
   ratio: number;
 }
 
+interface MoveState {
+  startX: number;
+  startY: number;
+  startPosX: number;
+  startPosY: number;
+  /** Upper clamp so the image can't be dragged fully off the page (lost). */
+  maxX: number;
+  maxY: number;
+}
+
 export function ImageResizeView({
   node,
   updateAttributes,
@@ -34,16 +44,22 @@ export function ImageResizeView({
 }: NodeViewProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [moveDrag, setMoveDrag] = useState<MoveState | null>(null);
   const [liveShift, setLiveShift] = useState(false);
   const [bodyWidthPx, setBodyWidthPx] = useState(0);
 
-  const { src, alt, width, height, align } = node.attrs as {
-    src: string;
-    alt?: string;
-    width?: string | null;
-    height?: string | null;
-    align?: string | null;
-  };
+  const { src, alt, width, height, align, float, posX, posY, zIndex } =
+    node.attrs as {
+      src: string;
+      alt?: string;
+      width?: string | null;
+      height?: string | null;
+      align?: string | null;
+      float?: boolean | null;
+      posX?: number | null;
+      posY?: number | null;
+      zIndex?: number | null;
+    };
 
   // --- Drag resize logic ---
   useEffect(() => {
@@ -99,6 +115,7 @@ export function ImageResizeView({
   const startDrag = useCallback(
     (handle: "bl" | "br") => (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation(); // don't let a handle drag also start a move drag
       const img = imgRef.current;
       if (!img) return;
       const rect = img.getBoundingClientRect();
@@ -112,6 +129,97 @@ export function ImageResizeView({
       });
     },
     []
+  );
+
+  // --- Free-positioning move-drag (only when float === true) ---
+  useEffect(() => {
+    if (!moveDrag) return;
+
+    let rafId: number | null = null;
+    const onMove = (e: MouseEvent) => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const rawX = Math.round(moveDrag.startPosX + (e.clientX - moveDrag.startX));
+        const rawY = Math.round(moveDrag.startPosY + (e.clientY - moveDrag.startY));
+        // Clamp to [0, max] so the image stays at least partly on the page.
+        const newX = Math.min(moveDrag.maxX, Math.max(0, rawX));
+        const newY = Math.min(moveDrag.maxY, Math.max(0, rawY));
+        updateAttributes({ posX: newX, posY: newY });
+      });
+    };
+    const onUp = () => setMoveDrag(null);
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, [moveDrag, updateAttributes]);
+
+  const startMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!float) return; // inline images keep normal click-to-select
+      e.preventDefault();
+      // Select this node so the resize handles + toolbar (incl. Float toggle) show.
+      const pos = getPos();
+      if (typeof pos === "number") editor.commands.setNodeSelection(pos);
+      // Compute the upper drag clamp from the page size, keeping a 24px sliver
+      // of the image always on the page so it can never be dragged out of reach.
+      const img = imgRef.current;
+      const page = img?.closest(".page-node");
+      const KEEP_VISIBLE = 24;
+      let maxX = Number.POSITIVE_INFINITY;
+      let maxY = Number.POSITIVE_INFINITY;
+      if (page) {
+        const pr = page.getBoundingClientRect();
+        maxX = Math.max(0, Math.round(pr.width - KEEP_VISIBLE));
+        maxY = Math.max(0, Math.round(pr.height - KEEP_VISIBLE));
+      }
+      setMoveDrag({
+        startX: e.clientX,
+        startY: e.clientY,
+        startPosX: Number(posX) || 0,
+        startPosY: Number(posY) || 0,
+        maxX,
+        maxY,
+      });
+    },
+    [float, posX, posY, getPos, editor]
+  );
+
+  const toggleFloat = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (float) {
+        // Back to inline flow.
+        updateAttributes({ float: null, posX: 0, posY: 0 });
+        return;
+      }
+      // Enable floating — seed position from the image's current spot on the page
+      // so it doesn't jump to the corner.
+      const img = imgRef.current;
+      const page = img?.closest(".page-node");
+      let initX = 0;
+      let initY = 0;
+      if (img && page) {
+        const ir = img.getBoundingClientRect();
+        const pr = page.getBoundingClientRect();
+        initX = Math.max(0, Math.round(ir.left - pr.left));
+        initY = Math.max(0, Math.round(ir.top - pr.top));
+      }
+      // Keep `align` untouched: while floating, the absolute wrapperStyle takes
+      // precedence and the align attr is dormant; turning float OFF then restores
+      // the image's original left/center/right alignment for free.
+      updateAttributes({
+        float: true,
+        posX: initX,
+        posY: initY,
+      });
+    },
+    [float, updateAttributes]
   );
 
   const applyPreset = (preset: string) => (e: React.MouseEvent) => {
@@ -153,9 +261,20 @@ export function ImageResizeView({
     [focusAfterImage]
   );
 
-  // --- Alignment wrapper style (mirrors CSS for A4Preview) ---
-  const wrapperStyle: React.CSSProperties =
-    align === "left"
+  // --- Wrapper style ---
+  // Floating: position:absolute anchored to the page (.page-node, the nearest
+  // positioned ancestor). This both places the image freely and removes it from
+  // the flow (zero footprint), so pagination measurement ignores it.
+  // Inline: alignment wrapper (mirrors CSS for A4Preview).
+  const wrapperStyle: React.CSSProperties = float
+    ? {
+        position: "absolute",
+        left: Number(posX) || 0,
+        top: Number(posY) || 0,
+        zIndex: Number(zIndex) || 5,
+        margin: 0,
+      }
+    : align === "left"
       ? { float: "left", margin: "0.5em 1em 0.5em 0", clear: "left" }
       : align === "right"
         ? { float: "right", margin: "0.5em 0 0.5em 1em", clear: "right" }
@@ -173,7 +292,7 @@ export function ImageResizeView({
     outline: selected ? "2px solid var(--color-accent)" : undefined,
     outlineOffset: selected ? "2px" : undefined,
     userSelect: "none",
-    cursor: "default",
+    cursor: float ? (moveDrag ? "grabbing" : "grab") : "default",
   };
 
   // --- Handle appearance ---
@@ -203,7 +322,15 @@ export function ImageResizeView({
   })();
 
   return (
-    <NodeViewWrapper as="div" style={wrapperStyle} onClick={handleWrapperClick}>
+    <NodeViewWrapper
+      as="div"
+      style={wrapperStyle}
+      onClick={handleWrapperClick}
+      // Marker so the pagination engine can detect a floating (out-of-flow) image
+      // in O(1) via el.matches('[data-float="true"]') — the inner <img> also carries
+      // data-float for serialization, but the wrapper is what pagination iterates.
+      data-float={float ? "true" : undefined}
+    >
       {/* Image + handles */}
       <div style={{ position: "relative", display: "inline-block" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -212,6 +339,7 @@ export function ImageResizeView({
           src={src}
           alt={alt ?? ""}
           draggable={false}
+          onMouseDown={startMove}
           style={imgStyle}
         />
         {selected && (
@@ -254,6 +382,25 @@ export function ImageResizeView({
           </span>
           {!isDragging && (
             <>
+              <span style={{ color: "var(--color-border-strong)" }}>·</span>
+              <button
+                onMouseDown={toggleFloat}
+                title="ลอยอิสระวางที่ไหนก็ได้ (Free-floating position)"
+                style={{
+                  padding: "2px 8px",
+                  border: `1px solid ${float ? "color-mix(in srgb, var(--color-accent) 50%, var(--color-border))" : "var(--color-border)"}`,
+                  background: float
+                    ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))"
+                    : "var(--color-muted)",
+                  color: float ? "var(--color-accent)" : "var(--color-muted-foreground)",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                {float ? "ลอยอยู่ (Floating)" : "ลอย (Float)"}
+              </button>
               <span style={{ color: "var(--color-border-strong)" }}>·</span>
               {(["25%", "50%", "75%", "100%"] as const).map((p) => (
                 <button

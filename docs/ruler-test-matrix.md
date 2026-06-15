@@ -39,9 +39,32 @@ Use this checklist when changing ruler, preview layout, or pagination.
 | Step | Expected |
 |------|----------|
 | Place cursor in paragraph; drag ▽ left / △ first-line | Paragraph `margin-left` / `text-indent` update; handles match after release |
+| Drag the ▽ **right-indent** triangle (near right margin) | Paragraph `margin-right` updates; text reflows; clamps so it can't cross the left indent |
+| Drag the ◼ **left-indent square** (below the left triangles) | Left indent + first-line move together (Word combined marker) |
 | Undo/redo indent change | Ruler handles update without moving cursor |
 | Switch to another paragraph | Handles show that paragraph’s indents |
 | Open doc with existing indented HTML | Handles correct on first click (initial sync) |
+
+## Double-click affordances (Word-style)
+
+| Step | Expected |
+|------|----------|
+| Double-click the ruler **body** (white content zone) | Opens the Paragraph dialog |
+| Double-click a **margin zone / handle** (striped area or x outside content) | Opens Page Setup (`wordhtml:open-page-setup`) |
+| Double-click the **vertical** ruler | Opens Page Setup |
+| Double-click a tab-stop marker | Removes that stop (not a dialog) |
+
+## Tab stops (per-position + types)
+
+| Step | Expected |
+|------|----------|
+| Corner selector (ruler corner box) — click | Cycles type glyph L → C → R → D → \| (left/center/right/decimal/bar) |
+| With a type selected, click the lower-half ruler track | Adds a stop of that type at the snapped position; marker shows the type glyph |
+| Type `a⇥b⇥c` with stops at e.g. 4 / 10 cm | Each segment lands ON its stop (not a uniform tab-size); not just multiples of the first stop |
+| Decimal stop + numbers of different lengths on separate lines | Decimal points line up vertically on the stop |
+| Drag a stop to a new position | Its type is preserved (tracked by identity); other stops keep their types |
+| Save + reload a doc with typed stops | `data-tab-stops` + `data-tab-stop-types` round-trip; stops render the same |
+| Export HTML/PDF with tab stops | Tabs are baked to fixed-width spacers (`.tab-bake`) matching the on-screen layout |
 
 ## Images
 

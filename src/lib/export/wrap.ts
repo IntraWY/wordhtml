@@ -62,9 +62,14 @@ export function wrapAsDocument(
       line-height: 1.7;
       tab-size: 1.27cm;
       -moz-tab-size: 1.27cm;
+      position: relative; /* anchor for free-floating images */
     }
     p, h1, h2, h3, li { white-space: pre-wrap; }
+    .tab-bake { display: inline-block; white-space: pre; }
     img { max-width: 100%; height: auto; }
+    /* Free-floating images: exported HTML is continuous (no page frames), so
+       they anchor to the document body — approximate, not page-exact. */
+    img[data-float="true"] { position: absolute; }
     blockquote {
       border-left: 3px solid #d4d4d8;
       padding: 0.25em 0 0.25em 1em;
