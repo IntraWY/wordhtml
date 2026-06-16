@@ -408,9 +408,20 @@ Cache name rotates per build (BUILD_ID/version), so deploys invalidate old cache
 
 **Current deployment:**
 - **GitHub:** `IntraWY/wordhtml` (private repo)
-- **Vercel:** `wordhtml.vercel.app` (auto-deploy on push to `master`)
+- **Cloudflare Pages:** `wordhtml.pages.dev` — **the live site**, locked behind Cloudflare Access (see "Private access lockdown" below). Deployed via direct upload of the prebuilt `out/` (no Pages build step): `npm run build` then `npx wrangler pages deploy out --project-name wordhtml --branch master`. Because the build bakes `NEXT_PUBLIC_FIREBASE_*` from `.env.local` into the static JS, **no env-var config is needed on Cloudflare** — it ships a prebuilt bundle.
+- **Vercel:** ❌ removed (the old `wordhtml.vercel.app` project was deleted). Reason: Vercel Deployment Protection only covers the production domain on the **paid** Pro plan; the free Hobby "Standard Protection" leaves production public — so it could not satisfy the "only me" requirement for free. Cloudflare Access can lock `*.pages.dev` for free, so hosting moved there.
 
 The static converter/editor runs with **no env vars**. Optional cloud sync (Templates + document history) activates only when `NEXT_PUBLIC_FIREBASE_*` is set at build time — see below.
+
+### Private access lockdown (Cloudflare Access — only the owner can use it)
+
+The site is a **single-user private tool**. It is protected at the Cloudflare edge so unauthenticated requests get **zero content** (this protects both *usage* and the *code* — nothing is served before auth).
+
+- **Cloudflare Zero Trust → Access application** covers `wordhtml.pages.dev` with a **"Only me" policy**: Action **Allow**, Include → Emails = `intrapeawg01@gmail.com`. Login is **One-time PIN** (emailed code). Free tier (up to 50 users).
+- Verified locked: an unauthenticated request returns **HTTP 302** → `…cloudflareaccess.com` login (`auth_status: NONE`), i.e. the door lock is active before any app HTML is served.
+- **To add another allowed user later:** Zero Trust → Access → Applications → wordhtml → Policies → add the email to the Include list.
+- **Firebase Authorized domains** must include the serving domain or Google sign-in fails with `auth/unauthorized-domain`. `wordhtml.pages.dev` was added (Firebase Console → Authentication → Settings → Authorized domains). The defunct `wordhtml.vercel.app` entry is harmless to leave but can be removed.
+- **Deploys preserve the lock:** Access is configured on the hostname, so re-running `wrangler pages deploy` does **not** reset it.
 
 ## Firebase cloud sync (activated)
 
@@ -421,8 +432,8 @@ Cloud sync for **Templates** (`users/{uid}/templates`) and **document history / 
 **What's configured (done):**
 - `.env.local` holds the `NEXT_PUBLIC_FIREBASE_*` web config (gitignored; values are public client config, not secrets). Re-pull anytime with: `firebase apps:sdkconfig WEB <appId> --project webhtml-d6832`.
 - `firestore.rules` deployed (`firebase deploy --only firestore:rules`) — grants `users/{uid}/**` to the owner; legacy global `templates` is read-only.
-- Auth → Google provider **enabled**; Authorized domains include `localhost` + `wordhtml.vercel.app`.
-- Vercel project env has all 7 `NEXT_PUBLIC_FIREBASE_*` (Production/Preview/Development) so the deployed build is Firebase-enabled.
+- Auth → Google provider **enabled**; Authorized domains include `localhost`, `webhtml-d6832.firebaseapp.com`, `webhtml-d6832.web.app`, and **`wordhtml.pages.dev`** (the live Cloudflare host). The legacy `wordhtml.vercel.app` entry is now defunct (Vercel deleted) and can be removed.
+- Env vars are baked into the static build from `.env.local` at `npm run build` time, so the prebuilt bundle uploaded to Cloudflare Pages is already Firebase-enabled — no per-host env config.
 
 **Verify config without signing in:** authorized domains via `GET identitytoolkit.googleapis.com/v1/projects?key=<apiKey>`; Google provider via `POST identitytoolkit.googleapis.com/v1/accounts:createAuthUri` (returns an `authUri` when enabled). A real end-to-end sign-in must be done in a normal browser — Google blocks OAuth in automation-controlled browsers.
 
