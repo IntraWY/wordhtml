@@ -4,11 +4,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Image as ImageIcon,
+  Layers,
+  SquareStack,
+} from "lucide-react";
+import {
   formatImageWidthLabel,
   imageWidthMatchesPreset,
   normalizeImagePercentWidths,
   resolveImagePresetWidth,
 } from "@/lib/imageScale";
+import {
+  attrsForLayoutMode,
+  isFloatingMode,
+  layoutModeFromAttrs,
+  type ImageLayoutMode,
+} from "@/lib/imageLayout";
 import {
   getPageContentWidthPx,
   measurePageBodyWidthFromDom,
@@ -35,6 +49,20 @@ interface MoveState {
   maxY: number;
 }
 
+/** Word-style layout modes shown in the size-bar "จัดวาง (Layout)" menu. */
+const LAYOUT_MODES: {
+  mode: ImageLayoutMode;
+  label: string;
+  Icon: typeof ImageIcon;
+}[] = [
+  { mode: "block", label: "เต็มความกว้าง (Block)", Icon: ImageIcon },
+  { mode: "wrapLeft", label: "ล้อมซ้าย (Wrap left)", Icon: AlignLeft },
+  { mode: "wrapRight", label: "ล้อมขวา (Wrap right)", Icon: AlignRight },
+  { mode: "center", label: "กึ่งกลาง บน-ล่าง (Top & bottom)", Icon: AlignCenter },
+  { mode: "front", label: "หน้าข้อความ (In front)", Icon: Layers },
+  { mode: "behind", label: "หลังข้อความ (Behind text)", Icon: SquareStack },
+];
+
 export function ImageResizeView({
   node,
   updateAttributes,
@@ -43,10 +71,12 @@ export function ImageResizeView({
   editor,
 }: NodeViewProps) {
   const imgRef = useRef<HTMLImageElement>(null);
+  const layoutWrapRef = useRef<HTMLSpanElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [moveDrag, setMoveDrag] = useState<MoveState | null>(null);
   const [liveShift, setLiveShift] = useState(false);
   const [bodyWidthPx, setBodyWidthPx] = useState(0);
+  const [layoutOpen, setLayoutOpen] = useState(false);
 
   const { src, alt, width, height, align, float, posX, posY, zIndex } =
     node.attrs as {
@@ -101,6 +131,16 @@ export function ImageResizeView({
       document.removeEventListener("mouseup", onUp);
     };
   }, [drag, updateAttributes]);
+
+  // Close the layout menu on an outside click.
+  useEffect(() => {
+    if (!layoutOpen) return;
+    const onDocDown = (e: MouseEvent) => {
+      if (!layoutWrapRef.current?.contains(e.target as Node)) setLayoutOpen(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [layoutOpen]);
 
   useEffect(() => {
     const body = imgRef.current?.closest(".page-body");
@@ -190,34 +230,39 @@ export function ImageResizeView({
     [float, posX, posY, getPos, editor]
   );
 
-  const toggleFloat = useCallback(
-    (e: React.MouseEvent) => {
+  const currentMode = layoutModeFromAttrs({ align, float, zIndex });
+
+  // Apply a Word-style layout mode. In-flow modes (block/wrap/center) just set
+  // align + clear float; floating modes (front/behind) additionally seed a start
+  // position from the image's current spot on the page so it doesn't jump to the
+  // corner when it first becomes free-floating.
+  const applyLayout = useCallback(
+    (mode: ImageLayoutMode) => (e: React.MouseEvent) => {
       e.preventDefault();
-      if (float) {
-        // Back to inline flow.
-        updateAttributes({ float: null, posX: 0, posY: 0 });
-        return;
+      setLayoutOpen(false);
+      const patch = attrsForLayoutMode(mode);
+      if (isFloatingMode(mode)) {
+        // Seed posX/posY only when transitioning from non-floating; if already
+        // floating, keep the user's dragged position.
+        let posPatch: { posX?: number; posY?: number } = {};
+        if (!float) {
+          const img = imgRef.current;
+          const page = img?.closest(".page-node");
+          let initX = 0;
+          let initY = 0;
+          if (img && page) {
+            const ir = img.getBoundingClientRect();
+            const pr = page.getBoundingClientRect();
+            initX = Math.max(0, Math.round(ir.left - pr.left));
+            initY = Math.max(0, Math.round(ir.top - pr.top));
+          }
+          posPatch = { posX: initX, posY: initY };
+        }
+        updateAttributes({ ...patch, ...posPatch });
+      } else {
+        // Back to the flow — reset the free position so a later float starts fresh.
+        updateAttributes({ ...patch, posX: 0, posY: 0 });
       }
-      // Enable floating — seed position from the image's current spot on the page
-      // so it doesn't jump to the corner.
-      const img = imgRef.current;
-      const page = img?.closest(".page-node");
-      let initX = 0;
-      let initY = 0;
-      if (img && page) {
-        const ir = img.getBoundingClientRect();
-        const pr = page.getBoundingClientRect();
-        initX = Math.max(0, Math.round(ir.left - pr.left));
-        initY = Math.max(0, Math.round(ir.top - pr.top));
-      }
-      // Keep `align` untouched: while floating, the absolute wrapperStyle takes
-      // precedence and the align attr is dormant; turning float OFF then restores
-      // the image's original left/center/right alignment for free.
-      updateAttributes({
-        float: true,
-        posX: initX,
-        posY: initY,
-      });
     },
     [float, updateAttributes]
   );
@@ -266,12 +311,16 @@ export function ImageResizeView({
   // positioned ancestor). This both places the image freely and removes it from
   // the flow (zero footprint), so pagination measurement ignores it.
   // Inline: alignment wrapper (mirrors CSS for A4Preview).
+  const baseZ = Number(zIndex) || 5;
   const wrapperStyle: React.CSSProperties = float
     ? {
         position: "absolute",
         left: Number(posX) || 0,
         top: Number(posY) || 0,
-        zIndex: Number(zIndex) || 5,
+        // While selected, force the image (and therefore its handles + size bar)
+        // to the front so a "behind text" image stays editable; the stored
+        // z-index (e.g. -1) re-applies once the selection clears.
+        zIndex: selected ? Math.max(50, baseZ) : baseZ,
         margin: 0,
       }
     : align === "left"
@@ -383,24 +432,86 @@ export function ImageResizeView({
           {!isDragging && (
             <>
               <span style={{ color: "var(--color-border-strong)" }}>·</span>
-              <button
-                onMouseDown={toggleFloat}
-                title="ลอยอิสระวางที่ไหนก็ได้ (Free-floating position)"
-                style={{
-                  padding: "2px 8px",
-                  border: `1px solid ${float ? "color-mix(in srgb, var(--color-accent) 50%, var(--color-border))" : "var(--color-border)"}`,
-                  background: float
-                    ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))"
-                    : "var(--color-muted)",
-                  color: float ? "var(--color-accent)" : "var(--color-muted-foreground)",
-                  borderRadius: 4,
-                  fontSize: 10,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
+              <span
+                ref={layoutWrapRef}
+                style={{ position: "relative", display: "inline-flex" }}
               >
-                {float ? "ลอยอยู่ (Floating)" : "ลอย (Float)"}
-              </button>
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setLayoutOpen((o) => !o);
+                  }}
+                  title="จัดวางรูปภาพ / ตัดข้อความ (Layout / Wrap text)"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "2px 8px",
+                    border: `1px solid ${float ? "color-mix(in srgb, var(--color-accent) 50%, var(--color-border))" : "var(--color-border)"}`,
+                    background: float
+                      ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))"
+                      : "var(--color-muted)",
+                    color: float ? "var(--color-accent)" : "var(--color-muted-foreground)",
+                    borderRadius: 4,
+                    fontSize: 10,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Layers className="size-3" />
+                  จัดวาง (Layout)
+                </button>
+                {layoutOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 4px)",
+                      left: 0,
+                      zIndex: 60,
+                      display: "flex",
+                      flexDirection: "column",
+                      minWidth: 196,
+                      padding: 4,
+                      background: "var(--color-surface)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: 8,
+                      boxShadow: "0 6px 20px rgba(0,0,0,.16)",
+                    }}
+                  >
+                    {LAYOUT_MODES.map(({ mode, label, Icon }) => {
+                      const active = mode === currentMode;
+                      return (
+                        <button
+                          key={mode}
+                          onMouseDown={applyLayout(mode)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "5px 8px",
+                            border: "none",
+                            borderRadius: 5,
+                            background: active
+                              ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))"
+                              : "transparent",
+                            color: active
+                              ? "var(--color-accent)"
+                              : "var(--color-foreground)",
+                            fontSize: 11,
+                            fontWeight: active ? 600 : 500,
+                            cursor: "pointer",
+                            textAlign: "left",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <Icon className="size-3.5" style={{ flexShrink: 0 }} />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </span>
               <span style={{ color: "var(--color-border-strong)" }}>·</span>
               {(["25%", "50%", "75%", "100%"] as const).map((p) => (
                 <button
