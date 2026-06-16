@@ -436,7 +436,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
             name="ribbon-space-before"
             type="number"
             min={0}
-            step={1}
+            step={0.1}
             value={currentSpaceBefore}
             onChange={(e) => handleSpaceBeforeChange(e.target.value)}
             disabled={!hasEditor}
@@ -452,7 +452,7 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
             name="ribbon-space-after"
             type="number"
             min={0}
-            step={1}
+            step={0.1}
             value={currentSpaceAfter}
             onChange={(e) => handleSpaceAfterChange(e.target.value)}
             disabled={!hasEditor}
