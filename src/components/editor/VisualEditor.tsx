@@ -75,7 +75,6 @@ import { isLiveEditor } from "@/lib/editorLive";
 import { useToastStore } from "@/store/toastStore";
 import { unwrapPageNode } from "@/lib/unwrapPageNode";
 import { getPageSelectionContext } from "@/lib/pagination/pageSelection";
-import { isPageBodyEffectivelyEmpty } from "@/lib/pagination/pageBodyEmpty";
 import { runPaginationMaintenance } from "@/lib/pagination/paginationMaintenance";
 import { dispatchPaginationCooldown } from "@/lib/events";
 import { insertVariableBadge } from "@/lib/tiptap/insertVariableBadge";
@@ -274,7 +273,11 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
           }
         }
 
-        // Delete at end of page → remove empty next page instead of leaving extra canvas pages.
+        // Delete at end of page → join the next page's first line up (Word-style
+        // forward merge). Works whether the next page is empty (removes the orphan
+        // page) or has content (mergePage joins the boundary paragraph; reflow then
+        // re-splits). Without this, native joinForward can't cross the pageNode
+        // boundary, so Delete at a page bottom is a dead key.
         if (event.key === "Delete" && pageCtx?.atPageBodyEnd) {
           const { state } = ed;
           const { $from } = state.selection;
@@ -301,10 +304,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
                 return true;
               }
             );
-            if (
-              nextPageBody !== state.doc &&
-              isPageBodyEffectivelyEmpty(nextPageBody)
-            ) {
+            if (nextPageBody !== state.doc) {
               event.preventDefault();
               const merged = ed.chain().focus().mergePage().run();
               if (merged) {
