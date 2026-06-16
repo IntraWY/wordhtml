@@ -20,9 +20,16 @@ import {
   ArrowDown,
   Square,
   SquareDashed,
-  Repeat
+  Repeat,
+  Image as ImageIcon,
+  Layers,
+  SquareStack,
 } from "lucide-react";
 import { editorCan } from "@/lib/editorLive";
+import {
+  attrsForLayoutMode,
+  type ImageLayoutMode,
+} from "@/lib/imageLayout";
 import {
   setSelectedCellBorders,
   selectionHasCell,
@@ -300,34 +307,74 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
       }
     );
   } else if (isImage) {
-    menuItems.push(
+    const applyImageLayout = (mode: ImageLayoutMode) => {
+      let patch: Record<string, unknown> = { ...attrsForLayoutMode(mode) };
+      // Seed a sensible free-float start position from the image's current spot
+      // so switching to front/behind doesn't snap it to the page's top-left.
+      if (mode === "front" || mode === "behind") {
+        const from = editor?.state.selection.from;
+        const dom =
+          typeof from === "number" ? editor?.view.nodeDOM(from) : null;
+        if (dom instanceof HTMLElement) {
+          const img =
+            dom.tagName === "IMG"
+              ? (dom as HTMLImageElement)
+              : dom.querySelector("img");
+          const page = dom.closest(".page-node");
+          if (img && page) {
+            const ir = img.getBoundingClientRect();
+            const pr = page.getBoundingClientRect();
+            patch = {
+              ...patch,
+              posX: Math.max(0, Math.round(ir.left - pr.left)),
+              posY: Math.max(0, Math.round(ir.top - pr.top)),
+            };
+          }
+        }
+      }
+      editor?.chain().focus().updateAttributes("image", patch).run();
+      setOpen(false);
+    };
+    const imageLayoutItems: MenuItem[] = [
       {
-        id: "align-left",
-        label: "ชิดซ้าย (Align left)",
+        id: "img-block",
+        label: "เต็มความกว้าง (Block)",
+        icon: <ImageIcon className="size-4" />,
+        action: () => applyImageLayout("block"),
+      },
+      {
+        id: "img-wrap-left",
+        label: "ล้อมซ้าย (Wrap left)",
         icon: <AlignLeft className="size-4" />,
-        action: () => {
-          editor?.chain().focus().updateAttributes("image", { align: "left" }).run();
-          setOpen(false);
-        },
+        action: () => applyImageLayout("wrapLeft"),
       },
       {
-        id: "align-center",
-        label: "กึ่งกลาง (Align center)",
-        icon: <AlignCenter className="size-4" />,
-        action: () => {
-          editor?.chain().focus().updateAttributes("image", { align: "center" }).run();
-          setOpen(false);
-        },
-      },
-      {
-        id: "align-right",
-        label: "ชิดขวา (Align right)",
+        id: "img-wrap-right",
+        label: "ล้อมขวา (Wrap right)",
         icon: <AlignRight className="size-4" />,
-        action: () => {
-          editor?.chain().focus().updateAttributes("image", { align: "right" }).run();
-          setOpen(false);
-        },
+        action: () => applyImageLayout("wrapRight"),
       },
+      {
+        id: "img-center",
+        label: "กึ่งกลาง บน-ล่าง (Top & bottom)",
+        icon: <AlignCenter className="size-4" />,
+        action: () => applyImageLayout("center"),
+      },
+      {
+        id: "img-front",
+        label: "หน้าข้อความ (In front)",
+        icon: <Layers className="size-4" />,
+        action: () => applyImageLayout("front"),
+      },
+      {
+        id: "img-behind",
+        label: "หลังข้อความ (Behind text)",
+        icon: <SquareStack className="size-4" />,
+        action: () => applyImageLayout("behind"),
+      },
+    ];
+    menuItems.push(
+      ...imageLayoutItems,
       { id: "div-image-1", label: "", divider: true },
       {
         id: "delete-image",
