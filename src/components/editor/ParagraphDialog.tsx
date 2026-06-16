@@ -164,7 +164,7 @@ export function ParagraphDialog({ open, onClose, editor }: ParagraphDialogProps)
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
-                          step={1}
+                          step={0.1}
                           min={0}
                           max={200}
                           value={draft[key as keyof ParagraphFormatValues] ?? 0}
