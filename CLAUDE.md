@@ -388,7 +388,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.11**
+- **Current version**: **v0.2.12**
 
 ### Patch bump rule (deploy default)
 
