@@ -9,6 +9,21 @@ import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { isLiveEditor } from "@/lib/editorLive";
 
+/**
+ * Whether a keydown target should suppress the app's global shortcuts.
+ *
+ * Skip only plain form fields (variable-value inputs, the find/replace box,
+ * spin buttons, …) where the keystroke is literal text entry. The main document
+ * surface and the header/footer mini-editors are `contentEditable` — shortcuts
+ * like Ctrl+S / Ctrl+F MUST keep working there (that is the normal editing
+ * state). The previous guard also bailed on `isContentEditable`, which silently
+ * disabled every shortcut while the cursor was in the document.
+ */
+export function shouldIgnoreShortcut(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+}
+
 export function useKeyboardShortcuts(editor: Editor | null) {
   const editorRef = useRef(editor);
   useEffect(() => {
@@ -27,15 +42,7 @@ export function useKeyboardShortcuts(editor: Editor | null) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
+      if (shouldIgnoreShortcut(event.target)) return;
 
       if (event.key === "F11") {
         event.preventDefault();

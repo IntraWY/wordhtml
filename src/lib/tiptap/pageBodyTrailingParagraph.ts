@@ -23,9 +23,11 @@ export const PageBodyTrailingParagraph = Extension.create({
           const insertPositions: number[] = [];
 
           doc.descendants((node, pos) => {
-            if (node.type.name !== "pageBody" || node.childCount === 0) return;
+            if (node.type.name !== "pageBody") return;
             const last = node.lastChild;
-            if (!last || last.type.name === "paragraph") return;
+            // Empty body (last === null) or one ending in a block atom both need a
+            // trailing paragraph so the user can click/type there.
+            if (last && last.type.name === "paragraph") return;
             insertPositions.push(pos + node.nodeSize - 1);
           });
 

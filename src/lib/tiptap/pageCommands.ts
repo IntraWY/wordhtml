@@ -1,5 +1,46 @@
 import { Extension } from "@tiptap/core";
+import { Fragment } from "@tiptap/pm/model";
+import { TextSelection } from "@tiptap/pm/state";
 import type { PageSetup } from "@/types";
+
+/**
+ * Concatenate page-body B's blocks onto body A's blocks. When A's last block and
+ * B's first block are both text blocks of the same type, they are *joined* into a
+ * single block (Word-style cross-page paragraph merge) instead of left as two
+ * adjacent blocks — this is what makes Backspace-at-page-top / Delete-at-page-end
+ * merge the boundary paragraphs rather than no-op.
+ *
+ * Returns the merged Fragment plus the content-relative caret target at the seam
+ * (the point where A's content ends), or `null` when no seam join happened.
+ */
+export function joinBodyFragments(
+  aContent: Fragment,
+  bContent: Fragment
+): { content: Fragment; seam: number | null } {
+  const aLast = aContent.lastChild;
+  const bFirst = bContent.firstChild;
+  if (
+    aLast &&
+    bFirst &&
+    aLast.isTextblock &&
+    bFirst.isTextblock &&
+    aLast.type === bFirst.type
+  ) {
+    const joined = aLast.copy(aLast.content.append(bFirst.content));
+    const aMinusLast = aContent.cut(0, aContent.size - aLast.nodeSize);
+    const bMinusFirst = bContent.cut(bFirst.nodeSize);
+    const content = aMinusLast
+      .append(Fragment.from(joined))
+      .append(bMinusFirst);
+    // Seam = inside the joined block, right after A's original content:
+    //   aMinusLast.size (blocks before the joined one)
+    //   + 1 (opening token of the joined block)
+    //   + aLast.content.size (A's original inline content)
+    const seam = aMinusLast.size + 1 + aLast.content.size;
+    return { content, seam };
+  }
+  return { content: aContent.append(bContent), seam: null };
+}
 
 function defaultPageSetup(): PageSetup {
   return {
@@ -113,11 +154,23 @@ export const PageCommands = Extension.create({
           const contentBefore = pageBodyNode.content.cut(0, splitPos);
           const contentAfter = pageBodyNode.content.cut(splitPos);
 
+          // pageBody requires "(block | pageBreak)+" — a split at a block boundary
+          // could yield an empty half. createAndFill backfills an empty paragraph
+          // so the page is never schema-invalid / unclickable. (Defense-in-depth:
+          // a caret inside a textblock already leaves an empty paragraph behind.)
+          const pageBodyType = state.schema.nodes.pageBody;
+          const makePageBody = (
+            attrs: Record<string, unknown> | null,
+            content: Fragment
+          ) =>
+            pageBodyType.createAndFill(attrs, content) ??
+            pageBodyType.create(attrs, content);
+
           // Replace current pageBody with contentBefore
           tr.replaceWith(
             pageBodyPos,
             pageBodyPos + pageBodyNode.nodeSize,
-            state.schema.nodes.pageBody.create(pageBodyNode.attrs, contentBefore)
+            makePageBody(pageBodyNode.attrs, contentBefore)
           );
 
           // Insert new pageNode with contentAfter after current pageNode.
@@ -130,9 +183,7 @@ export const PageCommands = Extension.create({
                 pageNumber: currentPageNumber + 1,
                 pageSetup: { ...currentPageSetup },
               },
-              [
-                state.schema.nodes.pageBody.create(null, contentAfter),
-              ]
+              [makePageBody(null, contentAfter)]
             )
           );
 
@@ -156,6 +207,18 @@ export const PageCommands = Extension.create({
               return true;
             }
           );
+
+          // Land the caret at the start of the new page's content (Word-style
+          // Ctrl+Enter), instead of letting it map to the end of the document.
+          // insertPos → pageNode open; +1 → pageBody open; resolve just inside and
+          // snap to the nearest text position.
+          try {
+            tr.setSelection(
+              TextSelection.near(tr.doc.resolve(insertPos + 2), 1)
+            );
+          } catch {
+            // leave the mapped selection if resolution fails (defensive)
+          }
 
           dispatch(tr);
           return true;
@@ -210,7 +273,8 @@ export const PageCommands = Extension.create({
             return false;
           }
 
-          const mergedContent = previousPageBody.node.content.append(
+          const { content: mergedContent, seam } = joinBodyFragments(
+            previousPageBody.node.content,
             currentPageBody.content
           );
 
@@ -226,6 +290,14 @@ export const PageCommands = Extension.create({
 
           const deletePos = tr.mapping.map(currentPagePos);
           tr.delete(deletePos, deletePos + currentPageNode.nodeSize);
+
+          // Land the caret at the seam so the join reads like a normal Backspace
+          // merge (cursor sits between the two former paragraphs' text). The
+          // deleted page is after this position, so it stays valid in the final doc.
+          if (seam !== null) {
+            const seamPos = previousPageBodyPos + 1 + seam;
+            tr.setSelection(TextSelection.create(tr.doc, seamPos));
+          }
 
           const renumberStart = tr.mapping.map(currentPagePos);
           tr.doc.nodesBetween(renumberStart, tr.doc.content.size, (node, pos) => {
@@ -299,8 +371,10 @@ export const PageCommands = Extension.create({
             return false;
           }
 
-          // Merge content: current body + next body
-          const mergedContent = currentPageBody.node.content.append(
+          // Merge content: current body + next body, joining the boundary text
+          // blocks so Delete-at-page-end pulls the next page's first line up.
+          const { content: mergedContent, seam } = joinBodyFragments(
+            currentPageBody.node.content,
             nextPageBody.node.content
           );
 
@@ -316,6 +390,13 @@ export const PageCommands = Extension.create({
           // Delete the next pageNode. Map position through prior replaceWith.
           const deletePos = tr.mapping.map(nextPagePos);
           tr.delete(deletePos, deletePos + nextPageNode.nodeSize);
+
+          // Keep the caret at the seam (end of the current page's former last
+          // line) so Delete reads like a normal forward-merge.
+          if (seam !== null) {
+            const seamPos = currentPageBodyPos + 1 + seam;
+            tr.setSelection(TextSelection.create(tr.doc, seamPos));
+          }
 
           // Update page numbers for subsequent pages.
           const currentPageNumber =

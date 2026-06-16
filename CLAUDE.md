@@ -260,6 +260,16 @@ VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (
 
 All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **851 unit tests pass; lint + build clean; e2e 34/34.**
 
+**WIP (unreleased, branch `feat/roadmap-cherrypick`) — Tab/Enter bug audit + cross-page join fix.** A live browser audit (Chrome DevTools, dev server) of the Tab and Enter/page systems. **Tab system: clean** — Tab mid-line→`\t`, Tab at block-start→indent, Shift+Tab outdent/delete-`\t`, decoration widths, and reload-persistence all verified PASS; no bug. An earlier Explore-agent's "CRITICAL: splitPage makes an empty unusable pageBody" was a **false positive** (a caret sits in a textblock, so `content.cut(splitPos)` always leaves a trailing empty paragraph; the new page is usable) — and that agent's proposed fix was wrong (it also bailed on `!last`). **Real bug found & fixed: you could not join paragraphs across an auto-paginated page boundary** — Backspace at a page top and Delete at a page bottom were dead keys, because `mergeWithPreviousPage`/`mergePage` did `content.append()` (concatenate, never join the seam blocks) and native joinBackward/Forward can't cross the `pageNode` boundary. Fixes (all in `src/lib/tiptap/pageCommands.ts` + `VisualEditor.tsx`):
+1. **Seam join** — new exported pure helper `joinBodyFragments(aContent, bContent)` joins A's last + B's first block when both are same-type textblocks (else concatenates), returning the merged Fragment + content-relative caret seam. Wired into both `mergeWithPreviousPage` (Backspace) and `mergePage` (Delete), which now `tr.setSelection` to the seam so the caret reads like a normal merge.
+2. **Delete handler** (`VisualEditor.tsx`) no longer gates on `isPageBodyEffectivelyEmpty` — Delete at `atPageBodyEnd` now merges whenever a next page exists (join its first line up), not only when the next page is empty. (Removed the now-unused `isPageBodyEffectivelyEmpty` import.)
+3. **splitPage caret** — Ctrl+Enter previously left the caret at the **document end** (a pre-existing bug, unrelated to the agent's empty-page claim); splitPage now `TextSelection.near`s the start of the new page (Word-style). Also hardened both split halves with `pageBody.createAndFill` so a split can never yield a schema-invalid empty body.
+4. **`pageBodyTrailingParagraph.ts`** — guard fixed so a truly empty body (childCount 0) would also self-heal (defense-in-depth; such a body is actually unreachable in a valid `(block|pageBreak)+` doc).
+
+Pagination model confirmed **by design**: pages are *soft* — `usePagination` holistically repaginates ~450ms after typing idle (`buildRepaginateTransaction`) to fill each page, so a manual Ctrl+Enter split whose content fits one page is reflowed back (the forced break is not durable). Auto-paginate verified (80 paras → 5 pages, page numbers correct, no console errors / no CPU peg). New tests: `src/lib/tiptap/pageCommands.crossPageJoin.test.ts` (10 — `joinBodyFragments` seam/no-join/empty-absorb, mergeWithPreviousPage/mergePage join + caret, orphan-page cleanup, splitPage split/caret/createAndFill). `bakeTabStops.test.ts` already existed (the agent's "no test" claim was also wrong). **861 unit tests pass** (851 + 10); `npm run build` clean (TypeScript + static export); live-verified in browser.
+
+**WIP round 2 — Tab/Space/variable alignment re-audit + global-shortcut fix.** A second live audit (agent + Chrome DevTools) of Tab, Space bar, and **aligning text after a placed `{{variable}}`**. All **verified working**: variables insert as text + a non-inclusive `variable` mark (`insertVariableBadge.ts`/`variableMark.ts`), so a Tab right after a badge has `parentOffset > 0` → inserts a literal `\t` (snaps to the ruler stop, no block-indent misfire, no mark leak); multiple spaces render via `white-space: pre-wrap` and survive save+reload; `collapseSpaces` is **off by default** (`DEFAULT_CLEANERS`) so space-alignment survives export unless the user enables that cleaner (Tab is immune either way; recommend Tab over spaces for columns). **Real bug found & fixed (unrelated to tab/space): every global keyboard shortcut was dead while the editor was focused.** `useKeyboardShortcuts.ts` bailed when `target.isContentEditable`, and the ProseMirror surface *is* contentEditable — so Ctrl+S / Ctrl+Shift+S / Ctrl+O / Ctrl+F / Ctrl+P / Ctrl+Shift+K/N/M / F11 / F1 did nothing while typing (only the toolbar Save button worked). Proven by symmetry: shortcuts fired with focus on `<body>` but not inside the editor. Fix: new pure helper `shouldIgnoreShortcut(target)` skips **only** `INPUT`/`TEXTAREA` (form fields), not the contentEditable editor; locked by `useKeyboardShortcuts.test.ts` (5 tests). Live-verified: Ctrl+F now opens Find/Replace and Ctrl+S opens Export from within the editor. **866 unit tests pass** (861 + 5); build clean.
+
 **v0.2.11 — Tab-stop plugin hardening.** A debug pass over the v0.2.10 tab-stop engine. The decoration rebuild loop (`tabStopPlugin.ts`) re-dispatched while `sig !== lastSig` with **no upper bound** — if a tab width flips a line-wrap back and forth (A↔B), the rAF loop never settles and pegs the CPU. Added a pure 2-cycle guard `shouldDispatchTabDecorations(sig, lastSig, prevSig)` in `tabStopLayout.ts` (stops on convergence *or* when about to revisit the state from two dispatches ago); the plugin now tracks `prevSig`. A forward cascade still produces a fresh sig per frame and dispatches normally, so real updates are never blocked. Locked by 5 new tests incl. a simulated A↔B oscillation that terminates after 2 dispatches. Also corrected two stale `paragraphFormat.ts` comments that still claimed tab stops were "left-aligned only" / derived a uniform `tabSize` from the first stop (both false since v0.2.10 — rendering is per-type via the plugin, `setTabStops` clears `tabSize` to null). Note: an audit flagged a "CRITICAL" type-loss-during-drag, but verification showed it was a false positive — `remapTabStopTypes`'s `leftover` pool already carries a moved stop's type (locked by the existing `"preserves a moved stop's type"` test).
 
 **v0.2.10 — Word-style ruler upgrades.** Four additions bringing the ruler closer to Microsoft Word:
@@ -378,7 +388,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.11**
+- **Current version**: **v0.2.12**
 
 ### Patch bump rule (deploy default)
 
@@ -408,9 +418,20 @@ Cache name rotates per build (BUILD_ID/version), so deploys invalidate old cache
 
 **Current deployment:**
 - **GitHub:** `IntraWY/wordhtml` (private repo)
-- **Vercel:** `wordhtml.vercel.app` (auto-deploy on push to `master`)
+- **Cloudflare Pages:** `wordhtml.pages.dev` — **the live site**, locked behind Cloudflare Access (see "Private access lockdown" below). Deployed via direct upload of the prebuilt `out/` (no Pages build step): `npm run build` then `npx wrangler pages deploy out --project-name wordhtml --branch master`. Because the build bakes `NEXT_PUBLIC_FIREBASE_*` from `.env.local` into the static JS, **no env-var config is needed on Cloudflare** — it ships a prebuilt bundle.
+- **Vercel:** ❌ removed (the old `wordhtml.vercel.app` project was deleted). Reason: Vercel Deployment Protection only covers the production domain on the **paid** Pro plan; the free Hobby "Standard Protection" leaves production public — so it could not satisfy the "only me" requirement for free. Cloudflare Access can lock `*.pages.dev` for free, so hosting moved there.
 
 The static converter/editor runs with **no env vars**. Optional cloud sync (Templates + document history) activates only when `NEXT_PUBLIC_FIREBASE_*` is set at build time — see below.
+
+### Private access lockdown (Cloudflare Access — only the owner can use it)
+
+The site is a **single-user private tool**. It is protected at the Cloudflare edge so unauthenticated requests get **zero content** (this protects both *usage* and the *code* — nothing is served before auth).
+
+- **Cloudflare Zero Trust → Access application** covers `wordhtml.pages.dev` with a **"Only me" policy**: Action **Allow**, Include → Emails = `intrapeawg01@gmail.com`. Login is **One-time PIN** (emailed code). Free tier (up to 50 users).
+- Verified locked: an unauthenticated request returns **HTTP 302** → `…cloudflareaccess.com` login (`auth_status: NONE`), i.e. the door lock is active before any app HTML is served.
+- **To add another allowed user later:** Zero Trust → Access → Applications → wordhtml → Policies → add the email to the Include list.
+- **Firebase Authorized domains** must include the serving domain or Google sign-in fails with `auth/unauthorized-domain`. `wordhtml.pages.dev` was added (Firebase Console → Authentication → Settings → Authorized domains). The defunct `wordhtml.vercel.app` entry is harmless to leave but can be removed.
+- **Deploys preserve the lock:** Access is configured on the hostname, so re-running `wrangler pages deploy` does **not** reset it.
 
 ## Firebase cloud sync (activated)
 
@@ -421,8 +442,8 @@ Cloud sync for **Templates** (`users/{uid}/templates`) and **document history / 
 **What's configured (done):**
 - `.env.local` holds the `NEXT_PUBLIC_FIREBASE_*` web config (gitignored; values are public client config, not secrets). Re-pull anytime with: `firebase apps:sdkconfig WEB <appId> --project webhtml-d6832`.
 - `firestore.rules` deployed (`firebase deploy --only firestore:rules`) — grants `users/{uid}/**` to the owner; legacy global `templates` is read-only.
-- Auth → Google provider **enabled**; Authorized domains include `localhost` + `wordhtml.vercel.app`.
-- Vercel project env has all 7 `NEXT_PUBLIC_FIREBASE_*` (Production/Preview/Development) so the deployed build is Firebase-enabled.
+- Auth → Google provider **enabled**; Authorized domains include `localhost`, `webhtml-d6832.firebaseapp.com`, `webhtml-d6832.web.app`, and **`wordhtml.pages.dev`** (the live Cloudflare host). The legacy `wordhtml.vercel.app` entry is now defunct (Vercel deleted) and can be removed.
+- Env vars are baked into the static build from `.env.local` at `npm run build` time, so the prebuilt bundle uploaded to Cloudflare Pages is already Firebase-enabled — no per-host env config.
 
 **Verify config without signing in:** authorized domains via `GET identitytoolkit.googleapis.com/v1/projects?key=<apiKey>`; Google provider via `POST identitytoolkit.googleapis.com/v1/accounts:createAuthUri` (returns an `authUri` when enabled). A real end-to-end sign-in must be done in a normal browser — Google blocks OAuth in automation-controlled browsers.
 
