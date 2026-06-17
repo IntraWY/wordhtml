@@ -51,6 +51,30 @@ test.describe("Smoke", () => {
     );
   });
 
+  test("editor route locks body scroll; docs route does not", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator(".page-node")).toBeVisible();
+    const lock = await page.evaluate(() => ({
+      locked: document.documentElement.classList.contains("editor-locked"),
+      // overflow is unreliable here due to CSS viewport-propagation; assert on
+      // the actual outcome: the body/viewport must not produce its own scroll.
+      noBodyScroll:
+        document.documentElement.scrollHeight <= window.innerHeight + 1,
+    }));
+    expect(lock.locked).toBe(true);
+    expect(lock.noBodyScroll).toBe(true);
+
+    // Other routes (sharing the same <body>) must not be locked.
+    await page.goto("/help");
+    expect(
+      await page.evaluate(() =>
+        document.documentElement.classList.contains("editor-locked")
+      )
+    ).toBe(false);
+  });
+
   test("can type into the editor", async ({ page }) => {
     await page.goto("/");
     const editor = page.locator("[contenteditable='true']").first();

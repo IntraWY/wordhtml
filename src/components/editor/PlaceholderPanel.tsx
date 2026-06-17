@@ -172,7 +172,7 @@ export function PlaceholderPanel({ editor }: { editor: Editor | null }) {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 text-sm">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 text-sm">
             {tab === "fields" && (
               <div className="space-y-3">
                 {!templateMode && (

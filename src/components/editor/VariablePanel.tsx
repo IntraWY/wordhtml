@@ -259,7 +259,7 @@ export function VariablePanel({ editor }: { editor?: Editor | null }) {
             </header>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-4">
               {/* Variables section */}
               <section className="space-y-2">
                 <div className="flex items-center justify-between">

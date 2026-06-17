@@ -71,6 +71,16 @@ body {
   font-feature-settings: "cv11", "ss01", "ss03";
 }
 
+/* Editor route locks body scroll to the viewport; the only scroller is the
+   inner overflow-auto container in EditorShell. Added/removed by EditorShell
+   on mount/unmount, so marketing/docs routes keep normal body scrolling. */
+html.editor-locked,
+html.editor-locked body {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

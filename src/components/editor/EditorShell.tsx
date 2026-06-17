@@ -213,6 +213,17 @@ export function EditorShell() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  /* Lock body scroll to the viewport while the editor is mounted.
+     The only scroller is the inner overflow-auto container below.
+     Class removed on unmount so other routes keep normal scrolling. */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("editor-locked");
+    return () => {
+      root.classList.remove("editor-locked");
+    };
+  }, []);
+
   const handleMarginChange = useCallback(
     (leftMm: number, rightMm: number) => {
       const { marginMm } = useEditorStore.getState().pageSetup;
@@ -322,7 +333,7 @@ export function EditorShell() {
             </button>
           </div>
         )}
-        <main className="flex flex-1 overflow-hidden">
+        <main className="flex min-h-0 flex-1 overflow-hidden">
           <div
             className={cn(
               "grid flex-1 gap-px overflow-hidden bg-[color:var(--color-border)]",
