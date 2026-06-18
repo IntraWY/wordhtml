@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
 import { Table as TableIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+const POPOVER_WIDTH = 210; // grid (10 cells) + padding, used to clamp against the right edge
 
 interface TableSizePickerProps {
   editor: Editor | null;
@@ -22,23 +25,47 @@ const MAX_ROWS = 8;
 export function TableSizePicker({ editor, disabled }: TableSizePickerProps) {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState<{ rows: number; cols: number }>({ rows: 0, cols: 0 });
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // The popover is portaled to <body> so it escapes the ribbon's overflow-x-auto
+  // scroll container (which would otherwise clip an absolutely-positioned child).
+  // Because it is portaled, position it `fixed` from the trigger's viewport rect.
+  const reposition = useCallback(() => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH));
+    setPos({ top: rect.bottom + 4, left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    reposition();
+  }, [open, reposition]);
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    const onReflow = () => reposition();
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", onReflow, true);
+    window.addEventListener("resize", onReflow);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", onReflow, true);
+      window.removeEventListener("resize", onReflow);
     };
-  }, [open]);
+  }, [open, reposition]);
 
   const handleInsert = useCallback(
     (rows: number, cols: number) => {
@@ -72,11 +99,13 @@ export function TableSizePicker({ editor, disabled }: TableSizePickerProps) {
         <span className="ml-0.5 text-[10px]">▾</span>
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
+          ref={popoverRef}
           role="dialog"
           aria-label="เลือกขนาดตาราง (Pick table size)"
-          className="absolute left-0 top-full z-50 mt-1 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-2 shadow-lg"
+          style={{ position: "fixed", top: pos.top, left: pos.left }}
+          className="z-50 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-background)] p-2 shadow-lg"
         >
           <div
             className="grid gap-0.5"
@@ -110,7 +139,8 @@ export function TableSizePicker({ editor, disabled }: TableSizePickerProps) {
               ? `${hover.rows} แถว × ${hover.cols} คอลัมน์`
               : "เลือกขนาดตาราง"}
           </p>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
