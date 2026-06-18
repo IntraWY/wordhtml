@@ -72,11 +72,17 @@ export function ImageResizeView({
 }: NodeViewProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const layoutWrapRef = useRef<HTMLSpanElement>(null);
+  const layoutMenuRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [moveDrag, setMoveDrag] = useState<MoveState | null>(null);
   const [liveShift, setLiveShift] = useState(false);
   const [bodyWidthPx, setBodyWidthPx] = useState(0);
   const [layoutOpen, setLayoutOpen] = useState(false);
+  // Flip the layout menu when it would spill past the viewport's right/bottom edge.
+  const [menuFlip, setMenuFlip] = useState<{ right: boolean; up: boolean }>({
+    right: false,
+    up: false,
+  });
 
   const { src, alt, width, height, align, float, posX, posY, zIndex } =
     node.attrs as {
@@ -132,15 +138,46 @@ export function ImageResizeView({
     };
   }, [drag, updateAttributes]);
 
-  // Close the layout menu on an outside click.
+  // Keep the layout menu inside the viewport (flip toward the opposite edge if
+  // it would be clipped near the right/bottom of the screen). Deferred to a
+  // rAF so the setState happens off the effect body (not a synchronous cascade)
+  // and after the menu has actually laid out.
+  const clampMenu = useCallback(() => {
+    const el = layoutMenuRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setMenuFlip({
+      right: r.right > window.innerWidth - 8,
+      up: r.bottom > window.innerHeight - 8,
+    });
+  }, []);
+
+  // Close the layout menu on an outside click or Escape.
   useEffect(() => {
     if (!layoutOpen) return;
     const onDocDown = (e: MouseEvent) => {
       if (!layoutWrapRef.current?.contains(e.target as Node)) setLayoutOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setLayoutOpen(false);
+      }
+    };
+    const onReflow = () => clampMenu();
     document.addEventListener("mousedown", onDocDown);
-    return () => document.removeEventListener("mousedown", onDocDown);
-  }, [layoutOpen]);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onReflow, true);
+    window.addEventListener("resize", onReflow);
+    const id = requestAnimationFrame(clampMenu);
+    return () => {
+      cancelAnimationFrame(id);
+      document.removeEventListener("mousedown", onDocDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onReflow, true);
+      window.removeEventListener("resize", onReflow);
+    };
+  }, [layoutOpen, clampMenu]);
 
   useEffect(() => {
     const body = imgRef.current?.closest(".page-body");
@@ -463,10 +500,13 @@ export function ImageResizeView({
                 </button>
                 {layoutOpen && (
                   <div
+                    ref={layoutMenuRef}
                     style={{
                       position: "absolute",
-                      top: "calc(100% + 4px)",
-                      left: 0,
+                      top: menuFlip.up ? "auto" : "calc(100% + 4px)",
+                      bottom: menuFlip.up ? "calc(100% + 4px)" : "auto",
+                      left: menuFlip.right ? "auto" : 0,
+                      right: menuFlip.right ? 0 : "auto",
                       zIndex: 60,
                       display: "flex",
                       flexDirection: "column",

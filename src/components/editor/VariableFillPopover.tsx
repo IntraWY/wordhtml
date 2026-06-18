@@ -18,6 +18,14 @@ import type { TemplateVariable } from "@/types";
 
 const POPOVER_WIDTH = 240;
 
+/** Clamp the popover's top-left so it stays inside the viewport. */
+function clampAnchor(rect: { left: number; bottom: number }) {
+  return {
+    left: Math.max(8, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 8)),
+    top: Math.min(rect.bottom + 6, window.innerHeight - 110),
+  };
+}
+
 /**
  * Inline fill popover: opens when the user clicks a {{variable}} badge in the
  * document (`wordhtml:fill-variable` from VisualEditor.handleClick). Edits the
@@ -27,6 +35,7 @@ const POPOVER_WIDTH = 240;
 export function VariableFillPopover({ editor }: { editor?: Editor | null }) {
   const [target, setTarget] = useState<FillVariableDetail | null>(null);
   const [draft, setDraft] = useState("");
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -37,11 +46,29 @@ export function VariableFillPopover({ editor }: { editor?: Editor | null }) {
         .getState()
         .variables.find((v) => v.name === detail.name);
       setDraft(current?.value ?? "");
+      // null pos → render anchors from the freshly captured rect until a
+      // scroll/resize repositions it (setState here is fine: it's an event cb).
+      setPos(null);
       setTarget(detail);
     };
     addEventListener(EVENT_NAMES.fillVariable, handler);
     return () => removeEventListener(EVENT_NAMES.fillVariable, handler);
   }, []);
+
+  // Re-anchor to the badge's live position so the popover tracks the editor
+  // when the canvas scrolls (the captured rect goes stale otherwise).
+  const reposition = useCallback(() => {
+    if (!target) return;
+    let rect: { left: number; bottom: number } = target.rect;
+    const el = document.querySelector<HTMLElement>(
+      `.variable-badge[data-variable="${CSS.escape(target.name)}"]`
+    );
+    if (el) {
+      const r = el.getBoundingClientRect();
+      rect = { left: r.left, bottom: r.bottom };
+    }
+    setPos(clampAnchor(rect));
+  }, [target]);
 
   useEffect(() => {
     if (!target) return;
@@ -53,13 +80,18 @@ export function VariableFillPopover({ editor }: { editor?: Editor | null }) {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setTarget(null);
     };
+    const onReflow = () => reposition();
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", onReflow, true);
+    window.addEventListener("resize", onReflow);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", onReflow, true);
+      window.removeEventListener("resize", onReflow);
     };
-  }, [target]);
+  }, [target, reposition]);
 
   const commit = useCallback(
     (value: string) => {
@@ -108,6 +140,7 @@ export function VariableFillPopover({ editor }: { editor?: Editor | null }) {
         if (!el) return;
         const r = el.getBoundingClientRect();
         setDraft("");
+        setPos(null);
         setTarget({
           name: next,
           rect: { left: r.left, top: r.top, bottom: r.bottom, width: r.width },
@@ -118,11 +151,9 @@ export function VariableFillPopover({ editor }: { editor?: Editor | null }) {
 
   if (!target) return null;
 
-  const left = Math.max(
-    8,
-    Math.min(target.rect.left, window.innerWidth - POPOVER_WIDTH - 8)
-  );
-  const top = Math.min(target.rect.bottom + 6, window.innerHeight - 110);
+  // Initial render uses the captured rect; once the user scrolls, `pos` holds
+  // the re-anchored coordinates.
+  const { left, top } = pos ?? clampAnchor(target.rect);
 
   return (
     <div
