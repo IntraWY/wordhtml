@@ -421,6 +421,21 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
 .prose-editor .ProseMirror {
   caret-color: #1c1917;
 }
+
+/* เช่นเดียวกับ caret ด้านบน: เนื้อหาในกระดาษ .page-node (พื้นขาวเสมอ) ต้องไม่ใช้
+   โทนตัวอักษรของธีมมืด ไม่งั้นข้อความ/โค้ด/อ้างอิง/เส้นตารางจะกลายเป็นสีอ่อนบน
+   พื้นขาว (เคย contrast ~1.06:1 = มองไม่เห็น). ปักหมุด ink token เป็นค่าโหมดสว่าง
+   ภายในกระดาษ ให้ตรงกับงานพิมพ์ (Paper-Stays-White). */
+html[data-theme="dark"] .page-node {
+  /* color is declared on the ancestor .prose-editor and inherited as a computed
+     light value, so re-declare it on the white sheet itself. */
+  color: #1c1917;
+  --color-foreground: #1c1917;
+  --color-muted-foreground: #57534e;
+  --color-muted: #f0ebe3;
+  --color-border: #e7e0d6;
+  --color-border-strong: #d6cec3;
+}
 /* Respect ProseMirror's hide-caret-during-selection — the rule above (specificity
    0,1,1) would otherwise beat .ProseMirror-hideselection (0,1,0) and keep the
    caret visible while a selection is active. */
