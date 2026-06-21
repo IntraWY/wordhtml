@@ -20,7 +20,9 @@ test.describe("Cloud sync UX (M1 / D1)", () => {
 
   test("history panel explains local vs cloud storage paths", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: /ประวัติ/i }).first().click();
+    // History now lives inside the "เอกสาร (Documents)" dropdown in the TopBar.
+    await page.getByRole("button", { name: "เอกสาร (Documents)" }).click();
+    await page.getByRole("menuitem", { name: /ประวัติ/i }).click();
     await expect(page.getByText("ที่เก็บข้อมูล (Storage)")).toBeVisible();
     await expect(page.getByText(/localStorage → wordhtml-editor/)).toBeVisible();
     await expect(page.getByText(/users\/\{uid\}\/snapshots/)).toBeVisible();

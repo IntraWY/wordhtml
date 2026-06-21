@@ -452,7 +452,7 @@ export function VariablePanel({ editor }: { editor?: Editor | null }) {
                   type="button"
                   onClick={() => setPreviewMode("preview")}
                   disabled={variables.length === 0}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[color:var(--color-foreground)] px-3 py-2 text-xs font-medium text-[color:var(--color-background)] transition-colors disabled:opacity-40"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-[color:var(--color-accent)] px-3 py-2 text-xs font-medium text-[color:var(--color-accent-foreground)] shadow-sm transition-colors hover:bg-[color:var(--color-accent-hover)] disabled:opacity-40"
                 >
                   <Eye className="size-3.5" />
                   Preview

@@ -360,10 +360,10 @@ export function EditorShell() {
               ) : (
                 <div
                   ref={scrollContainerRef}
-                  className="flex-1 overflow-auto bg-[color:var(--color-muted)]"
+                  className="editor-desk flex-1 overflow-auto"
                   style={{ scrollbarGutter: "stable" }}
                 >
-                  <div className="sticky top-0 z-10 bg-[color:var(--color-muted)] px-8 pt-8">
+                  <div className="sticky top-0 z-10 bg-[color:var(--color-canvas)] px-8 pt-8">
                     <EditorRulerBar
                       widthPx={widthPx}
                       cornerSlot={<TabTypeSelector />}
