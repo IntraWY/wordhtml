@@ -387,6 +387,20 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   z-index: 1;
 }
 
+/* "Drafting table" desk surface for the live edit scroll container.
+   Distinct from .editor-canvas (which is print-hidden): the page paints white
+   over this Desk-Linen dot grid so the A4 reads as a sheet on a desk.
+   In print, body * visibility:hidden already suppresses this background. */
+.editor-desk {
+  background-color: var(--color-canvas);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-border-strong) 22%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
+
 /* Shared document typography — used in both .prose-editor (Tiptap)
    and .paper (A4 Preview).  Keep both visually identical so users see
    what they'll get. */
