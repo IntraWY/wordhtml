@@ -93,6 +93,7 @@ function DocumentsMenu({ historyCount }: { historyCount: number }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label="เอกสาร (Documents)"
         title="เอกสาร (Documents)"
         className={cn(
           "relative inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-2.5 text-sm text-[color:var(--color-muted-foreground)] transition-colors hover:bg-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]",
