@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-21T00:00:00.000Z",
+  "title": "Design System: wordhtml",
+  "extensions": {
+    "colorMeta": {
+      "ink-blue": {
+        "role": "primary",
+        "displayName": "Ink Blue",
+        "canonical": "oklch(62.3% 0.214 259.8)",
+        "darkValue": "#60A5FA",
+        "tonalRamp": ["#172554", "#1e3a8a", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#dbeafe"]
+      },
+      "warm-stone": {
+        "role": "neutral",
+        "displayName": "Warm Stone",
+        "canonical": "oklch(97.6% 0.006 67)",
+        "darkValue": "#141210",
+        "tonalRamp": ["#1c1917", "#292524", "#57534e", "#a8a29e", "#d6cec3", "#e7e0d6", "#f0ebe3", "#faf8f5"]
+      },
+      "espresso-ink": {
+        "role": "neutral",
+        "displayName": "Espresso Ink",
+        "canonical": "oklch(21.5% 0.006 56)",
+        "darkValue": "#faf8f5",
+        "tonalRamp": ["#1c1917", "#292524", "#44403c", "#57534e", "#78716c", "#a8a29e", "#d6d3d1", "#f5f5f4"]
+      },
+      "sand": {
+        "role": "neutral",
+        "displayName": "Sand",
+        "canonical": "oklch(94.5% 0.01 75)",
+        "tonalRamp": ["#44403c", "#57534e", "#78716c", "#a8a29e", "#d6cec3", "#e7e0d6", "#f0ebe3", "#faf8f5"]
+      },
+      "slate-stone": {
+        "role": "neutral",
+        "displayName": "Slate Stone",
+        "canonical": "oklch(44.8% 0.008 67)",
+        "darkValue": "#a8a29e",
+        "tonalRamp": ["#1c1917", "#292524", "#44403c", "#57534e", "#78716c", "#a8a29e", "#d6d3d1", "#f5f5f4"]
+      },
+      "desk-linen": {
+        "role": "neutral",
+        "displayName": "Desk Linen",
+        "canonical": "oklch(90.5% 0.012 78)",
+        "darkValue": "#0c0a09",
+        "tonalRamp": ["#292524", "#44403c", "#78716c", "#a8a29e", "#d6cec3", "#e8e2d9", "#f0ebe3", "#faf8f5"]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#ffffff",
+        "darkValue": "#ffffff",
+        "tonalRamp": ["#d6d3d1", "#e7e5e4", "#f5f5f4", "#fafaf9", "#fdfdfc", "#fefefe", "#ffffff", "#ffffff"]
+      },
+      "approved-green": {
+        "role": "tertiary",
+        "displayName": "Approved Green",
+        "canonical": "oklch(59.6% 0.145 150)",
+        "darkValue": "#22c55e",
+        "tonalRamp": ["#052e16", "#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#4ade80", "#bbf7d0"]
+      },
+      "alert-red": {
+        "role": "tertiary",
+        "displayName": "Alert Red",
+        "canonical": "oklch(57.7% 0.215 27.3)",
+        "darkValue": "#ef4444",
+        "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca"]
+      },
+      "caution-amber": {
+        "role": "tertiary",
+        "displayName": "Caution Amber",
+        "canonical": "oklch(64.5% 0.156 58)",
+        "darkValue": "#f59e0b",
+        "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a"]
+      },
+      "merge-field-amber": {
+        "role": "signature",
+        "displayName": "Merge-Field Amber",
+        "canonical": "oklch(53.5% 0.184 38)",
+        "darkValue": "#fb923c",
+        "tonalRamp": ["#431407", "#7c2d12", "#9a3412", "#c2410c", "#ea580c", "#fb923c", "#fdba74", "#fff7ed"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page H1 / hero headings (Plus Jakarta Sans 700)." },
+      "headline": { "displayName": "Headline", "purpose": "Section H2 (Plus Jakarta Sans 700)." },
+      "title": { "displayName": "Title", "purpose": "H3 and dialog titles (Plus Jakarta Sans 600)." },
+      "body": { "displayName": "Body", "purpose": "Document and prose text (IBM Plex Sans Thai 400, 65–75ch)." },
+      "label": { "displayName": "Label", "purpose": "Ribbon/UI labels (IBM Plex Sans Thai 600); mono 10.5px for page numbers." }
+    },
+    "shadows": [
+      { "name": "page-rest", "value": "0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06), 0 12px 28px rgba(0,0,0,0.04)", "purpose": "The A4 page floating on the desk — the one element with layered elevation." },
+      { "name": "dialog", "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", "purpose": "Transient overlays only (dialogs, popovers)." },
+      { "name": "button-rest", "value": "0 1px 2px rgba(0,0,0,0.1)", "purpose": "Primary/danger buttons at rest." },
+      { "name": "button-hover", "value": "0 4px 6px -1px rgba(0,0,0,0.1)", "purpose": "Primary/danger buttons on hover." }
+    ],
+    "motion": [
+      { "name": "menu-open", "value": "120ms ease-out", "purpose": "Dropdown / dialog fade+scale in." },
+      { "name": "menu-close", "value": "100ms ease-in", "purpose": "Dropdown / dialog fade+scale out." },
+      { "name": "page-hover", "value": "200ms ease", "purpose": "A4 page box-shadow + 1px lift on hover (gated on prefers-reduced-motion)." },
+      { "name": "landing-reveal", "value": "550ms cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Staggered section reveals on landing/help." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single committing action on a screen (Save, Convert, Download).",
+      "html": "<button class=\"ds-btn-primary\">บันทึก (Save)</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:36px; padding:0 16px; border:none; border-radius:8px; background:#3B82F6; color:#fff; font:600 14px/1 'IBM Plex Sans Thai',system-ui,sans-serif; box-shadow:0 1px 2px rgba(0,0,0,.1); cursor:pointer; transition:background-color .15s, box-shadow .15s, transform .15s; } .ds-btn-primary:hover { background:#2563EB; box-shadow:0 4px 6px -1px rgba(0,0,0,.1); } .ds-btn-primary:active { transform:scale(.98); } .ds-btn-primary:focus-visible { outline:none; box-shadow:0 0 0 2px #faf8f5, 0 0 0 4px #3B82F6; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Non-committing alternative beside a primary action.",
+      "html": "<button class=\"ds-btn-secondary\">ยกเลิก (Cancel)</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:36px; padding:0 16px; border:1px solid #e7e0d6; border-radius:8px; background:#faf8f5; color:#1c1917; font:600 14px/1 'IBM Plex Sans Thai',system-ui,sans-serif; cursor:pointer; transition:background-color .15s; } .ds-btn-secondary:hover { background:#f0ebe3; } .ds-btn-secondary:focus-visible { outline:none; box-shadow:0 0 0 2px #faf8f5, 0 0 0 4px #3B82F6; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis action; the default in dense toolbars.",
+      "html": "<button class=\"ds-btn-ghost\">ดูทั้งหมด (View all)</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:36px; padding:0 12px; border:none; border-radius:8px; background:transparent; color:#1c1917; font:600 14px/1 'IBM Plex Sans Thai',system-ui,sans-serif; cursor:pointer; transition:background-color .15s; } .ds-btn-ghost:hover { background:#f0ebe3; } .ds-btn-ghost:focus-visible { outline:none; box-shadow:0 0 0 2px #3B82F6; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive action (Delete). Used sparingly.",
+      "html": "<button class=\"ds-btn-danger\">ลบ (Delete)</button>",
+      "css": ".ds-btn-danger { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:36px; padding:0 16px; border:none; border-radius:8px; background:#dc2626; color:#fff; font:600 14px/1 'IBM Plex Sans Thai',system-ui,sans-serif; box-shadow:0 1px 2px rgba(0,0,0,.1); cursor:pointer; transition:background-color .15s, box-shadow .15s; } .ds-btn-danger:hover { background:#c1212a; box-shadow:0 4px 6px -1px rgba(0,0,0,.1); }"
+    },
+    {
+      "name": "Ribbon Button",
+      "kind": "button",
+      "refersTo": "ribbon-button",
+      "description": "The workhorse formatting control in the ribbon; shown here in active (pressed) state.",
+      "html": "<div class=\"ds-ribbon-row\"><button class=\"ds-ribbon-btn\">B</button><button class=\"ds-ribbon-btn ds-active\">I</button><button class=\"ds-ribbon-btn\">U</button></div>",
+      "css": ".ds-ribbon-row { display:inline-flex; gap:2px; padding:4px; background:#fffefb; border:1px solid #e7e0d6; border-radius:10px; } .ds-ribbon-btn { height:28px; min-width:28px; padding:0 8px; border:none; border-radius:8px; background:transparent; color:#57534e; font:600 13px/1 'IBM Plex Sans Thai',system-ui,sans-serif; cursor:pointer; transition:background-color .12s, color .12s; } .ds-ribbon-btn:hover { background:#f0ebe3; color:#1c1917; } .ds-ribbon-btn.ds-active { color:#1c1917; background:color-mix(in srgb,#3B82F6 10%,#f0ebe3); box-shadow:0 0 0 1px color-mix(in srgb,#3B82F6 30%,transparent); }"
+    },
+    {
+      "name": "Variable Badge",
+      "kind": "chip",
+      "refersTo": "merge-field",
+      "description": "A {{merge-field}} placeholder rendered inline — the one warm accent, reserved for variables.",
+      "html": "<span class=\"ds-var-badge\">{{ชื่อผู้ใช้ไฟ}}</span>",
+      "css": ".ds-var-badge { display:inline-flex; align-items:center; padding:1px 8px; border:1px solid #fdba74; border-radius:999px; background:#fff7ed; color:#c2410c; font:600 13px/1.4 'IBM Plex Sans Thai',system-ui,sans-serif; }"
+    },
+    {
+      "name": "Dialog Shell",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "Radix-style centered dialog: hairline border, Warm-Stone surface, transient shadow.",
+      "html": "<div class=\"ds-dialog\"><div class=\"ds-dialog-head\"><span class=\"ds-dialog-title\">ตั้งค่าหน้า (Page Setup)</span><button class=\"ds-dialog-x\">✕</button></div><div class=\"ds-dialog-body\">เนื้อหาในกล่องโต้ตอบ (Dialog body content)</div></div>",
+      "css": ".ds-dialog { width:360px; max-width:90vw; background:#faf8f5; border:1px solid #e7e0d6; border-radius:12px; box-shadow:0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); overflow:hidden; font-family:'IBM Plex Sans Thai',system-ui,sans-serif; } .ds-dialog-head { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #e7e0d6; } .ds-dialog-title { font:600 16px/1.3 'Plus Jakarta Sans',system-ui,sans-serif; color:#1c1917; letter-spacing:-.01em; } .ds-dialog-x { border:none; background:transparent; color:#57534e; border-radius:8px; width:28px; height:28px; cursor:pointer; } .ds-dialog-x:hover { background:#f0ebe3; } .ds-dialog-body { padding:16px 20px; color:#1c1917; font-size:14px; }"
+    },
+    {
+      "name": "A4 Page (signature)",
+      "kind": "custom",
+      "refersTo": "page-node",
+      "description": "The soul of the product: a white A4 sheet floating on the dot-grid Desk-Linen canvas, with an Ink-Blue page-number pill.",
+      "html": "<div class=\"ds-canvas\"><div class=\"ds-page\"><p class=\"ds-page-h1\">บันทึกข้อความ</p><p class=\"ds-page-body\">เรียน ผู้อำนวยการฝ่าย ...</p><span class=\"ds-page-num\">1</span></div></div>",
+      "css": ".ds-canvas { padding:24px; background-color:#e8e2d9; background-image:radial-gradient(circle, color-mix(in srgb,#d6cec3 22%,transparent) 1px, transparent 1px); background-size:20px 20px; border-radius:12px; } .ds-page { position:relative; width:210px; min-height:280px; margin:0 auto; padding:28px 24px; background:#fff; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06), 0 12px 28px rgba(0,0,0,.04); } .ds-page-h1 { margin:0 0 12px; font:700 18px/1.2 'Plus Jakarta Sans',system-ui,sans-serif; color:#1c1917; letter-spacing:-.015em; text-align:center; } .ds-page-body { margin:0; font:400 13px/1.7 'IBM Plex Sans Thai',system-ui,sans-serif; color:#1c1917; } .ds-page-num { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); font:500 10.5px/1 ui-monospace,monospace; color:#3B82F6; background:color-mix(in srgb,#f0ebe3 55%,transparent); border:1px solid color-mix(in srgb,#3B82F6 20%,#e7e0d6); border-radius:999px; padding:2px 8px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Drafting Table",
+    "overview": "wordhtml is a calm, precise instrument for people who live in Microsoft Word and need to move documents to clean HTML and back, build official Thai letters, and run mail-merge — without ever uploading a sensitive file. The interface is a warm-stone desk; the white A4 page sits on it like a real sheet of paper; Ink Blue is the pen you only pick up to act. It rejects bloated legacy MS-Office chrome and dated Google-Docs grey: quieter than Office, warmer than Docs, with no generic AI/SaaS slop.",
+    "keyCharacteristics": [
+      "Warm stone neutrals, never cold grey or AI-cream.",
+      "A single Ink-Blue accent for action/selection/focus — nothing decorative.",
+      "The A4 page is the one hero surface; chrome is flat and quiet.",
+      "Thai-first bilingual labels; Word-fluent affordances.",
+      "WYSIWYG print fidelity: the on-screen page is a literal preview of the export."
+    ],
+    "rules": [
+      { "name": "The Ink-Only Rule", "body": "Ink Blue appears only where the user can act or where the system shows state (selection, focus, active). It is never used to decorate. Its rarity is what makes it read.", "section": "colors" },
+      { "name": "The Paper-Stays-White Rule", "body": "Dark mode dims the desk (canvas #0c0a09, chrome #141210) but the A4 page stays #ffffff. What you see on the page is exactly what prints.", "section": "colors" },
+      { "name": "The Thai-First Rule", "body": "Every label leads in Thai with English in parentheses — 'ตัวหนา (Bold)', 'ไฟล์ (File)'. Consistency here is the product's voice.", "section": "typography" },
+      { "name": "The Paper Floats, Chrome Is Flat Rule", "body": "Only the document page earns layered elevation. Toolbars, ribbons, panels, and cards are flat; if a chrome element needs a shadow, it's a transient overlay (dialog, dropdown), nothing else.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep Ink Blue rare — action, selection, focus, active only (The Ink-Only Rule).",
+      "Do lead every label in Thai with English in parentheses (The Thai-First Rule).",
+      "Do keep the A4 page #ffffff in every theme; it must match the print output exactly.",
+      "Do convey chrome depth with tonal layering (Surface/Sand/Warm Stone) + hairlines, not shadow.",
+      "Do verify body and placeholder text hold ≥4.5:1; bump toward Espresso Ink if close.",
+      "Do honor prefers-reduced-motion — the page-hover lift and all reveals already gate on it."
+    ],
+    "donts": [
+      "Don't rebuild bloated legacy MS-Office chrome — cluttered ribbons, heavy gradients, dated bevels.",
+      "Don't drift to dated Google-Docs grey — flat grey-on-grey with weak hierarchy.",
+      "Don't use gradient text, glassmorphism-by-default, identical icon-card grids, or hero-metric templates.",
+      "Don't use Ink Blue (or any color) decoratively, or add a second accent hue.",
+      "Don't use a border-left/border-right >1px colored stripe as accent (the editor's repeat-row inset stripe is the one sanctioned exception).",
+      "Don't put a tiny uppercase tracked eyebrow above sections, or default 01/02/03 markers.",
+      "Don't let the warm neutrals slide into AI-cream; they are stone, kept by hue not by warmth-by-default."
+    ]
+  }
+}
