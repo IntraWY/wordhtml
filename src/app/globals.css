@@ -856,6 +856,14 @@ html[data-theme="dark"] .paper {
     margin: 0 auto;
     page-break-after: always;
     break-after: page;
+    /* Print paper is always white — force document ink to its light-theme values
+       so dark-mode printing is never white-on-white. (Matches the forced-white
+       background above; inline color marks still override via specificity.) */
+    color: #1c1917;
+    --color-foreground: #1c1917;
+    --color-muted-foreground: #57534e;
+    --color-border: #e7e0d6;
+    --color-border-strong: #d6cec3;
   }
 
   .printable-paper:last-child {
