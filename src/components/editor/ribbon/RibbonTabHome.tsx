@@ -37,6 +37,7 @@ import {
   Minus,
   ArrowLeftToLine,
   ArrowRightToLine,
+  FilePlus,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
@@ -46,6 +47,7 @@ import { FontSizeSelector } from "../FontSizeSelector";
 import { useToastStore } from "@/store/toastStore";
 import { useDialogStore } from "@/store/dialogStore";
 import { useUiStore } from "@/store/uiStore";
+import { useEditorStore } from "@/store/editorStore";
 import { dispatchOpenSearch } from "@/lib/events";
 import { editorCan, isLiveEditor } from "@/lib/editorLive";
 import {
@@ -289,10 +291,25 @@ export function RibbonTabHome({ editor }: { editor: Editor | null }) {
   }, [editor]);
 
 
+  const handleNewDocument = useCallback(() => {
+    useDialogStore.getState().openConfirm(
+      "เอกสารใหม่ (New Document)",
+      "ล้างเนื้อหาปัจจุบันและเริ่มเอกสารใหม่?",
+      () => useEditorStore.getState().reset()
+    );
+  }, []);
+
   const hasEditor = isLiveEditor(editor);
 
   return (
     <>
+      {/* File */}
+      <RibbonGroup label="ไฟล์">
+        <RibbonButton label="เอกสารใหม่ (New Document)" onClick={handleNewDocument}>
+          <FilePlus className="size-3.5" />
+        </RibbonButton>
+      </RibbonGroup>
+
       {/* Clipboard */}
       <RibbonGroup label="คลิปบอร์ด">
         <RibbonButton label="วาง (Paste)" onClick={handlePaste} disabled={!hasEditor}>
