@@ -45,8 +45,8 @@ export function buildCommandRegistry(): CommandItem[] {
       run: () => {
         useDialogStore.getState().openConfirm(
           "เอกสารใหม่ (New Document)",
-          "ล้างเนื้อหาปัจจุบันและเริ่มเอกสารใหม่?",
-          () => useEditorStore.getState().reset()
+          "บันทึกเนื้อหาปัจจุบันลงประวัติแล้วเริ่มเอกสารใหม่?",
+          () => useEditorStore.getState().newDocument()
         );
       },
     },

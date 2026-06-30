@@ -37,7 +37,7 @@ export function useKeyboardShortcuts(editor: Editor | null) {
   const openShortcuts = useUiStore((s) => s.openShortcuts);
   const saveSnapshot = useEditorStore((s) => s.saveSnapshot);
   const triggerFileOpen = useEditorStore((s) => s.triggerFileOpen);
-  const reset = useEditorStore((s) => s.reset);
+  const newDocument = useEditorStore((s) => s.newDocument);
   const hasDoc = useEditorStore((s) => s.documentHtml.length > 0);
 
   useEffect(() => {
@@ -70,8 +70,8 @@ export function useKeyboardShortcuts(editor: Editor | null) {
         const { openConfirm } = useDialogStore.getState();
         openConfirm(
           "เอกสารใหม่ (New Document)",
-          "ล้างเนื้อหาปัจจุบันและเริ่มเอกสารใหม่?",
-          () => reset()
+          "บันทึกเนื้อหาปัจจุบันลงประวัติแล้วเริ่มเอกสารใหม่?",
+          () => newDocument()
         );
         return;
       }
@@ -154,7 +154,7 @@ export function useKeyboardShortcuts(editor: Editor | null) {
     saveSnapshot,
     hasDoc,
     triggerFileOpen,
-    reset,
+    newDocument,
     openExportDialog,
   ]);
 }

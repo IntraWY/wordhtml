@@ -116,6 +116,41 @@ describe("editorStore saveSnapshot in-place", () => {
     expect(useEditorStore.getState().activeSnapshotId).toBe(id);
     expect(sessionStorage.getItem(ACTIVE_SNAPSHOT_SESSION_KEY)).toBe(id);
   });
+});
+
+describe("editorStore newDocument", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    useEditorStore.setState({
+      documentHtml: "",
+      fileName: null,
+      history: [],
+      activeSnapshotId: null,
+      htmlSyncRevision: 0,
+    });
+  });
+
+  it("saves current content to history, then clears the document", () => {
+    useEditorStore.setState({ documentHtml: "<p>work in progress</p>" });
+
+    useEditorStore.getState().newDocument();
+
+    const state = useEditorStore.getState();
+    // The unsaved work was captured into History before clearing.
+    expect(state.history).toHaveLength(1);
+    expect(state.history[0]!.html).toBe("<p>work in progress</p>");
+    // The editor is now a blank new document.
+    expect(state.documentHtml).toBe("");
+    expect(state.activeSnapshotId).toBeNull();
+  });
+
+  it("on an empty document, clears without adding a history entry", () => {
+    useEditorStore.getState().newDocument();
+
+    const state = useEditorStore.getState();
+    expect(state.history).toHaveLength(0);
+    expect(state.documentHtml).toBe("");
+  });
 
   it("auto-restores saved document into empty editor from persisted activeSnapshotId", () => {
     const id = "snap-persisted";

@@ -210,6 +210,7 @@ interface EditorState {
   clearError: () => void;
   clearLoadWarnings: () => void;
   reset: () => void;
+  newDocument: () => void;
   // history actions
   saveSnapshot: (options?: { source?: "manual" | "auto" }) => void;
   loadSnapshot: (id: string) => void;
@@ -479,6 +480,15 @@ export const useEditorStore = create<EditorState>()(
           previewMode: "edit",
           htmlSyncRevision: state.htmlSyncRevision + 1,
         }));
+      },
+
+      newDocument: () => {
+        // Save the current document to History (and cloud, if signed in) before
+        // clearing, so starting a new document never loses unsaved work.
+        // saveSnapshot is a safe no-op when the document is empty or unchanged
+        // vs. the active snapshot, so this never creates duplicate history.
+        get().saveSnapshot({ source: "manual" });
+        get().reset();
       },
 
       saveSnapshot: (options) => {
