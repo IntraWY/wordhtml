@@ -24,8 +24,11 @@ import {
   Image as ImageIcon,
   Layers,
   SquareStack,
+  TableProperties,
+  TableCellsMerge,
 } from "lucide-react";
 import { editorCan } from "@/lib/editorLive";
+import { selectWholeTable } from "@/lib/tiptap/tableProperties";
 import {
   attrsForLayoutMode,
   type ImageLayoutMode,
@@ -56,6 +59,7 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const openParagraph = useUiStore((s) => s.openParagraph);
+  const openTableProperties = useUiStore((s) => s.openTableProperties);
 
   const handleContextMenu = useCallback(
     (event: MouseEvent) => {
@@ -296,6 +300,25 @@ export function EditorContextMenu({ editor, containerRef }: EditorContextMenuPro
         },
       },
       { id: "div-table-4", label: "", divider: true },
+      {
+        id: "select-whole-table",
+        label: "เลือกทั้งตาราง (Select whole table)",
+        icon: <TableCellsMerge className="size-4" />,
+        action: () => {
+          if (editor) selectWholeTable(editor);
+          setOpen(false);
+        },
+      },
+      {
+        id: "table-properties",
+        label: "คุณสมบัติตาราง… (Table properties…)",
+        icon: <TableProperties className="size-4" />,
+        action: () => {
+          openTableProperties();
+          setOpen(false);
+        },
+      },
+      { id: "div-table-5", label: "", divider: true },
       {
         id: "delete-table",
         label: "ลบตาราง (Delete table)",

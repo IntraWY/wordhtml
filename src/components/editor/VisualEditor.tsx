@@ -11,6 +11,7 @@ import {
   TableHeaderWithBorder,
 } from "@/lib/tiptap/tableCellBorder";
 import { RepeatingRow } from "@/lib/tiptap/repeatingRow";
+import { TablePropertiesExtension } from "@/lib/tiptap/tableProperties";
 import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
 import { PaginationAware } from "@/lib/tiptap/paginationAware";
@@ -175,6 +176,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       RepeatingRow,
       TableHeaderWithBorder,
       TableCellWithBorder,
+      TablePropertiesExtension,
       VariableMark,
       VariableTypingGuard,
       CommentMark,

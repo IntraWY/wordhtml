@@ -59,6 +59,10 @@ const MathInputDialog = dynamic(
   () => import("./MathInputDialog").then((m) => m.MathInputDialog),
   { ssr: false, loading: () => null }
 );
+const TablePropertiesDialog = dynamic(
+  () => import("./TablePropertiesDialog").then((m) => m.TablePropertiesDialog),
+  { ssr: false, loading: () => null }
+);
 const PlaceholderPanel = dynamic(
   () => import("./PlaceholderPanel").then((m) => m.PlaceholderPanel),
   { ssr: false, loading: () => null }
@@ -109,6 +113,8 @@ export function EditorShell() {
   const openHeaderFooter = useUiStore((s) => s.openHeaderFooter);
   const paragraphOpen = useUiStore((s) => s.paragraphOpen);
   const closeParagraph = useUiStore((s) => s.closeParagraph);
+  const tablePropertiesOpen = useUiStore((s) => s.tablePropertiesOpen);
+  const closeTableProperties = useUiStore((s) => s.closeTableProperties);
   const [mathOpen, setMathOpen] = useState(false);
 
   /* consolidated hooks */
@@ -484,6 +490,13 @@ export function EditorShell() {
         <DialogManager editor={editor} />
         {paragraphOpen && (
           <ParagraphDialog open={paragraphOpen} onClose={closeParagraph} editor={editor} />
+        )}
+        {tablePropertiesOpen && (
+          <TablePropertiesDialog
+            open={tablePropertiesOpen}
+            onClose={closeTableProperties}
+            editor={editor}
+          />
         )}
         {mathOpen && (
           <MathInputDialog open={mathOpen} onClose={() => setMathOpen(false)} editor={editor} />

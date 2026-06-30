@@ -88,7 +88,7 @@ export async function exportPdf(
     img[data-float="true"] { position: absolute; margin: 0; }
     .prose-editor hr, .paper hr { border: none; border-top: 1px solid #d4d4d8; margin: 1.5em 0; }
     .prose-editor table, .paper table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
-    .prose-editor td, .prose-editor th, .paper td, .paper th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
+    .prose-editor td, .prose-editor th, .paper td, .paper th { border: 1px solid #d4d4d8; padding: var(--wh-pad-t, 0.4rem) var(--wh-pad-r, 0.6rem) var(--wh-pad-b, 0.4rem) var(--wh-pad-l, 0.6rem); vertical-align: top; text-align: left; }
     .prose-editor th, .paper th { background: #f4f4f5; font-weight: 600; }
     .prose-editor td[data-borders="none"], .prose-editor th[data-borders="none"], .paper td[data-borders="none"], .paper th[data-borders="none"] { border: none; }
     .prose-editor ul[data-type="taskList"], .paper ul[data-type="taskList"] { list-style: none; padding-left: 0; }
@@ -103,7 +103,7 @@ export async function exportPdf(
     span[data-type="math-equation"] { display: inline-block; }
     img { max-width: 100%; height: auto; }
     table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
-    td, th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
+    td, th { border: 1px solid #d4d4d8; padding: var(--wh-pad-t, 0.4rem) var(--wh-pad-r, 0.6rem) var(--wh-pad-b, 0.4rem) var(--wh-pad-l, 0.6rem); vertical-align: top; text-align: left; }
     th { background: #f4f4f5; font-weight: 600; }
     td[data-borders="none"], th[data-borders="none"] { border: none; }
     blockquote { border-left: 3px solid #d4d4d8; padding: 0.25em 0 0.25em 1em; color: #52525b; font-style: italic; margin: 1em 0; }

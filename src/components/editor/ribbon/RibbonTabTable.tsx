@@ -15,17 +15,21 @@ import {
   SquareDashed,
   Square,
   TableRowsSplit,
+  TableProperties,
+  TableCellsMerge,
 } from "lucide-react";
 
 import { RibbonGroup } from "./RibbonGroup";
 import { RibbonButton } from "./RibbonButton";
 import { TableSizePicker } from "./TableSizePicker";
 import { isLiveEditor, editorCan } from "@/lib/editorLive";
+import { useUiStore } from "@/store/uiStore";
 import {
   setSelectedCellBorders,
   selectionHasCell,
 } from "@/lib/tiptap/tableCellBorder";
 import { distributeColumnsEvenly } from "@/lib/tiptap/tableColumns";
+import { selectWholeTable } from "@/lib/tiptap/tableProperties";
 
 /**
  * Word-style "ตาราง (Table)" ribbon tab. Always present (so it never shifts the
@@ -36,6 +40,7 @@ import { distributeColumnsEvenly } from "@/lib/tiptap/tableColumns";
  */
 export function RibbonTabTable({ editor }: { editor: Editor | null }) {
   const hasEditor = isLiveEditor(editor);
+  const openTableProperties = useUiStore((s) => s.openTableProperties);
 
   const state = useEditorState({
     editor,
@@ -167,6 +172,25 @@ export function RibbonTabTable({ editor }: { editor: Editor | null }) {
           disabled={!inTable}
         >
           <Square />
+        </RibbonButton>
+      </RibbonGroup>
+
+      <RibbonGroup label="คุณสมบัติ (Properties)">
+        <RibbonButton
+          label="เลือกทั้งตาราง (Select whole table)"
+          onClick={() => {
+            if (isLiveEditor(editor)) selectWholeTable(editor);
+          }}
+          disabled={!inTable}
+        >
+          <TableCellsMerge />
+        </RibbonButton>
+        <RibbonButton
+          label="คุณสมบัติตาราง / ระยะห่าง (Table properties)"
+          onClick={openTableProperties}
+          disabled={!inTable}
+        >
+          <TableProperties />
         </RibbonButton>
       </RibbonGroup>
 

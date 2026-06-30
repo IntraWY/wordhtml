@@ -69,6 +69,21 @@ describe("removeInlineStyles", () => {
     expect(result).not.toMatch(/left:/);
     expect(result).not.toMatch(/top:/);
   });
+
+  it("preserves Word-style table spacing styles (cell margins, spacing, row height)", () => {
+    const html =
+      `<table style="--wh-pad-t:6px;--wh-pad-r:10px;--wh-pad-b:6px;--wh-pad-l:10px;border-collapse:separate;border-spacing:4px;background:url(x)">` +
+      `<tbody><tr style="height:30px"><td><p>A</p></td></tr></tbody></table>`;
+    const result = removeInlineStyles(html);
+    // Cell-margin custom properties survive.
+    expect(result).toMatch(/--wh-pad-t:\s*6px/);
+    expect(result).toMatch(/--wh-pad-l:\s*10px/);
+    // Cell spacing survives.
+    expect(result).toMatch(/border-spacing:\s*4px/);
+    expect(result).toMatch(/border-collapse:\s*separate/);
+    // Row height survives (height is a structural KEEP prop).
+    expect(result).toMatch(/height:\s*30px/);
+  });
 });
 
 describe("removeEmptyTags", () => {

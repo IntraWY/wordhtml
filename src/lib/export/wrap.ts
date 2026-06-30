@@ -78,7 +78,7 @@ export function wrapAsDocument(
       margin: 1em 0;
     }
     table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
-    td, th { border: 1px solid #d4d4d8; padding: 0.4rem 0.6rem; vertical-align: top; text-align: left; }
+    td, th { border: 1px solid #d4d4d8; padding: var(--wh-pad-t, 0.4rem) var(--wh-pad-r, 0.6rem) var(--wh-pad-b, 0.4rem) var(--wh-pad-l, 0.6rem); vertical-align: top; text-align: left; }
     th { background: #f4f4f5; font-weight: 600; }
     td[data-borders="none"], th[data-borders="none"] { border: none; }
     code { background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; }

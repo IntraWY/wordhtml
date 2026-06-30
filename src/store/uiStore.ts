@@ -17,6 +17,7 @@ interface UiState {
   batchConvertOpen: boolean;
   headerFooterOpen: boolean;
   paragraphOpen: boolean;
+  tablePropertiesOpen: boolean;
   placeholderPanelOpen: boolean;
   commandPaletteOpen: boolean;
   templateGalleryOpen: boolean;
@@ -48,6 +49,8 @@ interface UiState {
   closeHeaderFooter: () => void;
   openParagraph: () => void;
   closeParagraph: () => void;
+  openTableProperties: () => void;
+  closeTableProperties: () => void;
   openPlaceholderPanel: () => void;
   closePlaceholderPanel: () => void;
   openCommandPalette: () => void;
@@ -79,6 +82,7 @@ export const useUiStore = create<UiState>()((set) => ({
   batchConvertOpen: false,
   headerFooterOpen: false,
   paragraphOpen: false,
+  tablePropertiesOpen: false,
   placeholderPanelOpen: false,
   commandPaletteOpen: false,
   templateGalleryOpen: false,
@@ -109,6 +113,8 @@ export const useUiStore = create<UiState>()((set) => ({
   closeHeaderFooter: () => set({ headerFooterOpen: false }),
   openParagraph: () => set({ paragraphOpen: true }),
   closeParagraph: () => set({ paragraphOpen: false }),
+  openTableProperties: () => set({ tablePropertiesOpen: true }),
+  closeTableProperties: () => set({ tablePropertiesOpen: false }),
   openPlaceholderPanel: () => set({ placeholderPanelOpen: true }),
   closePlaceholderPanel: () => set({ placeholderPanelOpen: false }),
   openCommandPalette: () => set({ commandPaletteOpen: true }),

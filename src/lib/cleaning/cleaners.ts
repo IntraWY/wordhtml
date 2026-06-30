@@ -66,6 +66,9 @@ export function removeInlineStyles(html: string): string {
     "text-indent", "width", "height",
     "font-size", "font-family", "color", "background-color", "line-height", "text-align",
     "border", // borderless form cells render inline border:none
+    // Word-style table spacing (TablePropertiesExtension): cell spacing on <table>.
+    // Cell margins ride on --wh-* custom props, retained separately below.
+    "border-collapse", "border-spacing",
   ];
   // Free-positioning props are preserved ONLY on floating images (img[data-float]).
   // Keeping them globally would let Word/Office positioned junk (e.g. text boxes,
@@ -81,6 +84,13 @@ export function removeInlineStyles(html: string): string {
     const saved: [string, string][] = keep
       .map((p) => [p, s.getPropertyValue(p)] as [string, string])
       .filter(([, v]) => v);
+    // Retain Word-style cell-margin custom properties (--wh-pad-*) on tables.
+    for (let i = 0; i < s.length; i++) {
+      const prop = s.item(i);
+      if (prop.startsWith("--wh-") && !saved.some(([p]) => p === prop)) {
+        saved.push([prop, s.getPropertyValue(prop)]);
+      }
+    }
     el.removeAttribute("style");
     for (const [prop, val] of saved) {
       (el as HTMLElement).style.setProperty(prop, val);
