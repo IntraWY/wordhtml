@@ -7,6 +7,8 @@ import { RepeatingRow } from "./repeatingRow";
 import { TableCellWithBorder, TableHeaderWithBorder } from "./tableCellBorder";
 import {
   TablePropertiesExtension,
+  StyleAwareTableView,
+  applyManagedTableStyle,
   readTableProperties,
   selectWholeTable,
   DEFAULT_CELL_MARGINS,
@@ -138,5 +140,98 @@ describe("TablePropertiesExtension", () => {
     expect(editor.commands.setTableProperties({ cellSpacing: 5 })).toBe(false);
     expect(selectWholeTable(editor)).toBe(false);
     expect(readTableProperties(editor).cellMargins).toEqual(DEFAULT_CELL_MARGINS);
+  });
+});
+
+describe("applyManagedTableStyle", () => {
+  it("writes cell margins + spacing as inline declarations on the <table>", () => {
+    const table = document.createElement("table");
+    applyManagedTableStyle(table, {
+      cellMargins: { top: 5, right: 7, bottom: 9, left: 11 },
+      cellSpacing: 8,
+    });
+    expect(table.style.getPropertyValue("--wh-pad-t")).toBe("5px");
+    expect(table.style.getPropertyValue("--wh-pad-r")).toBe("7px");
+    expect(table.style.getPropertyValue("--wh-pad-b")).toBe("9px");
+    expect(table.style.getPropertyValue("--wh-pad-l")).toBe("11px");
+    expect(table.style.getPropertyValue("border-collapse")).toBe("separate");
+    expect(table.style.getPropertyValue("border-spacing")).toBe("8px");
+  });
+
+  it("omits cell spacing when null/0", () => {
+    const table = document.createElement("table");
+    applyManagedTableStyle(table, {
+      cellMargins: { top: 4, right: 4, bottom: 4, left: 4 },
+      cellSpacing: null,
+    });
+    expect(table.style.getPropertyValue("--wh-pad-t")).toBe("4px");
+    expect(table.style.getPropertyValue("border-spacing")).toBe("");
+    expect(table.style.getPropertyValue("border-collapse")).toBe("");
+  });
+
+  it("removes previously-applied managed props on re-apply (toggle off)", () => {
+    const table = document.createElement("table");
+    applyManagedTableStyle(table, {
+      cellMargins: { top: 6, right: 6, bottom: 6, left: 6 },
+      cellSpacing: 8,
+    });
+    // Re-apply with everything cleared.
+    applyManagedTableStyle(table, { cellMargins: null, cellSpacing: null });
+    expect(table.style.getPropertyValue("--wh-pad-t")).toBe("");
+    expect(table.style.getPropertyValue("border-spacing")).toBe("");
+  });
+
+  it("preserves non-managed declarations (e.g. column width)", () => {
+    const table = document.createElement("table");
+    table.style.setProperty("width", "640px");
+    applyManagedTableStyle(table, {
+      cellMargins: { top: 5, right: 5, bottom: 5, left: 5 },
+      cellSpacing: null,
+    });
+    expect(table.style.getPropertyValue("width")).toBe("640px");
+    expect(table.style.getPropertyValue("--wh-pad-t")).toBe("5px");
+  });
+});
+
+describe("StyleAwareTableView (live editor render)", () => {
+  let editor: Editor | null = null;
+
+  afterEach(() => {
+    editor?.destroy();
+    editor = null;
+  });
+
+  function createResizableEditor(content: string) {
+    return new Editor({
+      extensions: [
+        StarterKit,
+        Table.configure({ resizable: true, View: StyleAwareTableView }),
+        RepeatingRow,
+        TableHeaderWithBorder,
+        TableCellWithBorder,
+        TablePropertiesExtension,
+      ],
+      content,
+    });
+  }
+
+  it("applies cell margins + spacing to the live <table> element", () => {
+    editor = createResizableEditor(TABLE_2x2);
+    editor.commands.focus("start");
+    editor.commands.setTableProperties({
+      cellMargins: { top: 5, right: 7, bottom: 9, left: 11 },
+      cellSpacing: 8,
+    });
+
+    const tableEl = editor.view.dom.querySelector("table");
+    expect(tableEl).not.toBeNull();
+    expect(tableEl!.style.getPropertyValue("--wh-pad-t")).toBe("5px");
+    expect(tableEl!.style.getPropertyValue("--wh-pad-l")).toBe("11px");
+    expect(tableEl!.style.getPropertyValue("border-spacing")).toBe("8px");
+
+    // Toggling spacing off removes only that declaration on the next update.
+    editor.commands.setTableProperties({ cellSpacing: null });
+    expect(tableEl!.style.getPropertyValue("border-spacing")).toBe("");
+    expect(tableEl!.style.getPropertyValue("--wh-pad-t")).toBe("5px");
   });
 });

@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 import type { Node as PMNode, ResolvedPos } from "@tiptap/pm/model";
 import { CellSelection, TableMap } from "@tiptap/pm/tables";
+import { TableView } from "@tiptap/extension-table";
 
 /**
  * Word-style table properties (the "คลุมตาราง → ตั้งค่าระยะห่าง" dialog):
@@ -217,4 +218,74 @@ export function selectWholeTable(editor: Editor): boolean {
   editor.view.dispatch(tr);
   editor.view.focus();
   return true;
+}
+
+/**
+ * The inline-style declarations this feature owns on the live `<table>` element.
+ * They are cleared before re-applying so that toggling a property off (e.g.
+ * cell spacing → 0) removes only that declaration and never the column widths
+ * that prosemirror-tables writes via `table.style.width`.
+ */
+const MANAGED_TABLE_STYLE_PROPS = [
+  "--wh-pad-t",
+  "--wh-pad-r",
+  "--wh-pad-b",
+  "--wh-pad-l",
+  "border-collapse",
+  "border-spacing",
+] as const;
+
+/**
+ * Apply the cell-margin / cell-spacing CSS onto a live `<table>` element,
+ * mirroring the `cellMargins`/`cellSpacing` `renderHTML` output.
+ *
+ * Why this exists: with `Table.configure({ resizable: true })` the editor renders
+ * tables through prosemirror-tables' `TableView`, which builds its own `<table>`
+ * and only honours `node.attrs.style` — it never runs our global-attribute
+ * `renderHTML`. So the margins/spacing that the export/Preview path emits via
+ * `getHTML()` were invisible in the editor. `StyleAwareTableView` calls this on
+ * construct + update to keep the editing surface in sync with the serialized
+ * output. Uses `setProperty` (additive) so the table width set by `updateColumns`
+ * is preserved.
+ */
+export function applyManagedTableStyle(
+  table: HTMLTableElement,
+  attrs: { cellMargins?: CellMargins | null; cellSpacing?: number | null }
+): void {
+  for (const prop of MANAGED_TABLE_STYLE_PROPS) {
+    table.style.removeProperty(prop);
+  }
+
+  const m = attrs.cellMargins ?? null;
+  if (m) {
+    table.style.setProperty("--wh-pad-t", `${m.top}px`);
+    table.style.setProperty("--wh-pad-r", `${m.right}px`);
+    table.style.setProperty("--wh-pad-b", `${m.bottom}px`);
+    table.style.setProperty("--wh-pad-l", `${m.left}px`);
+  }
+
+  const s = attrs.cellSpacing ?? null;
+  if (s != null && s > 0) {
+    table.style.setProperty("border-collapse", "separate");
+    table.style.setProperty("border-spacing", `${s}px`);
+  }
+}
+
+/**
+ * Table node view that keeps the live `<table>` in sync with the
+ * `cellMargins`/`cellSpacing` attributes. Wired via `Table.configure({ View })`
+ * in `VisualEditor.tsx`; the base `TableView` still owns column resizing — we only
+ * post-process the table element's inline style after it (re)renders.
+ */
+export class StyleAwareTableView extends TableView {
+  constructor(node: PMNode, cellMinWidth: number) {
+    super(node, cellMinWidth);
+    applyManagedTableStyle(this.table, node.attrs);
+  }
+
+  update(node: PMNode): boolean {
+    const ok = super.update(node);
+    if (ok) applyManagedTableStyle(this.table, node.attrs);
+    return ok;
+  }
 }

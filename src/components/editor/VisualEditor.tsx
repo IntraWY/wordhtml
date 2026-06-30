@@ -11,7 +11,10 @@ import {
   TableHeaderWithBorder,
 } from "@/lib/tiptap/tableCellBorder";
 import { RepeatingRow } from "@/lib/tiptap/repeatingRow";
-import { TablePropertiesExtension } from "@/lib/tiptap/tableProperties";
+import {
+  TablePropertiesExtension,
+  StyleAwareTableView,
+} from "@/lib/tiptap/tableProperties";
 import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
 import { PaginationAware } from "@/lib/tiptap/paginationAware";
@@ -172,6 +175,11 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
         handleWidth: 9,
         cellMinWidth: 28,
         lastColumnResizable: true,
+        // Custom node view that re-applies the TableProperties cell margins /
+        // cell spacing onto the live <table> — the stock TableView only honours
+        // node.attrs.style, so those attributes were visible in Preview/export
+        // (renderHTML) but not in the editor. Column resizing is unchanged.
+        View: StyleAwareTableView,
       }),
       RepeatingRow,
       TableHeaderWithBorder,
