@@ -8,8 +8,8 @@
 const PRESERVE_ATTRS_BY_TAG: Record<string, ReadonlyArray<string>> = {
   a: ["href", "title", "target", "rel"],
   img: ["src", "alt", "width", "height", "data-align", "data-float"],
-  td: ["colspan", "rowspan", "data-borders"],
-  th: ["colspan", "rowspan", "data-borders"],
+  td: ["colspan", "rowspan", "colwidth", "data-borders"],
+  th: ["colspan", "rowspan", "colwidth", "data-borders"],
   ol: ["start", "type"],
   span: ["data-type", "data-latex", "data-inline", "data-variable", "data-field-id", "data-placeholder-field"],
   div: ["data-type", "data-page-body", "data-page-header", "data-page-footer", "data-page-number", "data-page-setup"],

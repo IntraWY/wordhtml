@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/react";
 import { cn } from "@/lib/utils";
 import { RibbonTabHome } from "./RibbonTabHome";
 import { RibbonTabInsert } from "./RibbonTabInsert";
+import { RibbonTabTable } from "./RibbonTabTable";
 import { RibbonTabLayout } from "./RibbonTabLayout";
 import { RibbonTabClean } from "./RibbonTabClean";
 import { RibbonTabView } from "./RibbonTabView";
@@ -12,6 +13,7 @@ import { RibbonTabSettings } from "./RibbonTabSettings";
 
 const MemoizedRibbonTabHome = memo(RibbonTabHome);
 const MemoizedRibbonTabInsert = memo(RibbonTabInsert);
+const MemoizedRibbonTabTable = memo(RibbonTabTable);
 const MemoizedRibbonTabLayout = memo(RibbonTabLayout);
 const MemoizedRibbonTabClean = memo(RibbonTabClean);
 const MemoizedRibbonTabView = memo(RibbonTabView);
@@ -20,6 +22,7 @@ const MemoizedRibbonTabSettings = memo(RibbonTabSettings);
 const TABS = [
   { key: "home" as const, label: "หน้าแรก (Home)" },
   { key: "insert" as const, label: "แทรก (Insert)" },
+  { key: "table" as const, label: "ตาราง (Table)" },
   { key: "layout" as const, label: "เค้าโครง (Layout)" },
   { key: "clean" as const, label: "ล้าง (Clean)" },
   { key: "view" as const, label: "มุมมอง (View)" },
@@ -58,6 +61,7 @@ export const Ribbon = memo(function Ribbon({ editor }: { editor: Editor | null }
         <div className="flex min-w-full divide-x divide-[color:var(--color-border)]/40">
           {activeTab === "home" && <MemoizedRibbonTabHome editor={editor} />}
           {activeTab === "insert" && <MemoizedRibbonTabInsert editor={editor} />}
+          {activeTab === "table" && <MemoizedRibbonTabTable editor={editor} />}
           {activeTab === "layout" && <MemoizedRibbonTabLayout editor={editor} />}
           {activeTab === "clean" && <MemoizedRibbonTabClean />}
           {activeTab === "view" && <MemoizedRibbonTabView editor={editor} />}

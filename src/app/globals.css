@@ -625,9 +625,27 @@ html[data-theme="dark"] .page-node {
   right: -2px;
   top: 0;
   bottom: -2px;
-  width: 4px;
+  width: 6px;
+  /* Sit above the faint dashed borderless-cell guide so the handle stays
+     visible on form tables. Keep pointer-events:none — the prosemirror-tables
+     plugin owns hit-testing via handleWidth, not this element. */
+  z-index: 20;
   background: var(--color-accent);
   pointer-events: none;
+}
+/* prosemirror-tables adds .resize-cursor to the editor root while the pointer
+   is over a column boundary — surface the col-resize affordance there. The
+   root-only `cursor` is inherited, but the pointer sits over editable
+   `<td>`/`<p>` content whose contenteditable I-beam defeats the inherited
+   value — so reach the cells (and their children) explicitly. Scoped under
+   .resize-cursor, which only exists in the brief window near a boundary, so
+   cells revert to the text cursor the instant the pointer moves away. */
+.ProseMirror.resize-cursor,
+.ProseMirror.resize-cursor td,
+.ProseMirror.resize-cursor th,
+.ProseMirror.resize-cursor td *,
+.ProseMirror.resize-cursor th * {
+  cursor: col-resize;
 }
 .prose-editor .tableWrapper {
   overflow-x: auto;

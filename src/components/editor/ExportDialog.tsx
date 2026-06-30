@@ -33,6 +33,7 @@ import { resolveHtmlPlaceholders } from "@/lib/placeholders";
 import { checkExportHealth } from "@/lib/export/exportHealthCheck";
 import { inlinePlaceholderFields } from "@/lib/export/inlinePlaceholderFields";
 import { bakeTabStops } from "@/lib/export/bakeTabStops";
+import { bakeTableColumns } from "@/lib/export/bakeTableColumns";
 import { buildProjectBlob, projectFileName } from "@/lib/project";
 import { downloadMailMergeZip } from "@/lib/export/exportMailMerge";
 
@@ -90,6 +91,10 @@ export function ExportDialog() {
     // matches what the user sees (decorations aren't in getHTML). Safe no-op when
     // there are no ruler tab stops.
     html = bakeTabStops(html);
+    // Reconstruct table column widths (colgroup) from per-cell colwidth attrs,
+    // which the cleaning pipeline's removeEmptyTags would otherwise drop. Safe
+    // no-op when there are no tables or no resized columns.
+    html = bakeTableColumns(html);
     return html;
   }, [
     open,

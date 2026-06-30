@@ -163,7 +163,15 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       Highlight.configure({ multicolor: true }),
       FontSize,
       ParagraphFormatExtension,
-      Table.configure({ resizable: true }),
+      // handleWidth widens the (invisible) grab zone the prosemirror plugin
+      // hit-tests — the default 5px is hard to hit, especially on borderless
+      // form cells. cellMinWidth keeps columns usable when dragged narrow.
+      Table.configure({
+        resizable: true,
+        handleWidth: 9,
+        cellMinWidth: 28,
+        lastColumnResizable: true,
+      }),
       RepeatingRow,
       TableHeaderWithBorder,
       TableCellWithBorder,

@@ -140,6 +140,14 @@ describe("removeAttributes", () => {
     expect(result).not.toContain("align=");
   });
 
+  it("preserves colwidth/colspan/rowspan on table cells (column widths survive export)", () => {
+    const html = `<table><tbody><tr><td colspan="2" rowspan="1" colwidth="130,140" class="z">x</td></tr></tbody></table>`;
+    const result = removeAttributes(html);
+    expect(result).toContain(`colwidth="130,140"`);
+    expect(result).toContain(`colspan="2"`);
+    expect(result).not.toContain("class=");
+  });
+
   it("preserves data-float on floating images", () => {
     const html = `<img src="a.png" data-float="true" class="x">`;
     const result = removeAttributes(html);

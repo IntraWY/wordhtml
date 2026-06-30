@@ -258,9 +258,11 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.19)
+## Current state (v0.2.20)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **886 unit tests pass; lint + build clean; e2e 34/34.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **896 unit tests pass; lint + build clean; e2e 34/34.**
+
+**v0.2.20 — Word-style tables (drag-resize ergonomics + merge ribbon + width persistence).** Tables are the core layout for the user's Thai/PEA forms; both resize and merge already existed but felt broken. Four fixes: (1) **Resize easier to grab** — `Table.configure({ resizable: true, handleWidth: 9, cellMinWidth: 28, lastColumnResizable: true })` in `VisualEditor.tsx` (the prosemirror `handleWidth`, not the CSS handle, governs the hit-zone); `.column-resize-handle` widened to 6px + `z-index:20` over the borderless dashed guide. **Resize cursor affordance** — `.ProseMirror.resize-cursor` rule broadened to reach `td`/`th` + descendants (the root-only `cursor` was inherited but defeated by the contenteditable I-beam on the cell text), so the `↔` `col-resize` cursor now shows on hover near a boundary and reverts on move-away. (2)(3) **Word-style "ตาราง (Table)" ribbon tab** — new `RibbonTabTable.tsx` (registered in `Ribbon.tsx` after "insert"): insert size-picker, add/delete row & column, merge/split, toggle header, distribute columns evenly (`tableColumns.ts` → `distributeColumnsEvenly` clears `colwidth`), hide/show cell borders, split/delete table; reactive disabling via one consolidated `useEditorState` selector (primitives only). Right-click menu kept for parity. (4) **Column widths survive export** (the real bug) — Tiptap serializes `<colgroup>` in `getHTML()`, but the `removeEmptyTags` cleaner deleted it → `table-layout:fixed` redistributed columns. Fix: whitelist `colwidth` on td/th in `cleaners.ts` + new pure `bakeTableColumns.ts` rebuilds `<colgroup>` (and pins table width when all columns known) from per-cell `colwidth` **after** cleaning, wired into `ExportDialog.cleanedHtml` right after `bakeTabStops` — one touch-point covers HTML/ZIP/PDF/DOCX + live Preview (merges/colspan already survived). Locked by `bakeTableColumns.test.ts` (9) + a `cleaners.test.ts` preserve case. **896 unit tests pass**; build + lint clean.
 
 **v0.2.19 — "New Document" auto-saves before clearing (data-safety).** Builds on v0.2.18. Starting a new document used to call `reset()` directly, which clears the on-screen document **and** deletes the recovery draft — so unsaved work was unrecoverable (only previously-saved History snapshots survived, since `reset()` never touches `history`). New store action `newDocument()` (`editorStore.ts`, next to `reset`) calls `saveSnapshot({ source: "manual" })` **then** `reset()`, so the current document is always captured to History (and cloud when signed in) before clearing. `saveSnapshot` is a safe no-op on an empty doc (`!documentHtml.trim()`) or when unchanged vs. the active snapshot, so no duplicate/spurious history is created. **All three "new document" entry points** route through `newDocument()`: the Home-ribbon "ใหม่" button (`RibbonTabHome.tsx`), **Ctrl+Shift+N** (`useKeyboardShortcuts.ts`), and the command palette `new-doc` (`lib/commands/registry.ts`). Confirm-dialog message reworded to `"บันทึกเนื้อหาปัจจุบันลงประวัติแล้วเริ่มเอกสารใหม่?"` (no longer the scary "ล้างเนื้อหาปัจจุบัน"). Locked by `editorStore.snapshot.test.ts` (saves-then-clears; empty-doc clears without a history entry). **886 unit tests pass**; build clean; live on Cloudflare Pages.
 
@@ -396,7 +398,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.19**
+- **Current version**: **v0.2.20**
 
 ### Patch bump rule (deploy default)
 
