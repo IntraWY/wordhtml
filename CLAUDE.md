@@ -258,9 +258,13 @@ Tiptap StarterKit handles: Ctrl+B/I/U, Ctrl+Z/Y, Ctrl+A, Ctrl+E (inline code).
 ParagraphFormatExtension handles: Tab (caret at block start / multi-block → block indent ±0.5cm; otherwise insert real `\t`; list → sink/lift), Shift+Tab (block indent -0.5cm, or lift list).
 VisualEditor.tsx `handleKeyDown` handles: Ctrl+K (command palette), Ctrl+Enter (split page / page break), Backspace/Delete at page boundaries (merge pages), Backspace (outdent at start of indented paragraph). It does **not** intercept Tab — the only Tab handler is `ParagraphFormatExtension`.
 
-## Current state (v0.2.13)
+## Current state (v0.2.19)
 
-All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **877 unit tests pass; lint + build clean; e2e 34/34.**
+All 17 items from `wordhtml-feature-proposal.html` are shipped (A1–A3, B1–B9, C1–C4). **886 unit tests pass; lint + build clean; e2e 34/34.**
+
+**v0.2.19 — "New Document" auto-saves before clearing (data-safety).** Builds on v0.2.18. Starting a new document used to call `reset()` directly, which clears the on-screen document **and** deletes the recovery draft — so unsaved work was unrecoverable (only previously-saved History snapshots survived, since `reset()` never touches `history`). New store action `newDocument()` (`editorStore.ts`, next to `reset`) calls `saveSnapshot({ source: "manual" })` **then** `reset()`, so the current document is always captured to History (and cloud when signed in) before clearing. `saveSnapshot` is a safe no-op on an empty doc (`!documentHtml.trim()`) or when unchanged vs. the active snapshot, so no duplicate/spurious history is created. **All three "new document" entry points** route through `newDocument()`: the Home-ribbon "ใหม่" button (`RibbonTabHome.tsx`), **Ctrl+Shift+N** (`useKeyboardShortcuts.ts`), and the command palette `new-doc` (`lib/commands/registry.ts`). Confirm-dialog message reworded to `"บันทึกเนื้อหาปัจจุบันลงประวัติแล้วเริ่มเอกสารใหม่?"` (no longer the scary "ล้างเนื้อหาปัจจุบัน"). Locked by `editorStore.snapshot.test.ts` (saves-then-clears; empty-doc clears without a history entry). **886 unit tests pass**; build clean; live on Cloudflare Pages.
+
+**v0.2.18 — Visible "New Document" button.** The reset-to-blank capability was keyboard-only (Ctrl+Shift+N). Surfaced it as a Word-style **"ไฟล์ (File)" group placed first on the Home ribbon tab** (`RibbonTabHome.tsx`) with a `FilePlus` "ใหม่" button — reuses the existing `reset()` action + `useDialogStore.openConfirm` 1:1 with the shortcut handler (no new store logic in this round; superseded by v0.2.19's `newDocument()`).
 
 **WIP (unreleased, branch `feat/roadmap-cherrypick`) — Tab/Enter bug audit + cross-page join fix.** A live browser audit (Chrome DevTools, dev server) of the Tab and Enter/page systems. **Tab system: clean** — Tab mid-line→`\t`, Tab at block-start→indent, Shift+Tab outdent/delete-`\t`, decoration widths, and reload-persistence all verified PASS; no bug. An earlier Explore-agent's "CRITICAL: splitPage makes an empty unusable pageBody" was a **false positive** (a caret sits in a textblock, so `content.cut(splitPos)` always leaves a trailing empty paragraph; the new page is usable) — and that agent's proposed fix was wrong (it also bailed on `!last`). **Real bug found & fixed: you could not join paragraphs across an auto-paginated page boundary** — Backspace at a page top and Delete at a page bottom were dead keys, because `mergeWithPreviousPage`/`mergePage` did `content.append()` (concatenate, never join the seam blocks) and native joinBackward/Forward can't cross the `pageNode` boundary. Fixes (all in `src/lib/tiptap/pageCommands.ts` + `VisualEditor.tsx`):
 1. **Seam join** — new exported pure helper `joinBodyFragments(aContent, bContent)` joins A's last + B's first block when both are same-type textblocks (else concatenates), returning the merged Fragment + content-relative caret seam. Wired into both `mergeWithPreviousPage` (Backspace) and `mergePage` (Delete), which now `tr.setSelection` to the seam so the caret reads like a normal merge.
@@ -392,7 +396,7 @@ Before writing new code:
 - **Where it shows up**:
   - `src/lib/version.ts` exports `APP_VERSION` and `APP_VERSION_LABEL`
   - `src/app/layout.tsx` injects the version into HTML metadata (`generator` + meta `app-version`)
-- **Current version**: **v0.2.13**
+- **Current version**: **v0.2.19**
 
 ### Patch bump rule (deploy default)
 
