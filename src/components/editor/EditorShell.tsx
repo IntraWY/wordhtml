@@ -12,11 +12,13 @@ import { MobileToolbar } from "./MobileToolbar";
 import { Ruler } from "./Ruler";
 import { VisualEditor } from "./VisualEditor";
 import { PageCanvas } from "./PageCanvas";
+import { TableHandleOverlay } from "./TableHandleOverlay";
 import { PreviewToggle } from "./PreviewToggle";
 import { VariablePanel } from "./VariablePanel";
 import { VariableFillPopover } from "./VariableFillPopover";
 import { FieldFillPopover } from "./FieldFillPopover";
 import { IndentRuler } from "./IndentRuler";
+import { RulerColumnMarkers } from "./RulerColumnMarkers";
 import { EditorRulerBar, EditorPaperScrollBody } from "./EditorPaperLayout";
 import { TabTypeSelector } from "./TabTypeSelector";
 import { TemplatePreview } from "./TemplatePreview";
@@ -374,16 +376,22 @@ export function EditorShell() {
                       widthPx={widthPx}
                       cornerSlot={<TabTypeSelector />}
                       horizontalRuler={
-                        <IndentRuler
-                          editor={editor}
-                          cm={widthMm / 10}
-                          marginStart={marginLeftPx}
-                          marginEnd={marginRightPx}
-                          marginLeftMm={pageSetup.marginMm.left}
-                          marginRightMm={pageSetup.marginMm.right}
-                          onMarginChange={handleMarginChange}
-                          onRulerActive={handleRulerActive}
-                        />
+                        <div className="relative">
+                          <IndentRuler
+                            editor={editor}
+                            cm={widthMm / 10}
+                            marginStart={marginLeftPx}
+                            marginEnd={marginRightPx}
+                            marginLeftMm={pageSetup.marginMm.left}
+                            marginRightMm={pageSetup.marginMm.right}
+                            onMarginChange={handleMarginChange}
+                            onRulerActive={handleRulerActive}
+                          />
+                          <RulerColumnMarkers
+                            editor={editor}
+                            scrollContainerRef={scrollContainerRef}
+                          />
+                        </div>
                       }
                     />
                   </div>
@@ -425,6 +433,11 @@ export function EditorShell() {
                           pageSetup={pageSetup}
                           pageCount={pageCount}
                           onReserveHeightChange={setHeaderFooterReservePx}
+                        />
+                        <TableHandleOverlay
+                          editor={editor}
+                          pagesRootRef={articleRef as React.RefObject<HTMLElement>}
+                          scrollContainerRef={scrollContainerRef}
                         />
                       </div>
                     </EditorPaperScrollBody>

@@ -22,8 +22,9 @@ import { TableView } from "@tiptap/extension-table";
  * so the existing `Table.configure(...)` and `RepeatingRow` extensions are left
  * untouched; global attributes merge additively with their own `addAttributes`.
  *
- * Horizontal lines are NOT draggable — prosemirror-tables only ships column
- * resizing, and row height is set numerically here, never by dragging.
+ * Row height can be set numerically here OR by dragging a row's bottom border
+ * (see `tableRowResize.ts`, which writes the same `rowHeight` attr). Column
+ * resizing is handled by prosemirror-tables' built-in plugin.
  */
 
 export interface CellMargins {
@@ -102,6 +103,23 @@ export const TablePropertiesExtension = Extension.create({
             },
             parseHTML: (el: HTMLElement): number | null => {
               const raw = el.style.borderSpacing;
+              if (!raw) return null;
+              const n = parseFloat(raw);
+              return Number.isFinite(n) && n > 0 ? n : null;
+            },
+          },
+          // Word left-edge drag: the table shifts right by this many px
+          // (margin-left) while the first column narrows to keep the right edge
+          // fixed. Written by the TableHandleOverlay via tableCommands.ts.
+          tableIndent: {
+            default: null,
+            renderHTML: (attrs) => {
+              const v = attrs.tableIndent as number | null;
+              if (v == null || v <= 0) return {};
+              return { style: `margin-left:${v}px` };
+            },
+            parseHTML: (el: HTMLElement): number | null => {
+              const raw = el.style.marginLeft;
               if (!raw) return null;
               const n = parseFloat(raw);
               return Number.isFinite(n) && n > 0 ? n : null;
@@ -233,6 +251,7 @@ const MANAGED_TABLE_STYLE_PROPS = [
   "--wh-pad-l",
   "border-collapse",
   "border-spacing",
+  "margin-left",
 ] as const;
 
 /**
@@ -250,7 +269,11 @@ const MANAGED_TABLE_STYLE_PROPS = [
  */
 export function applyManagedTableStyle(
   table: HTMLTableElement,
-  attrs: { cellMargins?: CellMargins | null; cellSpacing?: number | null }
+  attrs: {
+    cellMargins?: CellMargins | null;
+    cellSpacing?: number | null;
+    tableIndent?: number | null;
+  }
 ): void {
   for (const prop of MANAGED_TABLE_STYLE_PROPS) {
     table.style.removeProperty(prop);
@@ -268,6 +291,11 @@ export function applyManagedTableStyle(
   if (s != null && s > 0) {
     table.style.setProperty("border-collapse", "separate");
     table.style.setProperty("border-spacing", `${s}px`);
+  }
+
+  const indent = attrs.tableIndent ?? null;
+  if (indent != null && indent > 0) {
+    table.style.setProperty("margin-left", `${indent}px`);
   }
 }
 

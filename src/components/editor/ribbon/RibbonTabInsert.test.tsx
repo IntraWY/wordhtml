@@ -14,6 +14,11 @@ function createMockEditor() {
     chain,
     isActive: vi.fn(() => false),
     getAttributes: vi.fn(() => ({})),
+    // useEditorState subscribes via on()/off(); mirror the shape the real
+    // Tiptap editor exposes so the code-block active-state hook can mount.
+    on: vi.fn(),
+    off: vi.fn(),
+    state: { selection: {} },
   } as unknown as Editor;
 
   return {

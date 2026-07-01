@@ -649,6 +649,81 @@ html[data-theme="dark"] .page-node {
 .ProseMirror.resize-cursor th * {
   cursor: col-resize;
 }
+/* Word-style ROW-height drag (tableRowResize.ts). The plugin toggles
+   .wh-row-resize-hot on the editor root while the pointer is over a row's
+   bottom border — surface the row-resize affordance there, reaching the cells
+   the same way the column-resize rule above does (contenteditable I-beam would
+   otherwise win). While dragging, .wh-row-resizing on <body> keeps the cursor
+   and suppresses text selection even when the pointer leaves the cell. */
+.ProseMirror.wh-row-resize-hot,
+.ProseMirror.wh-row-resize-hot td,
+.ProseMirror.wh-row-resize-hot th,
+.ProseMirror.wh-row-resize-hot td *,
+.ProseMirror.wh-row-resize-hot th * {
+  cursor: row-resize;
+}
+body.wh-row-resizing,
+body.wh-row-resizing * {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
+/* Word-style table handles (TableHandleOverlay.tsx). The left-edge grip is a
+   thin strip on the table's left border; it only becomes visible on hover so it
+   doesn't clutter the page. The move/select handle sits just outside the
+   top-left corner (Word's ⊞). Both are pointer-events:auto inside an otherwise
+   click-through overlay. */
+.wh-table-edge {
+  cursor: ew-resize;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.wh-table-edge:hover,
+body.wh-table-edge-dragging .wh-table-edge {
+  background: color-mix(in oklch, var(--color-accent) 55%, transparent);
+}
+.wh-table-move {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted-foreground);
+  cursor: grab;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.wh-table-move:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+body.wh-table-edge-dragging,
+body.wh-table-edge-dragging * {
+  cursor: ew-resize !important;
+  user-select: none !important;
+}
+body.wh-table-move-dragging,
+body.wh-table-move-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+/* Word-style column-boundary markers on the horizontal ruler
+   (RulerColumnMarkers.tsx). A small downward bracket at each inter-column
+   boundary; drag to resize that boundary. */
+.wh-ruler-col-marker {
+  width: 8px;
+  height: 9px;
+  cursor: ew-resize;
+  background: var(--color-muted-foreground);
+  opacity: 0.55;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transition: opacity 120ms ease;
+}
+.wh-ruler-col-marker:hover,
+body.wh-table-edge-dragging .wh-ruler-col-marker {
+  opacity: 1;
+  background: var(--color-accent);
+}
 .prose-editor .tableWrapper {
   overflow-x: auto;
 }

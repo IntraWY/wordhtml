@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 import {
   Link as LinkIcon,
@@ -65,6 +66,14 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
     editorRef.current = editor;
   }, [editor]);
   const hasEditor = isLiveEditor(editor);
+
+  // Reactive: keeps the code-block button highlight in sync as the caret
+  // moves in/out of a code block (a bare editor.isActive() in JSX is not
+  // reactive — it only re-evaluates on unrelated re-renders).
+  const isCodeBlockActive = useEditorState({
+    editor,
+    selector: ({ editor: e }) => e?.isActive("codeBlock") ?? false,
+  }) ?? false;
 
   const liveEditor = () => editorRef.current;
 
@@ -314,7 +323,7 @@ export function RibbonTabInsert({ editor }: { editor: Editor | null }) {
         <RibbonButton label="ขึ้นบรรทัดใหม่" onClick={handleSoftBreak} disabled={!hasEditor}>
           <WrapText className="size-3.5" />
         </RibbonButton>
-        <RibbonButton label="บล็อกโค้ด" onClick={handleCodeBlock} active={editor?.isActive("codeBlock")} disabled={!hasEditor}>
+        <RibbonButton label="บล็อกโค้ด" onClick={handleCodeBlock} active={isCodeBlockActive} disabled={!hasEditor}>
           <Code2 className="size-3.5" />
         </RibbonButton>
       </RibbonGroup>

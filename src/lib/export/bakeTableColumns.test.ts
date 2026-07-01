@@ -85,4 +85,15 @@ describe("bakeTableColumns", () => {
     expect(out).toContain("width:120px");
     expect(out).not.toContain("999px");
   });
+
+  it("keeps a table's margin-left (Word left-edge indent) when pinning width", () => {
+    // The overlay writes the left-edge indent as inline margin-left; baking the
+    // column widths must pin the width without dropping that indent.
+    const html =
+      `<table style="margin-left:40px"><tbody><tr>${cell("80")}${cell("60")}</tr></tbody></table>`;
+    const out = bakeTableColumns(html);
+
+    expect(out).toContain("margin-left:40px");
+    expect(out).toContain("width:140px"); // 80 + 60 pinned
+  });
 });

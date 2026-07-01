@@ -186,7 +186,7 @@ export function TablePropertiesDialog({ open, onClose, editor }: TableProperties
                 />
               </div>
               <p className="mt-2 text-[11px] text-[color:var(--color-muted-foreground)]">
-                ความสูงแถวเป็นค่า “อย่างน้อย” — แถวจะขยายตามเนื้อหาได้ (เหมือน Word) และเส้นแนวนอนของตารางลากไม่ได้
+                ความสูงแถวเป็นค่า “อย่างน้อย” — แถวจะขยายตามเนื้อหาได้ (เหมือน Word) หรือจะลากเส้นขอบล่างของแถวเพื่อปรับความสูงก็ได้ (Drag the row’s bottom border to resize)
               </p>
             </fieldset>
           </div>

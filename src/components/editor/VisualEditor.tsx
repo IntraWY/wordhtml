@@ -15,6 +15,7 @@ import {
   TablePropertiesExtension,
   StyleAwareTableView,
 } from "@/lib/tiptap/tableProperties";
+import { TableRowResize } from "@/lib/tiptap/tableRowResize";
 import { VariableMark } from "@/lib/tiptap/variableMark";
 import { PageBreak } from "@/lib/tiptap/pageBreak";
 import { PaginationAware } from "@/lib/tiptap/paginationAware";
@@ -185,6 +186,7 @@ export function VisualEditor({ onEditorReady }: VisualEditorProps) {
       TableHeaderWithBorder,
       TableCellWithBorder,
       TablePropertiesExtension,
+      TableRowResize,
       VariableMark,
       VariableTypingGuard,
       CommentMark,
