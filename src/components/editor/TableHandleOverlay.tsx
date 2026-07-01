@@ -96,6 +96,10 @@ export function TableHandleOverlay({
   // Live grip offset (px) while dragging the left edge; null when not dragging.
   const [previewDeltaPx, setPreviewDeltaPx] = useState<number | null>(null);
   const draggingRef = useRef(false);
+  // Teardown for the in-flight drag's window listeners, so unmount mid-drag
+  // can't leak listeners, leave the body class stuck, or dispatch on a torn-down
+  // editor when mouseup finally fires.
+  const activeTeardownRef = useRef<(() => void) | null>(null);
 
   const measure = useCallback(() => {
     if (!editor || editor.isDestroyed || !editor.isEditable) {
@@ -107,11 +111,15 @@ export function TableHandleOverlay({
       setActive(null);
       return;
     }
-    // Hide while prosemirror is resizing a column (avoid double-drag).
+    // Hide while prosemirror is resizing a column (avoid double-drag) — clear
+    // `active` so stale handles don't stay frozen over the resizing table.
     const colState = columnResizingPluginKey.getState(editor.state) as
       | { dragging?: unknown }
       | undefined;
-    if (colState?.dragging) return;
+    if (colState?.dragging) {
+      setActive(null);
+      return;
+    }
 
     const pos = activeTablePos(editor);
     if (pos == null) {
@@ -175,17 +183,25 @@ export function TableHandleOverlay({
         if (!draggingRef.current) measure();
       });
     };
+    // Guard resize like scroll/observer, else a window resize mid-drag snaps the
+    // grip to freshly-measured geometry and fights the live preview offset.
+    const onResize = () => {
+      if (!draggingRef.current) measure();
+    };
     scrollEl?.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", measure);
+    window.addEventListener("resize", onResize);
 
     return () => {
       cancelAnimationFrame(initRaf);
       ro?.disconnect();
       scrollEl?.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", onResize);
       if (scrollRaf) cancelAnimationFrame(scrollRaf);
     };
   }, [measure, pagesRootRef, scrollContainerRef]);
+
+  // Tear down any in-flight drag if the overlay unmounts mid-drag.
+  useEffect(() => () => activeTeardownRef.current?.(), []);
 
   const startLeftEdgeDrag = useCallback(
     (e: React.MouseEvent) => {
@@ -204,6 +220,13 @@ export function TableHandleOverlay({
       document.body.classList.add("wh-table-edge-dragging");
       let last: ReturnType<typeof resizeFromLeftEdge> = null;
 
+      const teardown = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.classList.remove("wh-table-edge-dragging");
+        draggingRef.current = false;
+        activeTeardownRef.current = null;
+      };
       const onMove = (ev: MouseEvent) => {
         const res = resizeFromLeftEdge(
           widths,
@@ -217,14 +240,13 @@ export function TableHandleOverlay({
         setPreviewDeltaPx(res.appliedDeltaPx);
       };
       const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-        document.body.classList.remove("wh-table-edge-dragging");
-        draggingRef.current = false;
+        teardown();
         setPreviewDeltaPx(null);
+        if (editor.isDestroyed) return;
         if (last) applyTableLeftEdge(editor, pos, last.widths, last.indentPx);
         else measure();
       };
+      activeTeardownRef.current = teardown;
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
@@ -243,6 +265,13 @@ export function TableHandleOverlay({
       draggingRef.current = true;
       document.body.classList.add("wh-table-move-dragging");
 
+      const teardown = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.classList.remove("wh-table-move-dragging");
+        draggingRef.current = false;
+        activeTeardownRef.current = null;
+      };
       const onMove = (ev: MouseEvent) => {
         if (
           !didDrag &&
@@ -253,10 +282,8 @@ export function TableHandleOverlay({
         }
       };
       const onUp = (ev: MouseEvent) => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-        document.body.classList.remove("wh-table-move-dragging");
-        draggingRef.current = false;
+        teardown();
+        if (editor.isDestroyed) return;
 
         if (!didDrag) {
           selectWholeTable(editor);
@@ -279,6 +306,7 @@ export function TableHandleOverlay({
         moveTableToIndex(editor, pos, targetIndex);
         measure();
       };
+      activeTeardownRef.current = teardown;
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },

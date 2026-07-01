@@ -87,6 +87,9 @@ export function RulerColumnMarkers({ editor, scrollContainerRef }: Props) {
     null
   );
   const draggingRef = useRef(false);
+  // Teardown for the in-flight drag, so unmount mid-drag can't leak window
+  // listeners, leave the body class stuck, or dispatch on a torn-down editor.
+  const activeTeardownRef = useRef<(() => void) | null>(null);
 
   const remeasure = useCallback(() => {
     if (!editor || editor.isDestroyed || !editor.isEditable) {
@@ -144,6 +147,13 @@ export function RulerColumnMarkers({ editor, scrollContainerRef }: Props) {
       document.body.classList.add("wh-table-edge-dragging");
       let committedWidths: number[] | null = null;
 
+      const teardown = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.classList.remove("wh-table-edge-dragging");
+        draggingRef.current = false;
+        activeTeardownRef.current = null;
+      };
       const onMove = (ev: MouseEvent) => {
         const delta = ev.clientX - startX;
         const next = resizeColumnBoundary(widths, index, delta, CELL_MIN_WIDTH);
@@ -154,19 +164,21 @@ export function RulerColumnMarkers({ editor, scrollContainerRef }: Props) {
         setDragPreview({ index, x: startBoundary + applied });
       };
       const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-        document.body.classList.remove("wh-table-edge-dragging");
-        draggingRef.current = false;
+        teardown();
         setDragPreview(null);
+        if (editor.isDestroyed) return;
         if (committedWidths) setColumnWidths(editor, tablePos, committedWidths);
         else remeasure();
       };
+      activeTeardownRef.current = teardown;
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
     [editor, model, remeasure]
   );
+
+  // Tear down any in-flight drag if the markers unmount mid-drag.
+  useEffect(() => () => activeTeardownRef.current?.(), []);
 
   if (!model) return null;
 

@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { computeRowHeight, MIN_ROW_PX } from "./rowResizeMath";
 
@@ -25,6 +25,9 @@ const GRAB_PX = 5;
 
 const HOT_CLASS = "wh-row-resize-hot";
 const DRAGGING_CLASS = "wh-row-resizing";
+
+/** Px the pointer must travel before a mousedown counts as a resize (not a click). */
+const DRAG_THRESHOLD_PX = 3;
 
 /** Resolve the doc position BEFORE the `tableRow` that owns a `<tr>` element. */
 function rowPosFromDom(view: EditorView, tr: HTMLTableRowElement): number | null {
@@ -56,10 +59,12 @@ function rowUnderPointer(
 }
 
 interface DragState {
-  rowPos: number;
-  tr: HTMLTableRowElement;
+  rowEl: HTMLTableRowElement;
   startHeight: number;
+  startX: number;
   startY: number;
+  /** Set once the pointer travels past DRAG_THRESHOLD_PX — a real resize. */
+  moved: boolean;
 }
 
 export function createTableRowResizePlugin(): Plugin {
@@ -67,6 +72,10 @@ export function createTableRowResizePlugin(): Plugin {
   let drag: DragState | null = null;
   let raf = 0;
   let pendingHeight = 0;
+  // Teardown for the in-flight drag's window listeners, so the plugin's own
+  // destroy() can tear a drag down if the view unmounts mid-drag (otherwise the
+  // listeners leak and mouseup dispatches on a destroyed view).
+  let activeCleanup: (() => void) | null = null;
 
   const hasRaf = typeof requestAnimationFrame === "function";
 
@@ -78,7 +87,7 @@ export function createTableRowResizePlugin(): Plugin {
 
   const applyPreview = () => {
     raf = 0;
-    if (drag) drag.tr.style.height = `${pendingHeight}px`;
+    if (drag) drag.rowEl.style.height = `${pendingHeight}px`;
   };
 
   return new Plugin({
@@ -96,28 +105,41 @@ export function createTableRowResizePlugin(): Plugin {
         },
         mousedown(view, event) {
           if (event.button !== 0) return false;
-          const tr = rowUnderPointer(event);
-          if (!tr) return false;
-          const rowPos = rowPosFromDom(view, tr);
-          if (rowPos == null) return false;
+          const rowEl = rowUnderPointer(event);
+          if (!rowEl) return false;
+          // Bail if we can't resolve the row — let ProseMirror handle the click.
+          if (rowPosFromDom(view, rowEl) == null) return false;
 
           event.preventDefault();
           drag = {
-            rowPos,
-            tr,
-            startHeight: tr.getBoundingClientRect().height,
+            rowEl,
+            startHeight: rowEl.getBoundingClientRect().height,
+            startX: event.clientX,
             startY: event.clientY,
+            moved: false,
           };
           pendingHeight = drag.startHeight;
           document.body.classList.add(DRAGGING_CLASS);
 
+          const cleanup = () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+            document.body.classList.remove(DRAGGING_CLASS);
+            if (raf && typeof cancelAnimationFrame === "function") {
+              cancelAnimationFrame(raf);
+              raf = 0;
+            }
+            activeCleanup = null;
+          };
+
           const onMove = (e: MouseEvent) => {
             if (!drag) return;
-            pendingHeight = computeRowHeight(
-              drag.startHeight,
-              e.clientY - drag.startY,
-              MIN_ROW_PX
-            );
+            const dy = e.clientY - drag.startY;
+            if (!drag.moved && Math.abs(dy) >= DRAG_THRESHOLD_PX) {
+              drag.moved = true;
+            }
+            if (!drag.moved) return; // ignore sub-threshold jitter (it's a click)
+            pendingHeight = computeRowHeight(drag.startHeight, dy, MIN_ROW_PX);
             if (hasRaf) {
               if (!raf) raf = requestAnimationFrame(applyPreview);
             } else {
@@ -126,28 +148,46 @@ export function createTableRowResizePlugin(): Plugin {
           };
 
           const onUp = () => {
-            window.removeEventListener("mousemove", onMove);
-            window.removeEventListener("mouseup", onUp);
-            document.body.classList.remove(DRAGGING_CLASS);
-            if (raf && typeof cancelAnimationFrame === "function") {
-              cancelAnimationFrame(raf);
-              raf = 0;
-            }
             const current = drag;
             drag = null;
+            cleanup();
             if (!current) return;
             // Drop the inline preview; the committed attr re-renders it.
-            current.tr.style.removeProperty("height");
-            const node = view.state.doc.nodeAt(current.rowPos);
+            current.rowEl.style.removeProperty("height");
+
+            // A click without a real drag (mousedown was prevented): place the
+            // caret where the user clicked — never mutate rowHeight.
+            if (!current.moved) {
+              const coords = view.posAtCoords({
+                left: current.startX,
+                top: current.startY,
+              });
+              if (coords) {
+                const sel = TextSelection.near(
+                  view.state.doc.resolve(coords.pos)
+                );
+                view.dispatch(view.state.tr.setSelection(sel));
+              }
+              view.focus();
+              return;
+            }
+
+            // Re-resolve the row position at commit time so a reflow during the
+            // drag (pagination / repaginate) can't write to a stale/wrong row.
+            const rowPos = rowPosFromDom(view, current.rowEl);
+            if (rowPos == null) return;
+            const node = view.state.doc.nodeAt(rowPos);
             if (!node || node.type.name !== "tableRow") return;
             if (pendingHeight === (node.attrs.rowHeight ?? 0)) return;
-            const tr = view.state.tr.setNodeMarkup(current.rowPos, undefined, {
-              ...node.attrs,
-              rowHeight: pendingHeight,
-            });
-            view.dispatch(tr);
+            view.dispatch(
+              view.state.tr.setNodeMarkup(rowPos, undefined, {
+                ...node.attrs,
+                rowHeight: pendingHeight,
+              })
+            );
           };
 
+          activeCleanup = cleanup;
           window.addEventListener("mousemove", onMove);
           window.addEventListener("mouseup", onUp);
           return true;
@@ -157,8 +197,11 @@ export function createTableRowResizePlugin(): Plugin {
     view() {
       return {
         destroy() {
+          drag = null;
+          activeCleanup?.(); // tear down an in-flight drag on unmount
           if (raf && typeof cancelAnimationFrame === "function") {
             cancelAnimationFrame(raf);
+            raf = 0;
           }
           document.body.classList.remove(DRAGGING_CLASS);
         },
